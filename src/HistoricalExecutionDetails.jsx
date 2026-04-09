@@ -331,7 +331,7 @@ const HistoricalExecutionDetails = ({ id }) => {
 
                 {/* Y-axis labels */}
                 {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                  const value = (maxThroughput + yPadding) - (ratio * (yRange + 2 * yPadding));
+                  const value = (yMaxThroughput + yPadding) - (ratio * (yRange + 2 * yPadding));
                   return (
                     <text
                       key={ratio}
