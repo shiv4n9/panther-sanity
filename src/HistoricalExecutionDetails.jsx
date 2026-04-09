@@ -20,15 +20,20 @@ const HistoricalExecutionDetails = ({ id }) => {
     timestamp: new Date().toLocaleDateString(),
   };
 
-  // Aggregated stats from history
+  // Aggregated stats from history (safely parse floats since throughput may contain letters like 'KPPS')
+  const getNum = (v) => {
+    const parsed = parseFloat(v);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   const avgThroughput = historicalData.length 
-    ? (historicalData.reduce((acc, curr) => acc + curr.throughput, 0) / historicalData.length).toFixed(2) 
+    ? (historicalData.reduce((acc, curr) => acc + getNum(curr.throughput), 0) / historicalData.length).toFixed(2) 
     : '0';
   const minThpt = historicalData.length 
-    ? Math.min(...historicalData.map(d => d.throughput)).toFixed(2) 
+    ? Math.min(...historicalData.map(d => getNum(d.throughput))).toFixed(2) 
     : '0';
   const maxThpt = historicalData.length 
-    ? Math.max(...historicalData.map(d => d.throughput)).toFixed(2) 
+    ? Math.max(...historicalData.map(d => getNum(d.throughput))).toFixed(2) 
     : '0';
   const peakCpu = historicalData.length 
     ? Math.max(...historicalData.map(d => parseInt(d.cpu || '0'))) 
@@ -89,13 +94,14 @@ const HistoricalExecutionDetails = ({ id }) => {
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
-  const maxThroughput = Math.max(...historicalData.map(d => d.throughput));
-  const minThroughput = Math.min(...historicalData.map(d => d.throughput));
-  const yRange = maxThroughput - minThroughput;
-  const yPadding = yRange * 0.1;
+  const yMaxThroughput = Math.max(...historicalData.map(d => getNum(d.throughput)));
+  const yMinThroughput = Math.min(...historicalData.map(d => getNum(d.throughput)));
+  const yRange = yMaxThroughput - yMinThroughput;
+  const yPadding = yRange === 0 ? 10 : yRange * 0.1;
 
   const scaleY = (value) => {
-    const normalized = (value - (minThroughput - yPadding)) / (yRange + 2 * yPadding);
+    const num = getNum(value);
+    const normalized = (num - (yMinThroughput - yPadding)) / (yRange + 2 * yPadding);
     return innerHeight - (normalized * innerHeight);
   };
 

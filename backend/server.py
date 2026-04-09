@@ -161,15 +161,21 @@ def ingest_csv(file_path: str) -> dict:
     conn = get_db()
     try:
         with conn.cursor() as cur:
+            force = request.args.get('force', 'false').lower() == 'true'
+            
             # Check if this file has already been ingested for this date
             cur.execute(
                 "SELECT COUNT(*) FROM sanity_runs WHERE csv_filename=%s AND run_date=%s",
                 (filename, run_date)
             )
             existing = cur.fetchone()[0]
-            if existing > 0:
+            if existing > 0 and not force:
                 logger.info(f"Already ingested {filename} for {run_date}, skipping.")
                 return {'status': 'skipped', 'filename': filename, 'reason': 'already ingested'}
+
+            if force and existing > 0:
+                 # Delete existing rows for this file so they get cleanly re-inserted
+                 cur.execute("DELETE FROM sanity_runs WHERE csv_filename=%s AND run_date=%s", (filename, run_date))
 
             for row in rows:
                 cur.execute(
