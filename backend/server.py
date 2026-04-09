@@ -100,9 +100,12 @@ def parse_csv_file(file_path: str) -> dict:
         if len(fields) < 3:
             continue
 
-        test_case  = fields[0].strip()
-        parameter  = fields[1].strip()
-        throughput = fields[2].strip()
+        # Test case names may contain unquoted commas (e.g. "IPSEC VPN Throughput (S2S, PSK, AES256-GCM)")
+        # Always use LAST field as throughput, SECOND-TO-LAST as parameter,
+        # and join everything before as the test case name.
+        throughput = fields[-1].strip()
+        parameter  = fields[-2].strip()
+        test_case  = ','.join(f.strip() for f in fields[:-2]).strip()
 
         # Skip the column header row
         if test_case.upper() == 'TESTCASE':

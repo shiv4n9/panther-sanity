@@ -27,22 +27,26 @@ export const parseCSV = (csvContent) => {
     const fields = parseCSVLine(line);
     
     if (fields.length >= 3) {
-      const testCase = fields[0]?.trim() || '';
-      const parameter = fields[1]?.trim() || '';
-      const throughput = fields[2]?.trim() || '';
+      // The CSV format: TESTCASE,...,PARAMETER,THROUGHPUT
+      // Test case names may contain unquoted commas (e.g. "IPSEC VPN Throughput (S2S, PSK, AES256-GCM)")
+      // So we always take the LAST field as throughput, SECOND-TO-LAST as parameter,
+      // and join everything before as the test case name.
+      const throughput = fields[fields.length - 1].trim();
+      const parameter  = fields[fields.length - 2].trim();
+      const testCase   = fields.slice(0, fields.length - 2).join(',').trim();
       
       // Skip the column header row
       if (testCase.toUpperCase() === 'TESTCASE') continue;
       // Skip blank test cases
       if (!testCase) continue;
       
-      // Extract CPU, Memory, SHM if available
+      // Extract CPU if available
       const cpuMatch = throughput.match(/CPU:\s*(\d+)%/i);
-      const cpu = cpuMatch ? cpuMatch[1] + '%' : '85%'; // Default for GNATS issues
+      const cpu = cpuMatch ? cpuMatch[1] + '%' : null;
       
-      // Mock memory and SHM data (would come from additional source in production)
-      const memory = cpuMatch ? `${(4.5 + Math.random() * 1.5).toFixed(1)}GB` : '5.2GB';
-      const shm = cpuMatch ? '512MB' : '1GB';
+      // Mock memory and SHM data
+      const memory = cpuMatch ? `${(4.5 + Math.random() * 1.5).toFixed(1)}GB` : null;
+      const shm = cpuMatch ? '512MB' : null;
       
       testData.push({
         id: idCounter++,
@@ -52,10 +56,9 @@ export const parseCSV = (csvContent) => {
         cpu,
         memory,
         shm,
-        // Check if throughput is a GNATS issue ID (numeric only)
-        isGnatsIssue: /^\d+$/.test(throughput.trim()),
-        gnatsUrl: /^\d+$/.test(throughput.trim()) 
-          ? `https://gnats.juniper.net/web/default/${throughput.trim()}#description_tab` 
+        isGnatsIssue: /^\d+$/.test(throughput),
+        gnatsUrl: /^\d+$/.test(throughput)
+          ? `https://gnats.juniper.net/web/default/${throughput}#description_tab`
           : null
       });
     }
