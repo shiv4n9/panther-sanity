@@ -287,31 +287,129 @@ const HistoricalExecutionDetails = ({ id }) => {
             </div>
             <div className="p-6">
               {histLoading ? (
-                <div className="h-[200px] flex items-center justify-center">
+                <div className="h-[240px] flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
                 </div>
               ) : histError ? (
-                <div className="h-[200px] flex items-center justify-center text-center">
+                <div className="h-[240px] flex items-center justify-center text-center">
                   <div className="max-w-md">
                     <p className="text-slate-600 font-medium mb-2">No Data Available</p>
                     <p className="text-slate-400 text-sm">{histError}</p>
                   </div>
                 </div>
               ) : historicalData.length === 0 ? (
-                <div className="h-[200px] flex items-center justify-center text-center">
+                <div className="h-[240px] flex items-center justify-center text-center">
                   <div>
                     <p className="text-slate-400 text-sm">No historical data found</p>
                     <p className="text-slate-300 text-xs mt-1">Click "Ingest Latest" on the dashboard</p>
                   </div>
                 </div>
               ) : (
-                <div className="h-[200px] flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-slate-700 font-medium mb-2">Throughput Trend</p>
-                    <p className="text-slate-500 text-sm">{historicalData.length} days of data loaded</p>
-                    <p className="text-slate-400 text-xs mt-2">Chart visualization coming soon</p>
-                  </div>
-                </div>
+                <svg ref={chartRef} viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-auto" style={{ maxHeight: '240px' }}>
+                  {/* Grid lines */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                    const y = padding.top + innerHeight * ratio;
+                    return (
+                      <line
+                        key={ratio}
+                        x1={padding.left}
+                        y1={y}
+                        x2={chartWidth - padding.right}
+                        y2={y}
+                        stroke="#e2e8f0"
+                        strokeWidth="1"
+                      />
+                    );
+                  })}
+
+                  {/* Area fill */}
+                  {historicalData.length > 1 && (
+                    <path
+                      d={areaPath}
+                      fill="url(#throughputGradient)"
+                      opacity="0.3"
+                    />
+                  )}
+
+                  {/* Line path */}
+                  {historicalData.length > 1 && (
+                    <path
+                      d={linePath}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* Data points */}
+                  {historicalData.map((point, index) => {
+                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
+                    const y = scaleY(point.throughput) + padding.top;
+                    return (
+                      <circle
+                        key={index}
+                        cx={x}
+                        cy={y}
+                        r="5"
+                        fill="#10b981"
+                        stroke="white"
+                        strokeWidth="2"
+                        className="cursor-pointer hover:r-7 transition-all"
+                        onMouseEnter={(e) => handlePointHover(point, index, e)}
+                        onMouseLeave={handlePointLeave}
+                      />
+                    );
+                  })}
+
+                  {/* Y-axis labels */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                    const y = padding.top + innerHeight * ratio;
+                    const value = (yMaxThroughput + yPadding) - ratio * (yRange + 2 * yPadding);
+                    return (
+                      <text
+                        key={ratio}
+                        x={padding.left - 10}
+                        y={y}
+                        textAnchor="end"
+                        alignmentBaseline="middle"
+                        fontSize="11"
+                        fill="#64748b"
+                        fontWeight="500"
+                      >
+                        {value.toFixed(0)}
+                      </text>
+                    );
+                  })}
+
+                  {/* X-axis labels (show dates for first, middle, last) */}
+                  {historicalData.length > 0 && [0, Math.floor(historicalData.length / 2), historicalData.length - 1].map((index) => {
+                    if (index >= historicalData.length) return null;
+                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
+                    return (
+                      <text
+                        key={index}
+                        x={x}
+                        y={chartHeight - padding.bottom + 20}
+                        textAnchor="middle"
+                        fontSize="10"
+                        fill="#94a3b8"
+                        fontWeight="500"
+                      >
+                        {historicalData[index].date}
+                      </text>
+                    );
+                  })}
+
+                  {/* Gradient definition */}
+                  <defs>
+                    <linearGradient id="throughputGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.6" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
+                    </linearGradient>
+                  </defs>
+                </svg>
               )}
             </div>
           </div>
@@ -324,30 +422,116 @@ const HistoricalExecutionDetails = ({ id }) => {
             </div>
             <div className="p-6">
               {histLoading ? (
-                <div className="h-[200px] flex items-center justify-center">
+                <div className="h-[240px] flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
                 </div>
               ) : histError ? (
-                <div className="h-[200px] flex items-center justify-center text-center">
+                <div className="h-[240px] flex items-center justify-center text-center">
                   <div className="max-w-md">
                     <p className="text-slate-600 font-medium mb-2">No Data Available</p>
                     <p className="text-slate-400 text-sm">{histError}</p>
                   </div>
                 </div>
               ) : historicalData.length === 0 ? (
-                <div className="h-[200px] flex items-center justify-center text-center">
+                <div className="h-[240px] flex items-center justify-center text-center">
                   <div>
                     <p className="text-slate-400 text-sm">No historical data found</p>
                   </div>
                 </div>
               ) : (
-                <div className="h-[200px] flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-slate-700 font-medium mb-2">CPU Usage Trend</p>
-                    <p className="text-slate-500 text-sm">{historicalData.length} days of data loaded</p>
-                    <p className="text-slate-400 text-xs mt-2">Chart visualization coming soon</p>
-                  </div>
-                </div>
+                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-auto" style={{ maxHeight: '240px' }}>
+                  {/* Grid lines */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                    const y = padding.top + innerHeight * ratio;
+                    return (
+                      <line
+                        key={ratio}
+                        x1={padding.left}
+                        y1={y}
+                        x2={chartWidth - padding.right}
+                        y2={y}
+                        stroke="#e2e8f0"
+                        strokeWidth="1"
+                      />
+                    );
+                  })}
+
+                  {/* CPU line path */}
+                  {historicalData.length > 1 && (
+                    <path
+                      d={historicalData.map((point, index) => {
+                        const x = (index / (historicalData.length - 1)) * innerWidth + padding.left;
+                        const cpuVal = parseInt(point.cpu || '0');
+                        const y = padding.top + innerHeight * (1 - cpuVal / 100);
+                        return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
+                      }).join(' ')}
+                      fill="none"
+                      stroke="#fb923c"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* CPU data points */}
+                  {historicalData.map((point, index) => {
+                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
+                    const cpuVal = parseInt(point.cpu || '0');
+                    const y = padding.top + innerHeight * (1 - cpuVal / 100);
+                    return (
+                      <circle
+                        key={index}
+                        cx={x}
+                        cy={y}
+                        r="5"
+                        fill="#fb923c"
+                        stroke="white"
+                        strokeWidth="2"
+                        className="cursor-pointer hover:r-7 transition-all"
+                        onMouseEnter={(e) => handlePointHover(point, index, e)}
+                        onMouseLeave={handlePointLeave}
+                      />
+                    );
+                  })}
+
+                  {/* Y-axis labels (0-100%) */}
+                  {[0, 25, 50, 75, 100].map((value) => {
+                    const y = padding.top + innerHeight * (1 - value / 100);
+                    return (
+                      <text
+                        key={value}
+                        x={padding.left - 10}
+                        y={y}
+                        textAnchor="end"
+                        alignmentBaseline="middle"
+                        fontSize="11"
+                        fill="#64748b"
+                        fontWeight="500"
+                      >
+                        {value}%
+                      </text>
+                    );
+                  })}
+
+                  {/* X-axis labels */}
+                  {historicalData.length > 0 && [0, Math.floor(historicalData.length / 2), historicalData.length - 1].map((index) => {
+                    if (index >= historicalData.length) return null;
+                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
+                    return (
+                      <text
+                        key={index}
+                        x={x}
+                        y={chartHeight - padding.bottom + 20}
+                        textAnchor="middle"
+                        fontSize="10"
+                        fill="#94a3b8"
+                        fontWeight="500"
+                      >
+                        {historicalData[index].date}
+                      </text>
+                    );
+                  })}
+                </svg>
               )}
             </div>
           </div>
@@ -360,30 +544,139 @@ const HistoricalExecutionDetails = ({ id }) => {
             </div>
             <div className="p-6">
               {histLoading ? (
-                <div className="h-[200px] flex items-center justify-center">
+                <div className="h-[240px] flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
                 </div>
               ) : histError ? (
-                <div className="h-[200px] flex items-center justify-center text-center">
+                <div className="h-[240px] flex items-center justify-center text-center">
                   <div className="max-w-md">
                     <p className="text-slate-600 font-medium mb-2">No Data Available</p>
                     <p className="text-slate-400 text-sm">{histError}</p>
                   </div>
                 </div>
               ) : historicalData.length === 0 ? (
-                <div className="h-[200px] flex items-center justify-center text-center">
+                <div className="h-[240px] flex items-center justify-center text-center">
                   <div>
                     <p className="text-slate-400 text-sm">No historical data found</p>
                   </div>
                 </div>
               ) : (
-                <div className="h-[200px] flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-slate-700 font-medium mb-2">Memory Usage Trend</p>
-                    <p className="text-slate-500 text-sm">{historicalData.length} days of data loaded</p>
-                    <p className="text-slate-400 text-xs mt-2">Chart visualization coming soon</p>
-                  </div>
-                </div>
+                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-auto" style={{ maxHeight: '240px' }}>
+                  {/* Grid lines */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                    const y = padding.top + innerHeight * ratio;
+                    return (
+                      <line
+                        key={ratio}
+                        x1={padding.left}
+                        y1={y}
+                        x2={chartWidth - padding.right}
+                        y2={y}
+                        stroke="#e2e8f0"
+                        strokeWidth="1"
+                      />
+                    );
+                  })}
+
+                  {/* Memory line path */}
+                  {historicalData.length > 1 && (() => {
+                    const memValues = historicalData.map(p => parseInt(p.memory || '0'));
+                    const maxMem = Math.max(...memValues);
+                    const minMem = Math.min(...memValues);
+                    const memRange = maxMem - minMem || 1;
+                    
+                    return (
+                      <path
+                        d={historicalData.map((point, index) => {
+                          const x = (index / (historicalData.length - 1)) * innerWidth + padding.left;
+                          const memVal = parseInt(point.memory || '0');
+                          const normalized = (memVal - minMem) / memRange;
+                          const y = padding.top + innerHeight * (1 - normalized);
+                          return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
+                        }).join(' ')}
+                        fill="none"
+                        stroke="#60a5fa"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    );
+                  })()}
+
+                  {/* Memory data points */}
+                  {(() => {
+                    const memValues = historicalData.map(p => parseInt(p.memory || '0'));
+                    const maxMem = Math.max(...memValues);
+                    const minMem = Math.min(...memValues);
+                    const memRange = maxMem - minMem || 1;
+                    
+                    return historicalData.map((point, index) => {
+                      const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
+                      const memVal = parseInt(point.memory || '0');
+                      const normalized = (memVal - minMem) / memRange;
+                      const y = padding.top + innerHeight * (1 - normalized);
+                      return (
+                        <circle
+                          key={index}
+                          cx={x}
+                          cy={y}
+                          r="5"
+                          fill="#60a5fa"
+                          stroke="white"
+                          strokeWidth="2"
+                          className="cursor-pointer hover:r-7 transition-all"
+                          onMouseEnter={(e) => handlePointHover(point, index, e)}
+                          onMouseLeave={handlePointLeave}
+                        />
+                      );
+                    });
+                  })()}
+
+                  {/* Y-axis labels (dynamic based on data) */}
+                  {(() => {
+                    const memValues = historicalData.map(p => parseInt(p.memory || '0'));
+                    const maxMem = Math.max(...memValues);
+                    const minMem = Math.min(...memValues);
+                    
+                    return [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                      const y = padding.top + innerHeight * ratio;
+                      const value = maxMem - ratio * (maxMem - minMem);
+                      return (
+                        <text
+                          key={ratio}
+                          x={padding.left - 10}
+                          y={y}
+                          textAnchor="end"
+                          alignmentBaseline="middle"
+                          fontSize="11"
+                          fill="#64748b"
+                          fontWeight="500"
+                        >
+                          {value.toFixed(0)}
+                        </text>
+                      );
+                    });
+                  })()}
+
+                  {/* X-axis labels */}
+                  {historicalData.length > 0 && [0, Math.floor(historicalData.length / 2), historicalData.length - 1].map((index) => {
+                    if (index >= historicalData.length) return null;
+                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
+                    return (
+                      <text
+                        key={index}
+                        x={x}
+                        y={chartHeight - padding.bottom + 20}
+                        textAnchor="middle"
+                        fontSize="10"
+                        fill="#94a3b8"
+                        fontWeight="500"
+                      >
+                        {historicalData[index].date}
+                      </text>
+                    );
+                  })}
+                </svg>
               )}
             </div>
           </div>
