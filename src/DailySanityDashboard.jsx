@@ -1,33 +1,21 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { loadCSVFromServer } from './utils/csvParser';
 
-// Tooltip Component using Portal
-const MetricsTooltip = ({ targetRef, isVisible, data }) => {
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (isVisible && targetRef.current) {
-      const rect = targetRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.left + window.scrollX
-      });
-    }
-  }, [isVisible, targetRef]);
-
-  if (!isVisible) return null;
+// Tooltip Component using Portal — uses mouse position, no refs needed
+const MetricsTooltip = ({ position, isVisible, data }) => {
+  if (!isVisible || !position) return null;
 
   return createPortal(
     <div 
       className="fixed z-[9999] animate-fade-in-up pointer-events-none"
       style={{ 
-        top: `${position.top}px`, 
-        left: `${position.left}px`,
+        top: `${position.y + 8}px`, 
+        left: `${position.x}px`,
         animationDuration: '200ms'
       }}
     >
-      <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[200px] pointer-events-auto">
+      <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[200px]">
         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
           <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
           <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">System Metrics</span>
@@ -84,7 +72,7 @@ const DailySanityDashboard = ({ data: propData }) => {
   const metadata = csvData?.metadata || { platform: 'SRX400', image: 'Loading...' };
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedGroups, setExpandedGroups] = useState({});
-  const [hoveredCell, setHoveredCell] = useState(null);
+  const [hoveredCell, setHoveredCell] = useState(null); // { id, x, y } | null
   const [ingestStatus, setIngestStatus] = useState(null); // null | 'loading' | 'success' | 'error'
   const [ingestMessage, setIngestMessage] = useState('');
 
@@ -515,8 +503,10 @@ const DailySanityDashboard = ({ data: propData }) => {
                                 tData.cpuPercent > 90 ? 'from-orange-400 to-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.5)]' :
                                 'from-emerald-400 to-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
 
-                              const srx400Ref = useRef(null);
-                              const srx440Ref = useRef(null);
+                              const handleCellEnter = (e, cellId) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setHoveredCell({ id: cellId, x: rect.left, y: rect.bottom });
+                              };
 
                               return (
                                 <div 
@@ -538,9 +528,8 @@ const DailySanityDashboard = ({ data: propData }) => {
 
                                   {/* SRX 400 Telemetry Column */}
                                   <div 
-                                    ref={srx400Ref}
                                     className="col-span-4 flex flex-col justify-center gap-1"
-                                    onMouseEnter={() => setHoveredCell(`${item.id}-srx400`)}
+                                    onMouseEnter={(e) => handleCellEnter(e, `${item.id}-srx400`)}
                                     onMouseLeave={() => setHoveredCell(null)}
                                   >
                                     {isNumericOnly(item.throughput) ? (
@@ -587,17 +576,16 @@ const DailySanityDashboard = ({ data: propData }) => {
                                     )}
                                     
                                     <MetricsTooltip 
-                                      targetRef={srx400Ref}
-                                      isVisible={hoveredCell === `${item.id}-srx400`}
+                                      position={hoveredCell?.id === `${item.id}-srx400` ? hoveredCell : null}
+                                      isVisible={hoveredCell?.id === `${item.id}-srx400`}
                                       data={item}
                                     />
                                   </div>
 
                                   {/* SRX 440 Telemetry Column */}
                                   <div 
-                                    ref={srx440Ref}
                                     className="col-span-4 flex flex-col justify-center gap-1"
-                                    onMouseEnter={() => setHoveredCell(`${item.id}-srx440`)}
+                                    onMouseEnter={(e) => handleCellEnter(e, `${item.id}-srx440`)}
                                     onMouseLeave={() => setHoveredCell(null)}
                                   >
                                     {isNumericOnly(item.throughput) ? (
@@ -644,8 +632,8 @@ const DailySanityDashboard = ({ data: propData }) => {
                                     )}
                                     
                                     <MetricsTooltip 
-                                      targetRef={srx440Ref}
-                                      isVisible={hoveredCell === `${item.id}-srx440`}
+                                      position={hoveredCell?.id === `${item.id}-srx440` ? hoveredCell : null}
+                                      isVisible={hoveredCell?.id === `${item.id}-srx440`}
                                       data={item}
                                     />
                                   </div>
