@@ -480,10 +480,8 @@ const DailySanityDashboard = ({ data: propData }) => {
                             {items.map((item, idx) => {
                               const tData = parseThroughput(item.throughput);
                               const isLast = idx === items.length - 1;
-                              const gaugeColor = 
-                                tData.cpuPercent > 95 ? 'from-red-500 to-red-600 shadow-[0_0_12px_rgba(239,68,68,0.5)]' :
-                                tData.cpuPercent > 90 ? 'from-orange-400 to-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.5)]' :
-                                'from-emerald-400 to-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
+                              // Use neutral color for all CPU bars
+                              const gaugeColor = 'from-slate-400 to-slate-500 shadow-[0_0_10px_rgba(100,116,139,0.3)]';
 
                               const handleCellEnter = (e, cellId) => {
                                 const rect = e.currentTarget.getBoundingClientRect();
@@ -500,11 +498,8 @@ const DailySanityDashboard = ({ data: propData }) => {
 
                                   <div className="col-span-4 flex items-center pl-8">
                                     <div className="w-3 h-px bg-slate-200 mr-3 group-hover/row:bg-emerald-300 transition-colors"></div>
-                                    <span 
-                                      className="font-jetbrains inline-flex items-center px-2.5 py-0.5 rounded-md bg-[#edfcf7] text-emerald-800 border border-emerald-200 text-xs font-medium cursor-help hover:bg-emerald-100 hover:text-emerald-900 hover:border-emerald-300 hover:scale-[1.03] transition-all duration-200 shadow-sm"
-                                      title="Click to view detailed packet configuration parameters"
-                                    >
-                                      {item.parameter}
+                                    <span className={`text-sm font-medium text-slate-700`}>
+                                      {testCase.includes('Firewall Throughput') ? 'Firewall UDP' : testCase.split(' (')[0]} Throughput ({item.parameter})
                                     </span>
                                   </div>
 
