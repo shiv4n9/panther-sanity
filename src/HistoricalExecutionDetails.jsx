@@ -7,17 +7,32 @@ const HistoricalExecutionDetails = ({ id }) => {
   const [histError, setHistError] = useState(null);
   const chartRef = useRef(null);
 
-  const [data] = useState({
-    runId: id || "1948446",
-    testCase: "IPSEC VPN Throughput (S2S, PSK, AES256-GCM)",
-    parameter: "UDP IMIX",
+  const hashParts = window.location.hash.split('?');
+  const params = new URLSearchParams(hashParts.length > 1 ? hashParts[1] : '');
+  const testCaseParam = params.get('tc') || "Unknown Test Case";
+  const parameterParam = params.get('p') || "Unknown Parameter";
+
+  const data = {
+    runId: id || params.get('t') || "Unknown",
+    testCase: testCaseParam,
+    parameter: parameterParam,
     status: "Passed",
-    timestamp: "2026-04-08 02:24:00 AM",
-    avgThroughput: "1.8 Gbps",
-    peakCpu: "85%",
-    minThroughput: "1.72 Gbps",
-    maxThroughput: "1.83 Gbps"
-  });
+    timestamp: new Date().toLocaleDateString(),
+  };
+
+  // Aggregated stats from history
+  const avgThroughput = historicalData.length 
+    ? (historicalData.reduce((acc, curr) => acc + curr.throughput, 0) / historicalData.length).toFixed(2) 
+    : '0';
+  const minThpt = historicalData.length 
+    ? Math.min(...historicalData.map(d => d.throughput)).toFixed(2) 
+    : '0';
+  const maxThpt = historicalData.length 
+    ? Math.max(...historicalData.map(d => d.throughput)).toFixed(2) 
+    : '0';
+  const peakCpu = historicalData.length 
+    ? Math.max(...historicalData.map(d => parseInt(d.cpu || '0'))) 
+    : '0';
 
   // Fetch real 30-day history from the backend
   useEffect(() => {
@@ -194,35 +209,38 @@ const HistoricalExecutionDetails = ({ id }) => {
           <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Avg Throughput</p>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-extrabold text-slate-900 leading-none">{data.avgThroughput.split(' ')[0]}</p>
-              <p className="text-sm font-bold text-slate-400 mb-0.5">{data.avgThroughput.split(' ')[1]}</p>
+              <p className="text-3xl font-extrabold text-slate-900 leading-none">{avgThroughput}</p>
+              <p className="text-sm font-bold text-slate-400 mb-0.5">Units</p>
             </div>
           </div>
-
-          <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          
+          <div className="bg-white rounded-xl p-5 border-t-[3px] border-orange-500 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <svg className="w-12 h-12 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            </div>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Peak CPU</p>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-extrabold text-slate-900 leading-none">{data.peakCpu.replace('%', '')}</p>
+              <p className="text-3xl font-extrabold text-slate-900 leading-none">{peakCpu}</p>
               <p className="text-sm font-bold text-slate-400 mb-0.5">%</p>
             </div>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
-              <div className="bg-orange-400 h-full rounded-full" style={{ width: data.peakCpu }}></div>
+            <div className="mt-3 w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-orange-500 rounded-full" style={{ width: `${peakCpu}%` }}></div>
             </div>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Min Throughput</p>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-extrabold text-blue-600 leading-none">{data.minThroughput.split(' ')[0]}</p>
-              <p className="text-sm font-bold text-slate-400 mb-0.5">{data.minThroughput.split(' ')[1]}</p>
+              <p className="text-3xl font-extrabold text-blue-600 leading-none">{minThpt}</p>
+              <p className="text-sm font-bold text-slate-400 mb-0.5">Units</p>
             </div>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Max Throughput</p>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-extrabold text-emerald-600 leading-none">{data.maxThroughput.split(' ')[0]}</p>
-              <p className="text-sm font-bold text-slate-400 mb-0.5">{data.maxThroughput.split(' ')[1]}</p>
+              <p className="text-3xl font-extrabold text-emerald-600 leading-none">{maxThpt}</p>
+              <p className="text-sm font-bold text-slate-400 mb-0.5">Units</p>
             </div>
           </div>
         </div>

@@ -12,7 +12,8 @@ function App() {
   }, []);
 
   if (currentHash.startsWith('#/history/')) {
-    const id = currentHash.split('#/history/')[1];
+    const fullId = currentHash.split('#/history/')[1] || '';
+    const id = fullId.split('?')[0];
     return <HistoricalExecutionDetails id={id} />;
   }
 

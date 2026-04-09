@@ -114,9 +114,14 @@ const DailySanityDashboard = ({ data: propData }) => {
         title: 'View GNATS issue details'
       };
     } else {
-      // Historical view link
+      // Historical view link — encode item data as URL params
+      const params = new URLSearchParams({
+        tc: item.testCase,
+        p:  item.parameter,
+        t:  item.throughput,
+      });
       return {
-        href: `#/history/${item.id}`,
+        href: `#/history/${item.id}?${params.toString()}`,
         target: '_self',
         title: 'View historical performance data'
       };
