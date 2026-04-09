@@ -170,21 +170,60 @@ const HistoricalExecutionDetails = ({ id }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/20 to-emerald-50/30 text-slate-900 pb-16">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16 relative overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
         
         .font-jetbrains {
           font-family: 'JetBrains Mono', monospace;
         }
+
+        @keyframes floatBlob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -40px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-blob { animation: floatBlob 15s infinite alternate ease-in-out; }
+        .animate-fade-in-up {
+          opacity: 0;
+          animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Custom Light Premium Scrollbar */
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: rgba(241, 245, 249, 0.5);
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: rgba(16, 185, 129, 0.4);
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(16, 185, 129, 0.7);
+        }
       `}</style>
 
+      {/* Dynamic Atmospheric Glows */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-40 -right-20 w-[50rem] h-[50rem] rounded-full blur-[100px] animate-blob bg-slate-200/40 transition-colors duration-1000"></div>
+        <div className="absolute top-60 -left-40 w-[40rem] h-[40rem] rounded-full blur-[100px] animate-blob bg-slate-200/30 transition-colors duration-1000" style={{ animationDelay: '4s' }}></div>
+      </div>
+
       {/* Header Section */}
-      <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+      <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50 relative">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <a 
             href="#" 
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-green-700 transition-colors mb-4 group"
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-emerald-600 transition-colors mb-4 group"
           >
             <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -195,13 +234,13 @@ const HistoricalExecutionDetails = ({ id }) => {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="flex-1">
               {/* Image Name - Prominent Display */}
-              <div className="mb-3 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg shadow-sm">
-                <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mb-3 inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg shadow-sm">
+                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <div>
-                  <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Image Version</p>
-                  <p className="font-jetbrains text-sm font-bold text-emerald-900">{metadata.imageName || 'Loading...'}</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Image Version</p>
+                  <p className="font-jetbrains text-sm font-bold text-slate-800">{metadata.imageName || 'Loading...'}</p>
                 </div>
               </div>
               
@@ -222,10 +261,10 @@ const HistoricalExecutionDetails = ({ id }) => {
               </p>
             </div>
             <div className="flex gap-3">
-              <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm focus:ring-2 focus:ring-green-500/20">
+              <button className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm focus:ring-2 focus:ring-emerald-500/20">
                 Export CSV
               </button>
-              <button className="px-4 py-2 bg-green-600 border border-transparent rounded-lg text-sm font-semibold text-white hover:bg-green-700 transition-colors shadow-sm focus:ring-2 focus:ring-green-600/50">
+              <button className="px-4 py-2 bg-slate-800 border border-transparent rounded-lg text-sm font-semibold text-white hover:bg-slate-700 transition-all shadow-sm focus:ring-2 focus:ring-slate-600/50">
                 Download Report
               </button>
             </div>
@@ -233,11 +272,11 @@ const HistoricalExecutionDetails = ({ id }) => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8 relative z-10">
         
         {/* KPI Cards (Top Row) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+          <div className="bg-white/95 backdrop-blur-xl rounded-xl p-5 border border-slate-300 shadow-lg hover:shadow-xl transition-all duration-300">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Avg Throughput</p>
             <div className="flex items-end gap-2">
               <p className="text-3xl font-extrabold text-slate-900 leading-none">{avgThroughput}</p>
@@ -245,7 +284,7 @@ const HistoricalExecutionDetails = ({ id }) => {
             </div>
           </div>
           
-          <div className="bg-white rounded-xl p-5 border-t-[3px] border-orange-500 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+          <div className="bg-white/95 backdrop-blur-xl rounded-xl p-5 border-t-[3px] border-orange-500 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <svg className="w-12 h-12 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </div>
@@ -259,7 +298,7 @@ const HistoricalExecutionDetails = ({ id }) => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <div className="bg-white/95 backdrop-blur-xl rounded-xl p-5 border border-slate-300 shadow-lg hover:shadow-xl transition-all duration-300">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Min Throughput</p>
             <div className="flex items-end gap-2">
               <p className="text-3xl font-extrabold text-blue-600 leading-none">{minThpt}</p>
@@ -267,7 +306,7 @@ const HistoricalExecutionDetails = ({ id }) => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <div className="bg-white/95 backdrop-blur-xl rounded-xl p-5 border border-slate-300 shadow-lg hover:shadow-xl transition-all duration-300">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Max Throughput</p>
             <div className="flex items-end gap-2">
               <p className="text-3xl font-extrabold text-emerald-600 leading-none">{maxThpt}</p>
@@ -280,8 +319,8 @@ const HistoricalExecutionDetails = ({ id }) => {
         <div className="grid grid-cols-1 gap-6">
           
           {/* Throughput Chart */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
+          <div className="bg-white/95 backdrop-blur-xl rounded-xl border border-slate-300 shadow-lg overflow-hidden animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
               <h2 className="text-lg font-bold text-slate-800 tracking-tight">Throughput over Time</h2>
               <p className="text-xs text-slate-500 mt-0.5">Daily test execution results (30 days)</p>
             </div>
@@ -318,6 +357,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                         y2={y}
                         stroke="#e2e8f0"
                         strokeWidth="1"
+                        strokeDasharray={ratio === 0 || ratio === 1 ? "0" : "4 4"}
                       />
                     );
                   })}
@@ -327,7 +367,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                     <path
                       d={areaPath}
                       fill="url(#throughputGradient)"
-                      opacity="0.3"
+                      opacity="0.2"
                     />
                   )}
 
@@ -337,7 +377,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                       d={linePath}
                       fill="none"
                       stroke="#10b981"
-                      strokeWidth="3"
+                      strokeWidth="2.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
@@ -348,18 +388,26 @@ const HistoricalExecutionDetails = ({ id }) => {
                     const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
                     const y = scaleY(point.throughput) + padding.top;
                     return (
-                      <circle
-                        key={index}
-                        cx={x}
-                        cy={y}
-                        r="5"
-                        fill="#10b981"
-                        stroke="white"
-                        strokeWidth="2"
-                        className="cursor-pointer hover:r-7 transition-all"
-                        onMouseEnter={(e) => handlePointHover(point, index, e)}
-                        onMouseLeave={handlePointLeave}
-                      />
+                      <g key={index}>
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="6"
+                          fill="white"
+                          stroke="#10b981"
+                          strokeWidth="2.5"
+                          className="cursor-pointer transition-all"
+                          onMouseEnter={(e) => handlePointHover(point, index, e)}
+                          onMouseLeave={handlePointLeave}
+                        />
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="3"
+                          fill="#10b981"
+                          className="pointer-events-none"
+                        />
+                      </g>
                     );
                   })}
 
@@ -376,7 +424,8 @@ const HistoricalExecutionDetails = ({ id }) => {
                         alignmentBaseline="middle"
                         fontSize="11"
                         fill="#64748b"
-                        fontWeight="500"
+                        fontWeight="600"
+                        fontFamily="'JetBrains Mono', monospace"
                       >
                         {value.toFixed(0)}
                       </text>
@@ -395,7 +444,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                         textAnchor="middle"
                         fontSize="10"
                         fill="#94a3b8"
-                        fontWeight="500"
+                        fontWeight="600"
                       >
                         {historicalData[index].date}
                       </text>
@@ -405,7 +454,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                   {/* Gradient definition */}
                   <defs>
                     <linearGradient id="throughputGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.6" />
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.5" />
                       <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
                     </linearGradient>
                   </defs>
@@ -415,8 +464,8 @@ const HistoricalExecutionDetails = ({ id }) => {
           </div>
 
           {/* CPU Chart */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
+          <div className="bg-white/95 backdrop-blur-xl rounded-xl border border-slate-300 shadow-lg overflow-hidden animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
               <h2 className="text-lg font-bold text-slate-800 tracking-tight">CPU Usage over Time</h2>
               <p className="text-xs text-slate-500 mt-0.5">Daily CPU utilization (30 days)</p>
             </div>
@@ -452,6 +501,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                         y2={y}
                         stroke="#e2e8f0"
                         strokeWidth="1"
+                        strokeDasharray={ratio === 0 || ratio === 1 ? "0" : "4 4"}
                       />
                     );
                   })}
@@ -467,7 +517,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                       }).join(' ')}
                       fill="none"
                       stroke="#fb923c"
-                      strokeWidth="3"
+                      strokeWidth="2.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
@@ -479,18 +529,26 @@ const HistoricalExecutionDetails = ({ id }) => {
                     const cpuVal = parseInt(point.cpu || '0');
                     const y = padding.top + innerHeight * (1 - cpuVal / 100);
                     return (
-                      <circle
-                        key={index}
-                        cx={x}
-                        cy={y}
-                        r="5"
-                        fill="#fb923c"
-                        stroke="white"
-                        strokeWidth="2"
-                        className="cursor-pointer hover:r-7 transition-all"
-                        onMouseEnter={(e) => handlePointHover(point, index, e)}
-                        onMouseLeave={handlePointLeave}
-                      />
+                      <g key={index}>
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="6"
+                          fill="white"
+                          stroke="#fb923c"
+                          strokeWidth="2.5"
+                          className="cursor-pointer transition-all"
+                          onMouseEnter={(e) => handlePointHover(point, index, e)}
+                          onMouseLeave={handlePointLeave}
+                        />
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="3"
+                          fill="#fb923c"
+                          className="pointer-events-none"
+                        />
+                      </g>
                     );
                   })}
 
@@ -506,7 +564,8 @@ const HistoricalExecutionDetails = ({ id }) => {
                         alignmentBaseline="middle"
                         fontSize="11"
                         fill="#64748b"
-                        fontWeight="500"
+                        fontWeight="600"
+                        fontFamily="'JetBrains Mono', monospace"
                       >
                         {value}%
                       </text>
@@ -525,7 +584,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                         textAnchor="middle"
                         fontSize="10"
                         fill="#94a3b8"
-                        fontWeight="500"
+                        fontWeight="600"
                       >
                         {historicalData[index].date}
                       </text>
@@ -537,8 +596,8 @@ const HistoricalExecutionDetails = ({ id }) => {
           </div>
 
           {/* Memory Chart */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
+          <div className="bg-white/95 backdrop-blur-xl rounded-xl border border-slate-300 shadow-lg overflow-hidden animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
               <h2 className="text-lg font-bold text-slate-800 tracking-tight">Memory Usage over Time</h2>
               <p className="text-xs text-slate-500 mt-0.5">Daily memory consumption (30 days)</p>
             </div>
@@ -574,6 +633,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                         y2={y}
                         stroke="#e2e8f0"
                         strokeWidth="1"
+                        strokeDasharray={ratio === 0 || ratio === 1 ? "0" : "4 4"}
                       />
                     );
                   })}
@@ -596,7 +656,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                         }).join(' ')}
                         fill="none"
                         stroke="#60a5fa"
-                        strokeWidth="3"
+                        strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
@@ -616,18 +676,26 @@ const HistoricalExecutionDetails = ({ id }) => {
                       const normalized = (memVal - minMem) / memRange;
                       const y = padding.top + innerHeight * (1 - normalized);
                       return (
-                        <circle
-                          key={index}
-                          cx={x}
-                          cy={y}
-                          r="5"
-                          fill="#60a5fa"
-                          stroke="white"
-                          strokeWidth="2"
-                          className="cursor-pointer hover:r-7 transition-all"
-                          onMouseEnter={(e) => handlePointHover(point, index, e)}
-                          onMouseLeave={handlePointLeave}
-                        />
+                        <g key={index}>
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r="6"
+                            fill="white"
+                            stroke="#60a5fa"
+                            strokeWidth="2.5"
+                            className="cursor-pointer transition-all"
+                            onMouseEnter={(e) => handlePointHover(point, index, e)}
+                            onMouseLeave={handlePointLeave}
+                          />
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r="3"
+                            fill="#60a5fa"
+                            className="pointer-events-none"
+                          />
+                        </g>
                       );
                     });
                   })()}
@@ -650,7 +718,8 @@ const HistoricalExecutionDetails = ({ id }) => {
                           alignmentBaseline="middle"
                           fontSize="11"
                           fill="#64748b"
-                          fontWeight="500"
+                          fontWeight="600"
+                          fontFamily="'JetBrains Mono', monospace"
                         >
                           {value.toFixed(0)}
                         </text>
@@ -670,7 +739,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                         textAnchor="middle"
                         fontSize="10"
                         fill="#94a3b8"
-                        fontWeight="500"
+                        fontWeight="600"
                       >
                         {historicalData[index].date}
                       </text>
@@ -684,20 +753,20 @@ const HistoricalExecutionDetails = ({ id }) => {
         </div>
 
         {/* Data Summary Table */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
+        <div className="bg-white/95 backdrop-blur-xl rounded-xl border border-slate-300 shadow-lg overflow-hidden animate-fade-in-up" style={{ animationDelay: '500ms' }}>
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
             <h2 className="text-lg font-bold text-slate-800 tracking-tight">Recent Execution Summary</h2>
             <p className="text-xs text-slate-500 mt-0.5">Last 10 daily test runs</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-slate-800 border-b border-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Throughput</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">CPU</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Memory</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">SHM</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Throughput</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">CPU</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Memory</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">SHM</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -723,6 +792,20 @@ const HistoricalExecutionDetails = ({ id }) => {
           </div>
         </div>
       </main>
+
+      {/* Footer matching dashboard */}
+      <footer className="bg-white border-t border-slate-200 shadow-sm relative z-10">
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+            <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span className="font-medium">Historical Data View</span>
+            <span className="text-slate-400">•</span>
+            <span className="font-jetbrains font-semibold text-slate-700">{historicalData.length} days loaded</span>
+          </div>
+        </div>
+      </footer>
 
       {/* Custom Tooltip Portal */}
       {hoveredPoint && (
