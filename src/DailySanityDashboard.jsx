@@ -585,52 +585,35 @@ const DailySanityDashboard = ({ data: propData }) => {
                                   {/* SRX 440 Telemetry Column */}
                                   <div 
                                     className="col-span-4 flex flex-col justify-center gap-1"
-                                    onMouseEnter={(e) => handleCellEnter(e, `${item.id}-srx440`)}
+                                    onMouseEnter={(e) => item.throughput440 && handleCellEnter(e, `${item.id}-srx440`)}
                                     onMouseLeave={() => setHoveredCell(null)}
                                   >
-                                    {isNumericOnly(item.throughput) ? (
-                                      <a
-                                        {...getThroughputLink(item)}
-                                        className="inline-flex items-center gap-1 rounded group/link transition-all duration-200 w-max"
-                                      >
-                                        <span className="font-jetbrains text-sm font-medium text-slate-700 group-hover/link:text-emerald-600 transition-all">
-                                          {Number(item.throughput).toLocaleString()}
-                                        </span>
-                                        <svg className="w-3.5 h-3.5 text-emerald-500 opacity-0 group-hover/link:opacity-100 group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 19L20 5m0 0H9m11 0v11" />
-                                        </svg>
-                                      </a>
-                                    ) : (
-                                      <a
-                                        {...getThroughputLink(item)}
-                                        className="flex flex-col gap-1.5 w-full max-w-[200px] group/link cursor-pointer"
-                                      >
-                                        <div className="flex justify-between items-end">
-                                          <span className="font-jetbrains text-sm font-medium text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 shadow-sm leading-tight group-hover/link:bg-emerald-50 group-hover/link:text-emerald-700 group-hover/link:border-emerald-300 transition-all">
-                                            {tData.throughputText}
+                                    {item.throughput440 ? (
+                                      // Has real 440 data — render same as 400
+                                      isNumericOnly(item.throughput440) ? (
+                                        <a
+                                          href={`https://gnats.juniper.net/web/default/${item.throughput440}#description_tab`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 rounded group/link transition-all duration-200 w-max"
+                                        >
+                                          <span className="font-jetbrains text-sm font-medium text-slate-700 group-hover/link:text-emerald-600 transition-all">
+                                            {Number(item.throughput440).toLocaleString()}
                                           </span>
-                                          {tData.hasCPU && (
-                                            <span className={`font-jetbrains text-xs font-bold tracking-tight ${tData.cpuPercent > 90 ? 'text-orange-600' : 'text-slate-500'}`}>
-                                              CPU {tData.cpuPercent}%
-                                            </span>
-                                          )}
-                                        </div>
-                                        
-                                        {tData.hasCPU && (
-                                          <div className="relative w-full h-[4px] bg-slate-200 rounded-full overflow-hidden shadow-inner border border-slate-300/50">
-                                            <div className="absolute top-0 bottom-0 left-[80%] w-px bg-slate-400 z-10"></div>
-                                            <div className="absolute top-0 bottom-0 left-[90%] w-px bg-slate-400 z-10"></div>
-                                            <div 
-                                              className={`absolute left-0 top-0 bottom-0 bg-gradient-to-r ${gaugeColor} transition-all duration-500`}
-                                              style={{ width: `${tData.cpuPercent}%` }}
-                                            >
-                                              <div className="absolute top-0 w-full h-full bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[scan_2s_ease-in-out_infinite]" style={{ animationDuration: '3s' }}></div>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </a>
+                                          <svg className="w-3.5 h-3.5 text-emerald-500 opacity-0 group-hover/link:opacity-100 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 19L20 5m0 0H9m11 0v11" />
+                                          </svg>
+                                        </a>
+                                      ) : (
+                                        <span className="font-jetbrains text-sm font-medium text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 shadow-sm leading-tight">
+                                          {item.throughput440}
+                                        </span>
+                                      )
+                                    ) : (
+                                      // No 440 data — show N/A
+                                      <span className="font-jetbrains text-sm text-slate-300 select-none">—</span>
                                     )}
-                                    
+
                                     <MetricsTooltip 
                                       position={hoveredCell?.id === `${item.id}-srx440` ? hoveredCell : null}
                                       isVisible={hoveredCell?.id === `${item.id}-srx440`}
