@@ -451,13 +451,20 @@ const DailySanityDashboard = ({ data: propData }) => {
                               <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${statusVisuals.bg} ${statusVisuals.glow} ring-[3px] ${statusVisuals.ring}`}></span>
                             </div>
 
-                            <span className={`text-sm font-semibold tracking-tight flex items-center gap-2 ${statusVisuals.text}`}>
-                              <span>{testCase.split(' (')[0]}</span>
-                              {testCase.includes(' (') && (
-                                <span className="font-jetbrains text-xs text-zinc-400 font-normal">
-                                  [Type: {testCase.split(' (')[1].replace(')', '')}]
-                                </span>
-                              )}
+                            <span className={`text-sm font-semibold tracking-tight ${statusVisuals.text}`}>
+                              <div className="flex flex-col">
+                                <span>{testCase.includes('Throughput') ? testCase.replace('Firewall Throughput', 'UDP Throughput') : testCase.split(' (')[0]}</span>
+                                {testCase.includes('Firewall Throughput') && (
+                                  <span className="font-jetbrains text-xs text-slate-400 font-normal">
+                                    Firewall Throughput
+                                  </span>
+                                )}
+                                {testCase.includes(' (') && !testCase.includes('Firewall Throughput') && (
+                                  <span className="font-jetbrains text-xs text-slate-400 font-normal">
+                                    {testCase.split(' (')[1].replace(')', '')}
+                                  </span>
+                                )}
+                              </div>
                             </span>
                           </div>
                         </div>
@@ -504,7 +511,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                                   {/* SRX 400 Column */}
                                   <div 
                                     className="col-span-4 flex flex-col justify-center gap-1"
-                                    onMouseEnter={(e) => handleCellEnter(e, `${item.id}-srx400`)}
+                                    onMouseEnter={(e) => !isNumericOnly(item.throughput) && handleCellEnter(e, `${item.id}-srx400`)}
                                     onMouseLeave={() => setHoveredCell(null)}
                                   >
                                     {isNumericOnly(item.throughput) ? (
@@ -524,16 +531,9 @@ const DailySanityDashboard = ({ data: propData }) => {
                                         {...getThroughputLink(item)}
                                         className="flex flex-col gap-1.5 w-full max-w-[200px] group/link cursor-pointer"
                                       >
-                                        <div className="flex justify-between items-end">
-                                          <span className="font-jetbrains text-sm font-medium text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 shadow-sm leading-tight group-hover/link:bg-emerald-50 group-hover/link:text-emerald-700 group-hover/link:border-emerald-300 transition-all">
-                                            {tData.throughputText}
-                                          </span>
-                                          {tData.hasCPU && (
-                                            <span className={`font-jetbrains text-xs font-bold tracking-tight ${tData.cpuPercent > 90 ? 'text-orange-600' : 'text-slate-500'}`}>
-                                              CPU {tData.cpuPercent}%
-                                            </span>
-                                          )}
-                                        </div>
+                                        <span className="font-jetbrains text-sm font-medium text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 shadow-sm leading-tight group-hover/link:bg-emerald-50 group-hover/link:text-emerald-700 group-hover/link:border-emerald-300 transition-all">
+                                          {tData.throughputText}
+                                        </span>
                                         
                                         {tData.hasCPU && (
                                           <div className="relative w-full h-[4px] bg-slate-200 rounded-full overflow-hidden shadow-inner border border-slate-300/50">
@@ -560,7 +560,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                                   {/* SRX 440 Column */}
                                   <div 
                                     className="col-span-4 flex flex-col justify-center gap-1"
-                                    onMouseEnter={(e) => item.throughput440 && handleCellEnter(e, `${item.id}-srx440`)}
+                                    onMouseEnter={(e) => item.throughput440 && !isNumericOnly(item.throughput440) && handleCellEnter(e, `${item.id}-srx440`)}
                                     onMouseLeave={() => setHoveredCell(null)}
                                   >
                                     {item.throughput440 ? (
