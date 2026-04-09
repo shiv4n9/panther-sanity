@@ -5,6 +5,7 @@ const HistoricalExecutionDetails = ({ id }) => {
   const [historicalData, setHistoricalData] = useState([]);
   const [histLoading, setHistLoading] = useState(true);
   const [histError, setHistError] = useState(null);
+  const [metadata, setMetadata] = useState({ imageName: '', platform: '' });
   const chartRef = useRef(null);
 
   const hashParts = window.location.hash.split('?');
@@ -18,6 +19,8 @@ const HistoricalExecutionDetails = ({ id }) => {
     parameter: parameterParam,
     status: "Passed",
     timestamp: new Date().toLocaleDateString(),
+    imageName: "", // Will be populated from API response
+    platform: "", // Will be populated from API response
   };
 
   // Aggregated stats from history (safely parse floats since throughput may contain letters like 'KPPS')
@@ -66,6 +69,13 @@ const HistoricalExecutionDetails = ({ id }) => {
         
         if (json.history && json.history.length > 0) {
           setHistoricalData(json.history);
+          // Extract metadata from first record
+          if (json.history[0]) {
+            setMetadata({
+              imageName: json.history[0].image_name || 'Unknown',
+              platform: json.history[0].platform || 'Unknown'
+            });
+          }
         } else {
           // Database is empty - no data has been ingested yet
           setHistError('No historical data found. Click "Ingest Latest" on the dashboard to populate the database.');
@@ -172,10 +182,21 @@ const HistoricalExecutionDetails = ({ id }) => {
           </a>
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
+            <div className="flex-1">
+              {/* Image Name - Prominent Display */}
+              <div className="mb-3 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg shadow-sm">
+                <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <div>
+                  <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Image Version</p>
+                  <p className="font-jetbrains text-sm font-bold text-emerald-900">{metadata.imageName || 'Loading...'}</p>
+                </div>
+              </div>
+              
               <div className="flex items-center gap-3 mb-2">
                 <span className="px-2.5 py-1 rounded bg-slate-100 text-slate-600 font-mono text-xs font-bold tracking-widest border border-slate-200">
-                  TEST ID: {data.runId}
+                  {metadata.platform || 'Platform'}
                 </span>
                 <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 shadow-sm">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -475,7 +496,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                   historicalData.slice(-10).reverse().map((row, index) => (
                     <tr key={index} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-3 text-sm text-slate-600 font-medium">{row.date}</td>
-                      <td className="px-6 py-3 text-sm font-jetbrains font-semibold text-emerald-600">{row.throughput} Gbps</td>
+                      <td className="px-6 py-3 text-sm font-jetbrains font-semibold text-emerald-600">{row.throughput}</td>
                       <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.cpu}</td>
                       <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.memory}</td>
                       <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.shm}</td>
@@ -506,7 +527,7 @@ const HistoricalExecutionDetails = ({ id }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>Throughput:</span>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '15px', fontWeight: 700, color: '#34d399' }}>{hoveredPoint.throughput} Gbps</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '15px', fontWeight: 700, color: '#34d399' }}>{hoveredPoint.throughput}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>CPU Usage:</span>
