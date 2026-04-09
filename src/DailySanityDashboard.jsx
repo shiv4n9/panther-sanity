@@ -437,7 +437,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                       {/* Accordion Header Row (Categorized Tint) */}
                       <div 
                         onClick={() => toggleGroup(testCase)}
-                        className={`grid grid-cols-12 gap-4 px-6 py-3 items-center cursor-pointer transition-colors duration-200 ${isExpanded ? catStyles.bgExpanded : catStyles.bg} ${catStyles.hover}`}
+                        className={`grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer transition-colors duration-200 ${isExpanded ? catStyles.bgExpanded : catStyles.bg} ${catStyles.hover}`}
                       >
                         <div className="col-span-12 flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -491,15 +491,20 @@ const DailySanityDashboard = ({ data: propData }) => {
                               return (
                                 <div 
                                   key={item.id}
-                                  className={`grid grid-cols-12 gap-4 px-6 py-2.5 items-center group/row hover:bg-slate-50 transition-all duration-200 relative ${!isLast ? 'border-b border-slate-100' : ''}`}
+                                  className={`grid grid-cols-12 gap-4 px-6 py-3.5 items-center group/row hover:bg-slate-50 transition-all duration-200 relative ${!isLast ? 'border-b border-slate-100' : ''}`}
                                 >
                                   {/* Indentation logic */}
                                   <div className="absolute left-[33px] top-0 bottom-0 w-px bg-slate-200 group-hover/row:bg-emerald-300 transition-colors"></div>
 
                                   <div className="col-span-4 flex items-center pl-8">
                                     <div className="w-3 h-px bg-slate-200 mr-3 group-hover/row:bg-emerald-300 transition-colors"></div>
-                                    <span className={`text-sm font-medium text-slate-700`}>
-                                      {testCase.includes('Firewall Throughput') ? 'Firewall UDP' : testCase.split(' (')[0]} Throughput ({item.parameter})
+                                    <span className={`text-sm font-medium text-slate-700 leading-relaxed`}>
+                                      {testCase.includes('Firewall Throughput') 
+                                        ? `Firewall UDP (${item.parameter})`
+                                        : testCase.includes('Throughput')
+                                        ? `${testCase.split(' (')[0]} (${item.parameter})`
+                                        : `${testCase} (${item.parameter})`
+                                      }
                                     </span>
                                   </div>
 
