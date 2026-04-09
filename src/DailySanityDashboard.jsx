@@ -521,7 +521,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                                         className="inline-flex items-center gap-1 rounded group/link transition-all duration-200 w-max"
                                       >
                                         <span className="font-jetbrains text-sm font-medium text-slate-700 group-hover/link:text-emerald-600 transition-all">
-                                          {item.throughput}
+                                          PR:{item.throughput}
                                         </span>
                                         <svg className="w-3.5 h-3.5 text-emerald-500 opacity-0 group-hover/link:opacity-100 group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 19L20 5m0 0H9m11 0v11" />
@@ -581,7 +581,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                                           className="inline-flex items-center gap-1 rounded group/link transition-all duration-200 w-max"
                                         >
                                           <span className="font-jetbrains text-sm font-medium text-slate-700 group-hover/link:text-emerald-600 transition-all">
-                                            {item.throughput440}
+                                            PR:{item.throughput440}
                                           </span>
                                           <svg className="w-3.5 h-3.5 text-emerald-500 opacity-0 group-hover/link:opacity-100 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 19L20 5m0 0H9m11 0v11" />
