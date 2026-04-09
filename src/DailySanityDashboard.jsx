@@ -198,16 +198,8 @@ const DailySanityDashboard = ({ data: propData }) => {
   };
 
   const getGroupStatus = (items) => {
-    let highestCpu = 0;
-    items.forEach(item => {
-      const td = parseThroughput(item.throughput);
-      if(td.hasCPU && td.cpuPercent > highestCpu) {
-        highestCpu = td.cpuPercent;
-      }
-    });
-    if (highestCpu > 95) return 'critical';
-    if (highestCpu > 90) return 'warning';
-    return 'healthy';
+    // Always return 'neutral' status - no red/green indicators
+    return 'neutral';
   };
 
   const getCategoryStyles = (testCase) => {
@@ -219,19 +211,11 @@ const DailySanityDashboard = ({ data: propData }) => {
   };
 
   const overallSeverity = useMemo(() => {
-    let severity = 0; 
-    Object.values(groupedData).forEach(items => {
-      const status = getGroupStatus(items);
-      if (status === 'critical') severity = 2;
-      else if (status === 'warning' && severity < 2) severity = 1;
-    });
-    return severity;
+    // Always use neutral colors - no red/green/amber
+    return 0;
   }, [groupedData]);
 
-  const blobColors = 
-    overallSeverity === 2 ? ['bg-red-200/40', 'bg-orange-200/30'] :
-    overallSeverity === 1 ? ['bg-amber-200/40', 'bg-yellow-200/30'] :
-    ['bg-emerald-200/40', 'bg-teal-200/30'];
+  const blobColors = ['bg-slate-200/40', 'bg-slate-200/30'];
 
   return (
     <>
@@ -328,7 +312,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                   Daily Sanity Execution
                 </h1>
                 <p className="text-sm font-medium text-slate-500 capitalize mt-1.5 ml-5">
-                  {metadata.platform} • {metadata.image}
+                  {metadata.platform}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -389,6 +373,11 @@ const DailySanityDashboard = ({ data: propData }) => {
                 </button>
 
                 <div className="text-right border-l border-slate-200 pl-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Image Version</p>
+                  <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{metadata.image || 'Loading...'}</p>
+                </div>
+                
+                <div className="text-right border-l border-slate-200 pl-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Database Sync</p>
                   <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{new Date().toLocaleTimeString()}</p>
                 </div>
@@ -444,9 +433,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                   const catStyles = getCategoryStyles(testCase);
                   
                   const statusVisuals = {
-                    critical: { ring: 'ring-red-400/30', bg: 'bg-red-500', glow: 'shadow-[0_0_12px_rgba(239,68,68,0.8)]', text: 'text-red-700' },
-                    warning: { ring: 'ring-orange-400/30', bg: 'bg-orange-500', glow: 'shadow-[0_0_12px_rgba(249,115,22,0.8)]', text: 'text-orange-700' },
-                    healthy: { ring: 'ring-emerald-400/30', bg: 'bg-emerald-500', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.8)]', text: catStyles.text }
+                    neutral: { ring: 'ring-slate-400/30', bg: 'bg-slate-500', glow: 'shadow-[0_0_12px_rgba(100,116,139,0.6)]', text: catStyles.text }
                   }[status];
 
                   return (
@@ -469,10 +456,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                             </div>
                             
                             <div className={`relative flex items-center justify-center w-2.5 h-2.5`}>
-                              {(status === 'critical' || status === 'warning') && (
-                                <span className={`absolute inline-flex w-full h-full rounded-full animate-ping opacity-60 ${statusVisuals.bg}`}></span>
-                              )}
-                              <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${statusVisuals.bg} ${statusVisuals.glow} ring-[3px] ${statusVisuals.ring} animate-pulse`} style={{ animationDuration: '3s' }}></span>
+                              <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${statusVisuals.bg} ${statusVisuals.glow} ring-[3px] ${statusVisuals.ring}`}></span>
                             </div>
 
                             <span className={`text-sm font-semibold tracking-tight flex items-center gap-2 ${statusVisuals.text}`}>
@@ -537,7 +521,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                                         className="inline-flex items-center gap-1 rounded group/link transition-all duration-200 w-max"
                                       >
                                         <span className="font-jetbrains text-sm font-medium text-slate-700 group-hover/link:text-emerald-600 transition-all">
-                                          {Number(item.throughput).toLocaleString()}
+                                          {item.throughput}
                                         </span>
                                         <svg className="w-3.5 h-3.5 text-emerald-500 opacity-0 group-hover/link:opacity-100 group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 19L20 5m0 0H9m11 0v11" />
@@ -597,7 +581,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                                           className="inline-flex items-center gap-1 rounded group/link transition-all duration-200 w-max"
                                         >
                                           <span className="font-jetbrains text-sm font-medium text-slate-700 group-hover/link:text-emerald-600 transition-all">
-                                            {Number(item.throughput440).toLocaleString()}
+                                            {item.throughput440}
                                           </span>
                                           <svg className="w-3.5 h-3.5 text-emerald-500 opacity-0 group-hover/link:opacity-100 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 19L20 5m0 0H9m11 0v11" />
