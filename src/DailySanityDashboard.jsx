@@ -85,6 +85,31 @@ const DailySanityDashboard = ({ data: propData }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedGroups, setExpandedGroups] = useState({});
   const [hoveredCell, setHoveredCell] = useState(null);
+  const [ingestStatus, setIngestStatus] = useState(null); // null | 'loading' | 'success' | 'error'
+  const [ingestMessage, setIngestMessage] = useState('');
+
+  const triggerIngest = async () => {
+    setIngestStatus('loading');
+    setIngestMessage('');
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${API_BASE}/api/ingest`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Ingest failed');
+      if (json.status === 'skipped') {
+        setIngestStatus('success');
+        setIngestMessage('Already up to date');
+      } else {
+        setIngestStatus('success');
+        setIngestMessage(`Ingested ${json.inserted} rows from ${json.filename}`);
+      }
+    } catch (err) {
+      setIngestStatus('error');
+      setIngestMessage(err.message);
+    } finally {
+      setTimeout(() => setIngestStatus(null), 4000);
+    }
+  };
 
   const isNumericOnly = (value) => {
     return /^\d+$/.test(value.trim());
@@ -313,7 +338,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                   {metadata.platform} • {metadata.image}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <div className="px-3.5 py-1.5 bg-slate-50 border border-slate-200 shadow-sm rounded-lg flex items-center gap-2.5 transition-colors">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
@@ -321,7 +346,56 @@ const DailySanityDashboard = ({ data: propData }) => {
                   </span>
                   <span className="text-xs font-bold text-emerald-600 tracking-wider uppercase">Live System</span>
                 </div>
-                <div className="text-right border-l border-slate-200 pl-4">
+
+                {/* Ingest Latest Button */}
+                <button
+                  onClick={triggerIngest}
+                  disabled={ingestStatus === 'loading'}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-200
+                    ${
+                      ingestStatus === 'loading'
+                        ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait'
+                        : ingestStatus === 'success'
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                        : ingestStatus === 'error'
+                        ? 'bg-red-50 border-red-300 text-red-700'
+                        : 'bg-white border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700'
+                    }`
+                  }
+                >
+                  {ingestStatus === 'loading' ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      </svg>
+                      Ingesting...
+                    </>
+                  ) : ingestStatus === 'success' ? (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {ingestMessage}
+                    </>
+                  ) : ingestStatus === 'error' ? (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      {ingestMessage}
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      Ingest Latest
+                    </>
+                  )}
+                </button>
+
+                <div className="text-right border-l border-slate-200 pl-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Database Sync</p>
                   <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{new Date().toLocaleTimeString()}</p>
                 </div>

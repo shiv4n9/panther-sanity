@@ -1,0 +1,68 @@
+services:
+
+  # ── PostgreSQL — Historical Data Store ──────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-panther_sanity}
+      POSTGRES_USER: ${POSTGRES_USER:-sanity}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sanity} -d ${POSTGRES_DB:-panther_sanity}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sanity_net
+
+  # ── Flask API — CSV Server + Ingest + History ────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      CSV_DIR: /data/csvs
+      PORT: 3001
+      HOST: 0.0.0.0
+      DEBUG: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sanity}:${POSTGRES_PASSWORD:-changeme_in_production}@db:5432/${POSTGRES_DB:-panther_sanity}
+    volumes:
+      # Mount the host CSV directory into the container (read-only for safety)
+      - ${CSV_DIR:-/root/gramasub/PANTHER_SANITY}:/data/csvs:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - sanity_net
+
+  # ── Nginx + React — Frontend ─────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - sanity_net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  sanity_net:
+    driver: bridge
