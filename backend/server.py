@@ -144,9 +144,23 @@ def ingest_csv(file_path: str) -> dict:
     # Derive run_date from filename (YYYYMMDD) or file mtime
     date_match = re.search(r'(\d{4})(\d{2})(\d{2})', filename)
     if date_match:
-        run_date = date(int(date_match.group(1)),
-                        int(date_match.group(2)),
-                        int(date_match.group(3)))
+        year = int(date_match.group(1))
+        month = int(date_match.group(2))
+        day = int(date_match.group(3))
+        
+        # Validate the extracted date
+        try:
+            run_date = date(year, month, day)
+            # If date is in the future, use file modification time instead
+            if run_date > date.today():
+                logger.warning(f"Filename contains future date {run_date}, using file mtime instead")
+                mtime = path.stat().st_mtime
+                run_date = datetime.fromtimestamp(mtime).date()
+        except ValueError:
+            # Invalid date in filename, fall back to mtime
+            logger.warning(f"Invalid date in filename: {year}-{month}-{day}, using file mtime")
+            mtime = path.stat().st_mtime
+            run_date = datetime.fromtimestamp(mtime).date()
     else:
         mtime    = path.stat().st_mtime
         run_date = datetime.fromtimestamp(mtime).date()
