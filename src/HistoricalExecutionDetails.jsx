@@ -51,18 +51,30 @@ const HistoricalExecutionDetails = ({ id }) => {
           parameter: data.parameter,
           days: 30,
         });
+        
+        console.log('Fetching history from:', `${API_BASE}/api/history?${params}`);
+        
         const res = await fetch(`${API_BASE}/api/history?${params}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`API returned ${res.status}: ${errorText}`);
+        }
+        
         const json = await res.json();
+        console.log('History API response:', json);
+        
         if (json.history && json.history.length > 0) {
           setHistoricalData(json.history);
         } else {
-          // No DB data yet — fall back to generated mock
-          setHistoricalData(generateMockHistory());
+          // Database is empty - no data has been ingested yet
+          setHistError('No historical data found. Click "Ingest Latest" on the dashboard to populate the database.');
+          setHistoricalData([]);
         }
       } catch (err) {
-        console.warn('History API unavailable, using mock data:', err.message);
-        setHistoricalData(generateMockHistory());
+        console.error('History API error:', err);
+        setHistError(`Failed to load historical data: ${err.message}`);
+        setHistoricalData([]);
       } finally {
         setHistLoading(false);
       }
@@ -70,22 +82,7 @@ const HistoricalExecutionDetails = ({ id }) => {
     fetchHistory();
   }, [data.testCase, data.parameter]);
 
-  // Fallback mock generator
-  const generateMockHistory = () => {
-    const days = 30;
-    return Array.from({ length: days }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (days - i - 1));
-      return {
-        day: `Day ${i + 1}`,
-        date: d.toISOString().split('T')[0],
-        throughput: parseFloat((1.72 + Math.random() * 0.11).toFixed(2)),
-        cpu: `${Math.floor(81 + Math.random() * 5)}%`,
-        memory: `${(5.0 + Math.random() * 0.4).toFixed(1)}GB`,
-        shm: '1GB',
-      };
-    });
-  };
+
 
   // Calculate chart dimensions and scaling
   const chartWidth = 1000;
@@ -286,11 +283,40 @@ const HistoricalExecutionDetails = ({ id }) => {
                   <div className="h-3 bg-slate-100 rounded w-1/2 mx-auto"></div>
                 </div>
               </div>
+            ) : histError ? (
+              <div className="h-[240px] flex items-center justify-center text-center">
+                <div className="max-w-md">
+                  <div className="text-amber-500 text-5xl mb-4">📊</div>
+                  <p className="text-slate-700 font-semibold text-base mb-2">No Historical Data Available</p>
+                  <p className="text-slate-500 text-sm mb-4">{histError}</p>
+                  <a 
+                    href="#" 
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-semibold shadow-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Go to Dashboard
+                  </a>
+                </div>
+              </div>
             ) : historicalData.length === 0 ? (
               <div className="h-[240px] flex items-center justify-center text-center">
-                <div>
-                  <p className="text-slate-400 font-medium text-sm">No historical data yet.</p>
-                  <p className="text-slate-300 text-xs mt-1">Click <strong>Ingest Latest</strong> on the dashboard to populate.</p>
+                <div className="max-w-md">
+                  <div className="text-slate-300 text-5xl mb-4">📈</div>
+                  <p className="text-slate-600 font-semibold text-base mb-2">No Data Points Yet</p>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Historical data will appear here once test results are ingested into the database.
+                  </p>
+                  <a 
+                    href="#" 
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-semibold shadow-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Dashboard
+                  </a>
                 </div>
               </div>
             ) : (
@@ -439,15 +465,23 @@ const HistoricalExecutionDetails = ({ id }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {historicalData.slice(-10).reverse().map((row, index) => (
-                  <tr key={index} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-3 text-sm text-slate-600 font-medium">{row.date}</td>
-                    <td className="px-6 py-3 text-sm font-jetbrains font-semibold text-emerald-600">{row.throughput} Gbps</td>
-                    <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.cpu}</td>
-                    <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.memory}</td>
-                    <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.shm}</td>
+                {historicalData.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center">
+                      <p className="text-slate-400 text-sm">No historical data available</p>
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  historicalData.slice(-10).reverse().map((row, index) => (
+                    <tr key={index} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-3 text-sm text-slate-600 font-medium">{row.date}</td>
+                      <td className="px-6 py-3 text-sm font-jetbrains font-semibold text-emerald-600">{row.throughput} Gbps</td>
+                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.cpu}</td>
+                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.memory}</td>
+                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.shm}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
