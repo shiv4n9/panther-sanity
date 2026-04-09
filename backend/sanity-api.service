@@ -1,0 +1,21 @@
+[Unit]
+Description=Sanity Test Results API Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/sanity-api
+Environment="PATH=/root/sanity-api/venv/bin"
+EnvironmentFile=/root/sanity-api/.env
+ExecStart=/root/sanity-api/venv/bin/python /root/sanity-api/server.py
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sanity-api
+
+[Install]
+WantedBy=multi-user.target
