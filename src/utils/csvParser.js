@@ -31,6 +31,11 @@ export const parseCSV = (csvContent) => {
       const parameter = fields[1]?.trim() || '';
       const throughput = fields[2]?.trim() || '';
       
+      // Skip the column header row
+      if (testCase.toUpperCase() === 'TESTCASE') continue;
+      // Skip blank test cases
+      if (!testCase) continue;
+      
       // Extract CPU, Memory, SHM if available
       const cpuMatch = throughput.match(/CPU:\s*(\d+)%/i);
       const cpu = cpuMatch ? cpuMatch[1] + '%' : '85%'; // Default for GNATS issues
@@ -50,7 +55,7 @@ export const parseCSV = (csvContent) => {
         // Check if throughput is a GNATS issue ID (numeric only)
         isGnatsIssue: /^\d+$/.test(throughput.trim()),
         gnatsUrl: /^\d+$/.test(throughput.trim()) 
-          ? `https://gnats.juniper.net/web/default/${throughput.trim()}` 
+          ? `https://gnats.juniper.net/web/default/${throughput.trim()}#description_tab` 
           : null
       });
     }

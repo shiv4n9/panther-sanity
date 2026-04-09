@@ -120,7 +120,7 @@ const DailySanityDashboard = ({ data: propData }) => {
     if (isNumericOnly(item.throughput)) {
       // GNATS issue link
       return {
-        href: `https://gnats.juniper.net/web/default/${item.throughput}`,
+        href: `https://gnats.juniper.net/web/default/${item.throughput}#description_tab`,
         target: '_blank',
         rel: 'noopener noreferrer',
         title: 'View GNATS issue details'

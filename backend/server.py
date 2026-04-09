@@ -100,9 +100,15 @@ def parse_csv_file(file_path: str) -> dict:
         if len(fields) < 3:
             continue
 
-        test_case  = fields[0]
-        parameter  = fields[1]
-        throughput = fields[2]
+        test_case  = fields[0].strip()
+        parameter  = fields[1].strip()
+        throughput = fields[2].strip()
+
+        # Skip the column header row
+        if test_case.upper() == 'TESTCASE':
+            continue
+        if not test_case:
+            continue
 
         cpu_match = re.search(r'CPU:\s*(\d+)%', throughput, re.IGNORECASE)
         cpu = (cpu_match.group(1) + '%') if cpu_match else None
