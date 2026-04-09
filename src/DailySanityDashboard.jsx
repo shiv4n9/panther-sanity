@@ -62,7 +62,7 @@ const DailySanityDashboard = ({ data: propData }) => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const result = await loadCSVFromServer('/sample-data.csv');
+        const result = await loadCSVFromServer();
         setCsvData(result);
         setLoading(false);
       } catch (err) {

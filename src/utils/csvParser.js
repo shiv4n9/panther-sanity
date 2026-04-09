@@ -103,7 +103,9 @@ const parseCSVLine = (line) => {
  */
 export const loadCSVFromServer = async (filePath = '/api/sanity-results/latest') => {
   try {
-    const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    // In production: VITE_API_URL is '' so URLs are relative (nginx proxies /api/ to backend)
+    // In local dev: set VITE_API_URL=http://localhost:3001 in .env
+    const API_BASE = import.meta.env.VITE_API_URL || '';
     const url = filePath.startsWith('http') ? filePath : `${API_BASE}${filePath}`;
     
     console.log('Loading CSV from:', url);
