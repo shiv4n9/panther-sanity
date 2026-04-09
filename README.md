@@ -6,6 +6,9 @@ Enterprise-grade dashboard for visualizing network testing metrics and performan
 ![Python](https://img.shields.io/badge/Python-3.8+-blue)
 ![React](https://img.shields.io/badge/React-19.2-61dafb)
 ![Flask](https://img.shields.io/badge/Flask-3.0-black)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+🔗 **Repository**: [github.com/shiv4n9/panther-sanity](https://github.com/shiv4n9/panther-sanity)
 
 ## 🎯 Features
 
