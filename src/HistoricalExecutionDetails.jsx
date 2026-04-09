@@ -55,12 +55,15 @@ const HistoricalExecutionDetails = ({ id }) => {
           days: 30,
         });
         
-        console.log('Fetching history from:', `${API_BASE}/api/history?${params}`);
+        const url = `${API_BASE}/api/history?${params}`;
+        console.log('Fetching history from:', url);
+        console.log('Query params:', { test_case: data.testCase, parameter: data.parameter });
         
-        const res = await fetch(`${API_BASE}/api/history?${params}`);
+        const res = await fetch(url);
         
         if (!res.ok) {
           const errorText = await res.text();
+          console.error('API error:', errorText);
           throw new Error(`API returned ${res.status}: ${errorText}`);
         }
         
@@ -89,7 +92,15 @@ const HistoricalExecutionDetails = ({ id }) => {
         setHistLoading(false);
       }
     };
-    fetchHistory();
+    
+    // Only fetch if we have test case and parameter
+    if (data.testCase && data.parameter) {
+      fetchHistory();
+    } else {
+      console.warn('Missing test case or parameter:', { testCase: data.testCase, parameter: data.parameter });
+      setHistLoading(false);
+      setHistError('Invalid test case or parameter');
+    }
   }, [data.testCase, data.parameter]);
 
 
