@@ -198,10 +198,6 @@ const HistoricalExecutionDetails = ({ id }) => {
                 <span className="px-2.5 py-1 rounded bg-slate-100 text-slate-600 font-mono text-xs font-bold tracking-widest border border-slate-200">
                   {metadata.platform || 'Platform'}
                 </span>
-                <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  {data.status.toUpperCase()}
-                </span>
                 <span className="text-xs font-medium text-slate-400 border-l border-slate-300 pl-3">
                   30-Day Historical View
                 </span>
@@ -269,8 +265,88 @@ const HistoricalExecutionDetails = ({ id }) => {
           </div>
         </div>
 
-        {/* Longitudinal Chart - Daily Runs */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Three Separate Charts - Throughput, CPU, Memory */}
+        <div className="grid grid-cols-1 gap-6">
+          
+          {/* Throughput Chart */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight">Throughput over Time</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Daily test execution results (30 days)</p>
+            </div>
+            <div className="p-6">
+              {histLoading ? (
+                <div className="h-[200px] flex items-center justify-center">
+                  <div className="text-slate-400">Loading...</div>
+                </div>
+              ) : histError || historicalData.length === 0 ? (
+                <div className="h-[200px] flex items-center justify-center text-center">
+                  <div>
+                    <p className="text-slate-400 text-sm">No data available</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center">
+                  <p className="text-slate-500 text-sm">Chart: Throughput values over 30 days</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* CPU Chart */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight">CPU Usage over Time</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Daily CPU utilization (30 days)</p>
+            </div>
+            <div className="p-6">
+              {histLoading ? (
+                <div className="h-[200px] flex items-center justify-center">
+                  <div className="text-slate-400">Loading...</div>
+                </div>
+              ) : histError || historicalData.length === 0 ? (
+                <div className="h-[200px] flex items-center justify-center text-center">
+                  <div>
+                    <p className="text-slate-400 text-sm">No data available</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center">
+                  <p className="text-slate-500 text-sm">Chart: CPU percentage over 30 days</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Memory Chart */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight">Memory Usage over Time</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Daily memory consumption (30 days)</p>
+            </div>
+            <div className="p-6">
+              {histLoading ? (
+                <div className="h-[200px] flex items-center justify-center">
+                  <div className="text-slate-400">Loading...</div>
+                </div>
+              ) : histError || historicalData.length === 0 ? (
+                <div className="h-[200px] flex items-center justify-center text-center">
+                  <div>
+                    <p className="text-slate-400 text-sm">No data available</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center">
+                  <p className="text-slate-500 text-sm">Chart: Memory usage over 30 days</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Longitudinal Chart - Daily Runs - OLD VERSION TO BE REPLACED */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" style={{display: 'none'}}>
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-800 tracking-tight">Throughput over Time</h2>
