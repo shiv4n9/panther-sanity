@@ -364,18 +364,15 @@ const DailySanityDashboard = ({ data: propData }) => {
                   )}
                 </button>
 
-                {/* Image Version Info - Two Platforms */}
-                <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
-                  <div className="text-right">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">SRX 400 Image</p>
-                    <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{metadata.image || 'Loading...'}</p>
+                {/* Image Version Info - Show only if data exists */}
+                {metadata.image && metadata.image !== 'Loading...' && (
+                  <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+                    <div className="text-right">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{metadata.platform} Image</p>
+                      <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{metadata.image}</p>
+                    </div>
                   </div>
-                  <div className="w-px h-8 bg-slate-200"></div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">SRX 440 Image</p>
-                    <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{metadata.image || 'Loading...'}</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
