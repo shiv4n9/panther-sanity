@@ -308,22 +308,14 @@ const DailySanityDashboard = ({ data: propData }) => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                  <span className="w-2 h-7 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.3)]"></span>
-                  Daily Sanity Execution
+                  <span className="w-2 h-7 bg-gradient-to-b from-slate-600 to-slate-800 rounded-full shadow-[0_0_8px_rgba(71,85,105,0.3)]"></span>
+                  PANTHER Daily Sanity Dashboard
                 </h1>
-                <p className="text-sm font-medium text-slate-500 capitalize mt-1.5 ml-5">
-                  {metadata.platform}
+                <p className="text-sm font-medium text-slate-500 mt-1.5 ml-5">
+                  Automated Test Execution Results
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="px-3.5 py-1.5 bg-slate-50 border border-slate-200 shadow-sm rounded-lg flex items-center gap-2.5 transition-colors">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
-                  </span>
-                  <span className="text-xs font-bold text-emerald-600 tracking-wider uppercase">Live System</span>
-                </div>
-
                 {/* Ingest Latest Button */}
                 <button
                   onClick={triggerIngest}
@@ -372,14 +364,17 @@ const DailySanityDashboard = ({ data: propData }) => {
                   )}
                 </button>
 
-                <div className="text-right border-l border-slate-200 pl-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Image Version</p>
-                  <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{metadata.image || 'Loading...'}</p>
-                </div>
-                
-                <div className="text-right border-l border-slate-200 pl-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Database Sync</p>
-                  <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{new Date().toLocaleTimeString()}</p>
+                {/* Image Version Info - Two Platforms */}
+                <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+                  <div className="text-right">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">SRX 400 Image</p>
+                    <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{metadata.image || 'Loading...'}</p>
+                  </div>
+                  <div className="w-px h-8 bg-slate-200"></div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">SRX 440 Image</p>
+                    <p className="font-jetbrains text-xs font-semibold text-slate-600 tracking-tight leading-tight mt-0.5">{metadata.image || 'Loading...'}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -617,6 +612,21 @@ const DailySanityDashboard = ({ data: propData }) => {
           </div>
 
         </main>
+
+        {/* Footer with Database Sync Time */}
+        <footer className="bg-white border-t border-slate-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-6 py-3">
+            <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+              <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-medium">Last Database Sync:</span>
+              <span className="font-jetbrains font-semibold text-slate-700">{new Date().toLocaleTimeString()}</span>
+              <span className="text-slate-400">•</span>
+              <span>{new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+        </footer>
       </div>
     </>
       )}
