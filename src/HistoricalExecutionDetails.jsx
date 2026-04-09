@@ -288,17 +288,29 @@ const HistoricalExecutionDetails = ({ id }) => {
             <div className="p-6">
               {histLoading ? (
                 <div className="h-[200px] flex items-center justify-center">
-                  <div className="text-slate-400">Loading...</div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
                 </div>
-              ) : histError || historicalData.length === 0 ? (
+              ) : histError ? (
+                <div className="h-[200px] flex items-center justify-center text-center">
+                  <div className="max-w-md">
+                    <p className="text-slate-600 font-medium mb-2">No Data Available</p>
+                    <p className="text-slate-400 text-sm">{histError}</p>
+                  </div>
+                </div>
+              ) : historicalData.length === 0 ? (
                 <div className="h-[200px] flex items-center justify-center text-center">
                   <div>
-                    <p className="text-slate-400 text-sm">No data available</p>
+                    <p className="text-slate-400 text-sm">No historical data found</p>
+                    <p className="text-slate-300 text-xs mt-1">Click "Ingest Latest" on the dashboard</p>
                   </div>
                 </div>
               ) : (
                 <div className="h-[200px] flex items-center justify-center">
-                  <p className="text-slate-500 text-sm">Chart: Throughput values over 30 days</p>
+                  <div className="text-center">
+                    <p className="text-slate-700 font-medium mb-2">Throughput Trend</p>
+                    <p className="text-slate-500 text-sm">{historicalData.length} days of data loaded</p>
+                    <p className="text-slate-400 text-xs mt-2">Chart visualization coming soon</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -313,17 +325,28 @@ const HistoricalExecutionDetails = ({ id }) => {
             <div className="p-6">
               {histLoading ? (
                 <div className="h-[200px] flex items-center justify-center">
-                  <div className="text-slate-400">Loading...</div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
                 </div>
-              ) : histError || historicalData.length === 0 ? (
+              ) : histError ? (
+                <div className="h-[200px] flex items-center justify-center text-center">
+                  <div className="max-w-md">
+                    <p className="text-slate-600 font-medium mb-2">No Data Available</p>
+                    <p className="text-slate-400 text-sm">{histError}</p>
+                  </div>
+                </div>
+              ) : historicalData.length === 0 ? (
                 <div className="h-[200px] flex items-center justify-center text-center">
                   <div>
-                    <p className="text-slate-400 text-sm">No data available</p>
+                    <p className="text-slate-400 text-sm">No historical data found</p>
                   </div>
                 </div>
               ) : (
                 <div className="h-[200px] flex items-center justify-center">
-                  <p className="text-slate-500 text-sm">Chart: CPU percentage over 30 days</p>
+                  <div className="text-center">
+                    <p className="text-slate-700 font-medium mb-2">CPU Usage Trend</p>
+                    <p className="text-slate-500 text-sm">{historicalData.length} days of data loaded</p>
+                    <p className="text-slate-400 text-xs mt-2">Chart visualization coming soon</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -338,17 +361,28 @@ const HistoricalExecutionDetails = ({ id }) => {
             <div className="p-6">
               {histLoading ? (
                 <div className="h-[200px] flex items-center justify-center">
-                  <div className="text-slate-400">Loading...</div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
                 </div>
-              ) : histError || historicalData.length === 0 ? (
+              ) : histError ? (
+                <div className="h-[200px] flex items-center justify-center text-center">
+                  <div className="max-w-md">
+                    <p className="text-slate-600 font-medium mb-2">No Data Available</p>
+                    <p className="text-slate-400 text-sm">{histError}</p>
+                  </div>
+                </div>
+              ) : historicalData.length === 0 ? (
                 <div className="h-[200px] flex items-center justify-center text-center">
                   <div>
-                    <p className="text-slate-400 text-sm">No data available</p>
+                    <p className="text-slate-400 text-sm">No historical data found</p>
                   </div>
                 </div>
               ) : (
                 <div className="h-[200px] flex items-center justify-center">
-                  <p className="text-slate-500 text-sm">Chart: Memory usage over 30 days</p>
+                  <div className="text-center">
+                    <p className="text-slate-700 font-medium mb-2">Memory Usage Trend</p>
+                    <p className="text-slate-500 text-sm">{historicalData.length} days of data loaded</p>
+                    <p className="text-slate-400 text-xs mt-2">Chart visualization coming soon</p>
+                  </div>
                 </div>
               )}
             </div>
