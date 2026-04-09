@@ -112,10 +112,11 @@ const HistoricalExecutionDetails = ({ id }) => {
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
-  const yMaxThroughput = Math.max(...historicalData.map(d => getNum(d.throughput)));
-  const yMinThroughput = Math.min(...historicalData.map(d => getNum(d.throughput)));
+  const yMaxThroughput = historicalData.length > 0 ? Math.max(...historicalData.map(d => getNum(d.throughput))) : 100;
+  const yMinThroughput = historicalData.length > 0 ? Math.min(...historicalData.map(d => getNum(d.throughput))) : 0;
   const yRange = yMaxThroughput - yMinThroughput;
-  const yPadding = yRange === 0 ? 10 : yRange * 0.1;
+  // For single data point, create a reasonable scale around the value (±20%)
+  const yPadding = yRange === 0 ? Math.max(yMaxThroughput * 0.2, 10) : yRange * 0.1;
 
   const scaleY = (value) => {
     const num = getNum(value);
@@ -124,20 +125,23 @@ const HistoricalExecutionDetails = ({ id }) => {
   };
 
   const scaleX = (index) => {
+    if (historicalData.length === 1) return innerWidth / 2; // Center single point
     return (index / (historicalData.length - 1)) * innerWidth;
   };
 
-  // Generate path for the line chart
-  const linePath = historicalData
+  // Generate path for the line chart (only if multiple points)
+  const linePath = historicalData.length > 1 ? historicalData
     .map((point, index) => {
       const x = scaleX(index) + padding.left;
       const y = scaleY(point.throughput) + padding.top;
       return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
     })
-    .join(' ');
+    .join(' ') : '';
 
-  // Generate path for the area fill
-  const areaPath = `${linePath} L ${scaleX(historicalData.length - 1) + padding.left},${innerHeight + padding.top} L ${padding.left},${innerHeight + padding.top} Z`;
+  // Generate path for the area fill (only if multiple points)
+  const areaPath = historicalData.length > 1 
+    ? `${linePath} L ${scaleX(historicalData.length - 1) + padding.left},${innerHeight + padding.top} L ${padding.left},${innerHeight + padding.top} Z`
+    : '';
 
   const handlePointHover = (point, index, event) => {
     // Get the SVG element and calculate exact position
@@ -411,6 +415,21 @@ const HistoricalExecutionDetails = ({ id }) => {
                     );
                   })}
 
+                  {/* Single data point indicator */}
+                  {historicalData.length === 1 && (
+                    <text
+                      x={chartWidth / 2}
+                      y={padding.top + innerHeight + 15}
+                      textAnchor="middle"
+                      fontSize="11"
+                      fill="#94a3b8"
+                      fontWeight="500"
+                      fontStyle="italic"
+                    >
+                      Single data point • More data will show trend over time
+                    </text>
+                  )}
+
                   {/* Y-axis labels */}
                   {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
                     const y = padding.top + innerHeight * ratio;
@@ -551,6 +570,21 @@ const HistoricalExecutionDetails = ({ id }) => {
                       </g>
                     );
                   })}
+
+                  {/* Single data point indicator */}
+                  {historicalData.length === 1 && (
+                    <text
+                      x={chartWidth / 2}
+                      y={padding.top + innerHeight + 15}
+                      textAnchor="middle"
+                      fontSize="11"
+                      fill="#94a3b8"
+                      fontWeight="500"
+                      fontStyle="italic"
+                    >
+                      Single data point • More data will show trend over time
+                    </text>
+                  )}
 
                   {/* Y-axis labels (0-100%) */}
                   {[0, 25, 50, 75, 100].map((value) => {
@@ -699,6 +733,21 @@ const HistoricalExecutionDetails = ({ id }) => {
                       );
                     });
                   })()}
+
+                  {/* Single data point indicator */}
+                  {historicalData.length === 1 && (
+                    <text
+                      x={chartWidth / 2}
+                      y={padding.top + innerHeight + 15}
+                      textAnchor="middle"
+                      fontSize="11"
+                      fill="#94a3b8"
+                      fontWeight="500"
+                      fontStyle="italic"
+                    >
+                      Single data point • More data will show trend over time
+                    </text>
+                  )}
 
                   {/* Y-axis labels (dynamic based on data) */}
                   {(() => {
