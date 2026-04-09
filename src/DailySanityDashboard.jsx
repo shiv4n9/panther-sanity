@@ -427,8 +427,8 @@ const DailySanityDashboard = ({ data: propData }) => {
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-800 border-b border-slate-700">
               <div className="col-span-4 text-xs font-bold text-slate-300 uppercase tracking-wider pl-1">System Test Case / Profile</div>
-              <div className="col-span-4 text-xs font-bold text-slate-300 uppercase tracking-wider">SRX 400 Telemetry</div>
-              <div className="col-span-4 text-xs font-bold text-slate-300 uppercase tracking-wider">SRX 440 Telemetry</div>
+              <div className="col-span-4 text-xs font-bold text-slate-300 uppercase tracking-wider">SRX 400</div>
+              <div className="col-span-4 text-xs font-bold text-slate-300 uppercase tracking-wider">SRX 440</div>
             </div>
 
             {/* Table Body */}
@@ -484,12 +484,6 @@ const DailySanityDashboard = ({ data: propData }) => {
                               )}
                             </span>
                           </div>
-                          
-                          <div className="flex items-center gap-2 group-hover/accordion:-translate-x-1 transition-transform duration-300">
-                             <span className={`font-jetbrains px-2 py-0.5 rounded border bg-white/80 ${catStyles.border} ${catStyles.text} font-medium text-xs shadow-sm`}>
-                               {items.length} node{items.length !== 1 ? 's' : ''}
-                             </span>
-                          </div>
                         </div>
                       </div>
 
@@ -531,7 +525,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                                     </span>
                                   </div>
 
-                                  {/* SRX 400 Telemetry Column */}
+                                  {/* SRX 400 Column */}
                                   <div 
                                     className="col-span-4 flex flex-col justify-center gap-1"
                                     onMouseEnter={(e) => handleCellEnter(e, `${item.id}-srx400`)}
@@ -587,7 +581,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                                     />
                                   </div>
 
-                                  {/* SRX 440 Telemetry Column */}
+                                  {/* SRX 440 Column */}
                                   <div 
                                     className="col-span-4 flex flex-col justify-center gap-1"
                                     onMouseEnter={(e) => item.throughput440 && handleCellEnter(e, `${item.id}-srx440`)}
