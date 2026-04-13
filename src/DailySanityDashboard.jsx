@@ -318,7 +318,7 @@ const DailySanityDashboard = ({ data: propData }) => {
               <div className="flex items-center gap-3">
                 {/* Longevity Portal Button */}
                 <a
-                  href="http://10.204.134.80:3000/?device=snpsrx400a-proto"
+                  href="http://10.204.134.80:3000/#/device/snpsrx400a-proto"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-1.5 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-blue-100 hover:border-blue-400 transition-all duration-200"
