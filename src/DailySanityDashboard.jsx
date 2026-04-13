@@ -80,7 +80,7 @@ const DailySanityDashboard = ({ data: propData }) => {
     setIngestStatus('loading');
     setIngestMessage('');
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const API_BASE = import.meta.env.VITE_API_URL || '';
       const res = await fetch(`${API_BASE}/api/ingest?force=true`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Ingest failed');
