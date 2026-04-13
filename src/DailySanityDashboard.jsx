@@ -642,7 +642,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="font-medium">Last Database Sync:</span>
-              <span className="font-jetbrains font-semibold text-slate-900">{new Date().toLocaleTimeString()}</span>
+              <span className="font-jetbrains font-semibold text-slate-700">{new Date().toLocaleTimeString()}</span>
               <span className="text-slate-400">•</span>
               <span>{new Date().toLocaleDateString()}</span>
             </div>
