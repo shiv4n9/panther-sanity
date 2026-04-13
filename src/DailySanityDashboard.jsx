@@ -316,6 +316,20 @@ const DailySanityDashboard = ({ data: propData }) => {
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                {/* Longevity Portal Button */}
+                <a
+                  href="http://10.204.134.80:3000/?filter=HIGHEND"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-blue-100 hover:border-blue-400 transition-all duration-200"
+                  title="View SRX 400/440 telemetry in Longevity Portal"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Longevity
+                </a>
+
                 {/* Ingest Latest Button */}
                 <button
                   onClick={triggerIngest}
