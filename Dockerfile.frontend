@@ -9,6 +9,11 @@ RUN npm ci
 
 # Copy source and build
 COPY . .
+
+# Set VITE_API_URL to empty string so it uses relative URLs
+ARG VITE_API_URL=
+ENV VITE_API_URL=${VITE_API_URL}
+
 RUN npm run build
 
 # ── Stage 2: Serve with nginx ─────────────────────────────────
