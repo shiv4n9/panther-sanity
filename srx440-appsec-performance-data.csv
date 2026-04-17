@@ -1,0 +1,11 @@
+Platform,SRX440
+Image,25.4X300-202604130112.0-EVO
+TESTCASE,PARAMETER,THROUGHPUT
+HTTP Throughput via CPS Method (Payload: 64KB),AppSec + IDP-Recommended policy,"1000 CPS, 570 Mbps, CPU: 82%, Global data shm: 84%"
+HTTP Throughput via CPS Method (Payload: 64KB),AppSec + IDP-Enterprise Rec policy,"350 CPS, 200 Mbps, CPU: 82%, Global data shm: 84%"
+HTTPS Throughput via CPS Method (Payload: 64KB),AppSec + SSL(TLS1.2),"215 CPS, 125 Mbps, CPU: 81%, Global data shm: 76%"
+HTTPS Throughput via CPS Method (Payload: 64KB),AppSec + SSL+ IDP-Recommended policy,"190 CPS, 110 Mbps, CPU: 75%, Global data shm: 75%"
+HTTPS Throughput via CPS Method (Payload: 64KB),AppSec + SSL+ IDP-Enterprise Rec policy,"60 CPS, 34 Mbps, CPU: 70%, Global data shm: 64%"
+CPS Performance (Payload: 64B),AppSec with ASC enabled CPS,"11000 CPS, CPU: 80%, Global data shm: 84%"
+CPS Performance (Payload: 64B),AppSec CPS,"2800 CPS, CPU: 81%, Global Data shm: 81%"
+CPS Performance (Payload: 64B),AppSec + SSL(TLS1.2),"230 CPS, CPU: 38%, Global Data Shm: 78%"
