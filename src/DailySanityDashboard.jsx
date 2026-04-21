@@ -304,35 +304,35 @@ const DailySanityDashboard = ({ data: propData }) => {
 
         {/* Crisp Enterprise Header */}
         <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-6 py-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
                   <span className="w-2 h-7 bg-gradient-to-b from-slate-600 to-slate-800 rounded-full shadow-[0_0_8px_rgba(71,85,105,0.3)]"></span>
                   PANTHER Daily Sanity Dashboard
                 </h1>
-                <p className="text-sm font-medium text-slate-500 mt-1.5 ml-5">
+                <p className="text-sm font-medium text-slate-500 mt-1 ml-5">
                   Automated Test Execution Results
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {/* AppSec Performance Button */}
                 <a
                   href="#/appsec-performance"
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-lg border border-purple-300 bg-purple-50 text-purple-700 text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-purple-100 hover:border-purple-400 transition-all duration-200"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-300 bg-purple-50 text-purple-700 text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-purple-100 hover:border-purple-400 transition-all duration-200"
                   title="View SRX440 AppSec Performance Results"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
-                  AppSec Performance
+                  AppSec
                 </a>
 
                 {/* Ingest Latest Button */}
                 <button
                   onClick={triggerIngest}
                   disabled={ingestStatus === 'loading'}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-200
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-200
                     ${
                       ingestStatus === 'loading'
                         ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait'
@@ -381,22 +381,22 @@ const DailySanityDashboard = ({ data: propData }) => {
         </header>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-6 py-8 relative z-10 space-y-6">
+        <main className="max-w-7xl mx-auto px-6 py-6 relative z-10 space-y-4">
           
           {/* Search Bar */}
           <div 
             className="animate-fade-in-up relative group transition-shadow duration-300 rounded-xl"
-            style={{ animationDelay: '300ms' }}
+            style={{ animationDelay: '200ms' }}
           >
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               type="text"
-              placeholder="Query test configurations or network parameters..."
+              placeholder="Search test cases or parameters..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-white/95 backdrop-blur-md border border-slate-300 rounded-xl
+              className="w-full pl-11 pr-4 py-2.5 bg-white/95 backdrop-blur-md border border-slate-300 rounded-xl
                         focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500
                         transition-all duration-300 text-slate-800 text-sm font-medium placeholder-slate-400 shadow-sm hover:shadow-md"
             />
@@ -406,9 +406,9 @@ const DailySanityDashboard = ({ data: propData }) => {
           {metadata.image && metadata.image !== 'Loading...' && (
             <div 
               className="animate-fade-in-up bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl shadow-sm"
-              style={{ animationDelay: '350ms' }}
+              style={{ animationDelay: '250ms' }}
             >
-              <div className="px-6 py-3">
+              <div className="px-5 py-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -423,7 +423,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                   {/* Longevity Portal Button */}
                   <button
                     onClick={() => window.open('http://10.204.134.80:3000/?device=snpsrx400c-proto', '_blank')}
-                    className="flex items-center gap-2 px-3 py-1 rounded-md border border-blue-400 bg-white text-blue-600 text-xs font-semibold uppercase tracking-wider shadow-sm hover:bg-blue-50 hover:border-blue-500 transition-all duration-200"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-md border border-blue-400 bg-white text-blue-600 text-xs font-semibold uppercase tracking-wider shadow-sm hover:bg-blue-50 hover:border-blue-500 transition-all duration-200"
                     title="View SRX 400 telemetry in Longevity Portal"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -439,11 +439,11 @@ const DailySanityDashboard = ({ data: propData }) => {
           {/* High Density Accordion Table */}
           <div 
             className="animate-fade-in-up bg-white/95 backdrop-blur-xl rounded-xl shadow-lg border border-slate-300 overflow-hidden flex flex-col"
-            style={{ animationDelay: '400ms' }}
+            style={{ animationDelay: '300ms' }}
           >
             {/* Table Header */}
-            <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-800 border-b border-slate-700">
-              <div className="col-span-4 text-xs font-bold text-slate-300 uppercase tracking-wider pl-1">System Test Case / Profile</div>
+            <div className="grid grid-cols-12 gap-4 px-6 py-2.5 bg-slate-800 border-b border-slate-700">
+              <div className="col-span-4 text-xs font-bold text-slate-300 uppercase tracking-wider pl-1">Test Case / Configuration</div>
               <div className="col-span-4 text-xs font-bold text-slate-300 uppercase tracking-wider">SRX 400</div>
               <div className="col-span-4 text-xs font-bold text-slate-300 uppercase tracking-wider">SRX 440</div>
             </div>
@@ -473,7 +473,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                       {/* Accordion Header Row (Categorized Tint) */}
                       <div 
                         onClick={() => toggleGroup(testCase)}
-                        className={`grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer transition-colors duration-200 ${isExpanded ? catStyles.bgExpanded : catStyles.bg} ${catStyles.hover}`}
+                        className={`grid grid-cols-12 gap-4 px-6 py-3 items-center cursor-pointer transition-colors duration-200 ${isExpanded ? catStyles.bgExpanded : catStyles.bg} ${catStyles.hover}`}
                       >
                         <div className="col-span-12 flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -527,7 +527,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                               return (
                                 <div 
                                   key={item.id}
-                                  className={`grid grid-cols-12 gap-4 px-6 py-3.5 items-center group/row hover:bg-slate-50 transition-all duration-200 relative ${!isLast ? 'border-b border-slate-100' : ''}`}
+                                  className={`grid grid-cols-12 gap-4 px-6 py-2.5 items-center group/row hover:bg-slate-50 transition-all duration-200 relative ${!isLast ? 'border-b border-slate-100' : ''}`}
                                 >
                                   {/* Indentation logic */}
                                   <div className="absolute left-[33px] top-0 bottom-0 w-px bg-slate-200 group-hover/row:bg-emerald-300 transition-colors"></div>
