@@ -422,7 +422,7 @@ const DailySanityDashboard = ({ data: propData }) => {
                   
                   {/* Longevity Portal Button */}
                   <button
-                    onClick={() => window.open('http://10.204.134.80:3000/?device=snpsrx400a-proto', '_blank')}
+                    onClick={() => window.open('http://10.204.134.80:3000/?device=snpsrx400c-proto', '_blank')}
                     className="flex items-center gap-2 px-3 py-1 rounded-md border border-blue-400 bg-white text-blue-600 text-xs font-semibold uppercase tracking-wider shadow-sm hover:bg-blue-50 hover:border-blue-500 transition-all duration-200"
                     title="View SRX 400 telemetry in Longevity Portal"
                   >
