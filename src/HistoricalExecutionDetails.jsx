@@ -23,7 +23,7 @@ const HistoricalExecutionDetails = ({ id }) => {
   };
 
   // Filter out rows where throughput is a pure PR number (numeric-only = GNATS issue, not data)
-  const isNumericOnly = (v) => /^\d+$/.test((v || '').trim());
+  const isNumericOnly = (v) => /^\d+$/.test(String(v || '').trim());
 
   const stats = useMemo(() => {
     // Exclude PR rows from stats
