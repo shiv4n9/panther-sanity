@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { loadCSVFromServer } from './utils/csvParser';
+import { API_BASE } from './config/api';
 
 // Tooltip Component using Portal — uses mouse position, no refs needed
 const MetricsTooltip = ({ position, isVisible, data }) => {
@@ -80,7 +81,6 @@ const DailySanityDashboard = ({ data: propData }) => {
     setIngestStatus('loading');
     setIngestMessage('');
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || '';
       const res = await fetch(`${API_BASE}/api/ingest?force=true`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Ingest failed');
@@ -177,8 +177,8 @@ const DailySanityDashboard = ({ data: propData }) => {
     return groups;
   }, [filteredData]);
 
-  // Initial group expansion
-  useMemo(() => {
+  // Initial group expansion — useEffect because it triggers state updates
+  useEffect(() => {
     const initialExpanded = {};
     Object.keys(groupedData).forEach(testCase => {
       if (!(testCase in expandedGroups)) {
@@ -197,11 +197,6 @@ const DailySanityDashboard = ({ data: propData }) => {
     }));
   };
 
-  const getGroupStatus = (items) => {
-    // Always return 'neutral' status - no red/green indicators
-    return 'neutral';
-  };
-
   const getCategoryStyles = (testCase) => {
     const lowerCase = testCase.toLowerCase();
     if (lowerCase.includes('firewall') || lowerCase.includes('udp')) return { bg: 'bg-blue-50/90', bgExpanded: 'bg-blue-100/60', hover: 'hover:bg-blue-100', text: 'text-blue-900', border: 'border-blue-200' };
@@ -209,11 +204,6 @@ const DailySanityDashboard = ({ data: propData }) => {
     if (lowerCase.includes('appsec')) return { bg: 'bg-orange-50/90', bgExpanded: 'bg-orange-100/60', hover: 'hover:bg-orange-100', text: 'text-orange-900', border: 'border-orange-200' };
     return { bg: 'bg-slate-50/90', bgExpanded: 'bg-slate-100/60', hover: 'hover:bg-slate-100', text: 'text-slate-800', border: 'border-slate-200' };
   };
-
-  const overallSeverity = useMemo(() => {
-    // Always use neutral colors - no red/green/amber
-    return 0;
-  }, [groupedData]);
 
   const blobColors = ['bg-slate-200/40', 'bg-slate-200/30'];
 
@@ -246,50 +236,7 @@ const DailySanityDashboard = ({ data: propData }) => {
       
       {!loading && !error && (
       <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-        .font-jetbrains {
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        @keyframes scan {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
-        }
-        @keyframes floatBlob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -40px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-blob { animation: floatBlob 15s infinite alternate ease-in-out; }
-        .animate-fade-in-up {
-          opacity: 0;
-          animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        /* Custom Light Premium Scrollbar */
-        ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-          background: rgba(241, 245, 249, 0.5); /* Slate 50 */
-          border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb {
-          background: rgba(16, 185, 129, 0.4); /* Soft emerald */
-          border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-          background: rgba(16, 185, 129, 0.7); /* Brighter emerald on hover */
-        }
-      `}</style>
       
       <div 
         className={`min-h-screen bg-slate-50 text-slate-800 relative overflow-hidden pb-16 transition-colors duration-1000`}
@@ -457,12 +404,9 @@ const DailySanityDashboard = ({ data: propData }) => {
               ) : (
                 Object.entries(groupedData).map(([testCase, items], index) => {
                   const isExpanded = expandedGroups[testCase];
-                  const status = getGroupStatus(items);
                   const catStyles = getCategoryStyles(testCase);
                   
-                  const statusVisuals = {
-                    neutral: { ring: 'ring-slate-400/30', bg: 'bg-slate-500', glow: 'shadow-[0_0_12px_rgba(100,116,139,0.6)]', text: catStyles.text }
-                  }[status];
+                  const statusVisuals = { ring: 'ring-slate-400/30', bg: 'bg-slate-500', glow: 'shadow-[0_0_12px_rgba(100,116,139,0.6)]', text: catStyles.text };
 
                   return (
                     <div 

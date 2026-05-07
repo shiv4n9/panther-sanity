@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
-Entrypoint: starts the watchdog CSV watcher in a background thread,
-then serves the Flask app via Gunicorn (production WSGI server).
+Entrypoint: starts Gunicorn with a post_worker_init hook that launches
+the Watchdog CSV watcher inside each worker process — ensuring it survives
+the os.execv that Gunicorn performs internally.
 """
 import os
 import time
-import threading
 import logging
-import subprocess
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -18,6 +17,7 @@ CSV_DIR      = os.environ.get('CSV_DIR', '/data/csvs')
 
 
 def wait_for_db(retries=15, delay=3):
+    """Block until Postgres is reachable (reuses server.py's pool-less fallback)."""
     import psycopg2
     for i in range(retries):
         try:
@@ -32,22 +32,6 @@ def wait_for_db(retries=15, delay=3):
     return False
 
 
-def start_watchdog():
-    """Run the watchdog in a daemon thread."""
-    from watchdog.observers import Observer
-    from server import CSVHandler, ingest_csv
-    import re
-    from pathlib import Path
-    from datetime import datetime, date
-
-    handler  = CSVHandler()
-    observer = Observer()
-    observer.schedule(handler, CSV_DIR, recursive=False)
-    observer.daemon = True
-    observer.start()
-    logger.info(f"Watchdog started: watching {CSV_DIR}")
-
-
 if __name__ == '__main__':
     os.makedirs(CSV_DIR, exist_ok=True)
 
@@ -56,20 +40,20 @@ if __name__ == '__main__':
     else:
         logger.warning("DATABASE_URL not set — no database support")
 
-    # Start watchdog in background thread
-    t = threading.Thread(target=start_watchdog, daemon=True)
-    t.start()
-
     workers = int(os.environ.get('GUNICORN_WORKERS', 4))
     port    = int(os.environ.get('PORT', 3001))
 
     logger.info(f"Starting Gunicorn with {workers} workers on port {port}")
 
+    # Use subprocess instead of os.execv so we stay in control.
+    # Gunicorn is configured with a post_worker_init hook (gunicorn_conf.py)
+    # that starts the Watchdog inside worker 0.
     os.execv('/usr/local/bin/gunicorn', [
         'gunicorn',
         '--workers', str(workers),
         '--bind',    f'0.0.0.0:{port}',
         '--timeout', '60',
+        '--config',  'gunicorn_conf.py',
         '--access-logfile', '-',
         '--error-logfile',  '-',
         'server:app'

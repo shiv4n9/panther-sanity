@@ -44,9 +44,9 @@ export const parseCSV = (csvContent) => {
       const cpuMatch = throughput.match(/CPU:\s*(\d+)%/i);
       const cpu = cpuMatch ? cpuMatch[1] + '%' : null;
       
-      // Mock memory and SHM data
-      const memory = cpuMatch ? `${(4.5 + Math.random() * 1.5).toFixed(1)}GB` : null;
-      const shm = cpuMatch ? '512MB' : null;
+      // Memory and SHM — not yet available in CSV source data
+      const memory = null;
+      const shm = null;
       
       testData.push({
         id: idCounter++,
@@ -99,16 +99,12 @@ const parseCSVLine = (line) => {
   return fields;
 };
 
-/**
- * Load CSV file from server
- * @param {string} filePath - Path to CSV file (default: latest)
- * @returns {Promise<object>} Parsed CSV data
- */
+import { API_BASE } from '../config/api';
+
 export const loadCSVFromServer = async (filePath = '/api/sanity-results/latest') => {
   try {
-    // In production: VITE_API_URL is '' so URLs are relative (nginx proxies /api/ to backend)
+    // In production: API_BASE is '' so URLs are relative (nginx proxies /api/ to backend)
     // In local dev: set VITE_API_URL=http://localhost:3001 in .env
-    const API_BASE = import.meta.env.VITE_API_URL || '';
     const url = filePath.startsWith('http') ? filePath : `${API_BASE}${filePath}`;
     
     console.log('Loading CSV from:', url);
@@ -125,31 +121,4 @@ export const loadCSVFromServer = async (filePath = '/api/sanity-results/latest')
     console.error('Error loading CSV:', error);
     throw error;
   }
-};
-
-/**
- * Generate mock historical data for a test case
- * This would be replaced with actual historical CSV parsing
- * @param {number} testId - Test case ID
- * @returns {array} Historical data points
- */
-export const generateHistoricalData = (testId) => {
-  const days = 30;
-  const historicalData = [];
-  
-  for (let i = 0; i < days; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - (days - i - 1));
-    
-    historicalData.push({
-      day: `Day ${i + 1}`,
-      date: date.toISOString().split('T')[0],
-      throughput: (1.72 + Math.random() * 0.11).toFixed(2),
-      cpu: `${Math.floor(81 + Math.random() * 5)}%`,
-      memory: `${(5.0 + Math.random() * 0.4).toFixed(1)}GB`,
-      shm: '1GB'
-    });
-  }
-  
-  return historicalData;
 };

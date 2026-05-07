@@ -18,6 +18,7 @@ from datetime import datetime, date, timedelta
 import logging
 import psycopg2
 import psycopg2.extras
+import psycopg2.pool
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -40,13 +41,38 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '')
 os.makedirs(CSV_DIR, exist_ok=True)
 
 # ─── Database Helpers ─────────────────────────────────────────
+_db_pool = None
+
+
+def init_db_pool(minconn=2, maxconn=10):
+    """Initialize the connection pool. Call once after DB is reachable."""
+    global _db_pool
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL environment variable not set")
+    _db_pool = psycopg2.pool.ThreadedConnectionPool(minconn, maxconn, DATABASE_URL)
+    logger.info(f"Database connection pool initialized (min={minconn}, max={maxconn})")
+
+
 def get_db():
-    """Get a new database connection."""
+    """Get a connection from the pool (or create a one-off if pool not ready)."""
+    if _db_pool:
+        conn = _db_pool.getconn()
+        conn.autocommit = False
+        return conn
+    # Fallback for startup / health checks before pool is ready
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL environment variable not set")
     conn = psycopg2.connect(DATABASE_URL)
     conn.autocommit = False
     return conn
+
+
+def put_db(conn):
+    """Return a connection to the pool (or close it if no pool)."""
+    if _db_pool:
+        _db_pool.putconn(conn)
+    else:
+        conn.close()
 
 
 def wait_for_db(retries=10, delay=3):
@@ -132,11 +158,15 @@ def parse_csv_file(file_path: str) -> dict:
     }
 
 
-def ingest_csv(file_path: str) -> dict:
+def ingest_csv(file_path: str, force: bool = False) -> dict:
     """
     Parse a CSV file and insert its rows into sanity_runs.
     Skips rows that already exist for this csv_filename + run_date.
     Returns a summary dict.
+
+    Args:
+        file_path: Path to the CSV file.
+        force: If True, delete existing rows and re-insert.
     
     Note: The date in the filename represents the image build date, not the test execution date.
     We use the file modification time as the actual test run date.
@@ -149,7 +179,7 @@ def ingest_csv(file_path: str) -> dict:
     mtime    = path.stat().st_mtime
     run_date = datetime.fromtimestamp(mtime).date()
 
-    logger.info(f"Ingesting {filename} (run_date={run_date})")
+    logger.info(f"Ingesting {filename} (run_date={run_date}, force={force})")
 
     parsed  = parse_csv_file(file_path)
     rows    = parsed['rows']
@@ -159,8 +189,6 @@ def ingest_csv(file_path: str) -> dict:
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            force = request.args.get('force', 'false').lower() == 'true'
-            
             # Check if this file has already been ingested for this date
             cur.execute(
                 "SELECT COUNT(*) FROM sanity_runs WHERE csv_filename=%s AND run_date=%s",
@@ -212,7 +240,7 @@ def ingest_csv(file_path: str) -> dict:
         logger.error(f"Ingest failed for {filename}: {e}")
         raise
     finally:
-        conn.close()
+        put_db(conn)
 
 
 # ─── Watchdog ─────────────────────────────────────────────────
@@ -226,7 +254,7 @@ class CSVHandler(FileSystemEventHandler):
         if src.endswith('.csv'):
             logger.info(f"Watchdog detected: {src}")
             try:
-                ingest_csv(src)
+                ingest_csv(src, force=False)
             except Exception as e:
                 logger.error(f"Auto-ingest error: {e}")
 
@@ -250,7 +278,7 @@ def health_check():
     db_ok = False
     try:
         conn  = get_db()
-        conn.close()
+        put_db(conn)
         db_ok = True
     except Exception:
         pass
@@ -345,7 +373,8 @@ def manual_ingest():
         if not os.path.exists(file_path):
             return jsonify({'error': f'File not found: {file_path}'}), 404
 
-        result = ingest_csv(file_path)
+        force = request.args.get('force', 'false').lower() == 'true'
+        result = ingest_csv(file_path, force=force)
         return jsonify(result), 200
 
     except Exception as e:
@@ -371,27 +400,29 @@ def get_history():
 
     try:
         conn = get_db()
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT
-                  run_date,
-                  throughput,
-                  cpu,
-                  memory,
-                  shm,
-                  platform,
-                  image_name
-                FROM sanity_runs
-                WHERE test_case = %s
-                  AND parameter = %s
-                  AND run_date  >= %s
-                ORDER BY run_date ASC
-                """,
-                (test_case, parameter, since)
-            )
-            rows = cur.fetchall()
-        conn.close()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                      run_date,
+                      throughput,
+                      cpu,
+                      memory,
+                      shm,
+                      platform,
+                      image_name
+                    FROM sanity_runs
+                    WHERE test_case = %s
+                      AND parameter = %s
+                      AND run_date  >= %s
+                    ORDER BY run_date ASC
+                    """,
+                    (test_case, parameter, since)
+                )
+                rows = cur.fetchall()
+        finally:
+            put_db(conn)
 
         # Build response — one point per day
         history = []
@@ -449,6 +480,7 @@ if __name__ == '__main__':
     # Wait for Postgres before starting the server
     if DATABASE_URL:
         wait_for_db()
+        init_db_pool()
     else:
         logger.warning("DATABASE_URL not set — running without database support")
 

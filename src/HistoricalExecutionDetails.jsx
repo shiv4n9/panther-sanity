@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import LineChart from './components/LineChart';
+import { API_BASE } from './config/api';
 
 const HistoricalExecutionDetails = ({ id }) => {
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -6,41 +8,46 @@ const HistoricalExecutionDetails = ({ id }) => {
   const [histLoading, setHistLoading] = useState(true);
   const [histError, setHistError] = useState(null);
   const [metadata, setMetadata] = useState({ imageName: '', platform: '' });
-  const chartRef = useRef(null);
 
+  // Parse URL params once — stable references
   const hashParts = window.location.hash.split('?');
   const params = new URLSearchParams(hashParts.length > 1 ? hashParts[1] : '');
   const testCaseParam = params.get('tc') || "Unknown Test Case";
   const parameterParam = params.get('p') || "Unknown Parameter";
+  const runId = id || params.get('t') || "Unknown";
 
-  const data = {
-    runId: id || params.get('t') || "Unknown",
-    testCase: testCaseParam,
-    parameter: parameterParam,
-    status: "Passed",
-    timestamp: new Date().toLocaleDateString(),
-    imageName: "", // Will be populated from API response
-    platform: "", // Will be populated from API response
-  };
-
-  // Aggregated stats from history (safely parse floats since throughput may contain letters like 'KPPS')
+  // Aggregated stats (memoized)
   const getNum = (v) => {
     const parsed = parseFloat(v);
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  const avgThroughput = historicalData.length 
-    ? (historicalData.reduce((acc, curr) => acc + getNum(curr.throughput), 0) / historicalData.length).toFixed(2) 
-    : '0';
-  const minThpt = historicalData.length 
-    ? Math.min(...historicalData.map(d => getNum(d.throughput))).toFixed(2) 
-    : '0';
-  const maxThpt = historicalData.length 
-    ? Math.max(...historicalData.map(d => getNum(d.throughput))).toFixed(2) 
-    : '0';
-  const peakCpu = historicalData.length 
-    ? Math.max(...historicalData.map(d => parseInt(d.cpu || '0'))) 
-    : '0';
+  const stats = useMemo(() => {
+    if (historicalData.length === 0) return { avg: '0', min: '0', max: '0', peakCpu: '0' };
+    const values = historicalData.map(d => getNum(d.throughput));
+    return {
+      avg: (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2),
+      min: Math.min(...values).toFixed(2),
+      max: Math.max(...values).toFixed(2),
+      peakCpu: Math.max(...historicalData.map(d => parseInt(d.cpu || '0'))),
+    };
+  }, [historicalData]);
+
+  // Prepare CPU chart data — normalize to numeric percentages
+  const cpuChartData = useMemo(() => {
+    return historicalData.map(d => ({
+      ...d,
+      cpuValue: parseInt(d.cpu || '0'),
+    }));
+  }, [historicalData]);
+
+  // Prepare Memory chart data — normalize to numeric values
+  const memoryChartData = useMemo(() => {
+    return historicalData.map(d => ({
+      ...d,
+      memoryValue: parseInt(d.memory || '0'),
+    }));
+  }, [historicalData]);
 
   // Fetch real 30-day history from the backend
   useEffect(() => {
@@ -48,16 +55,14 @@ const HistoricalExecutionDetails = ({ id }) => {
       setHistLoading(true);
       setHistError(null);
       try {
-        const API_BASE = import.meta.env.VITE_API_URL || '';
-        const params = new URLSearchParams({
-          test_case: data.testCase,
-          parameter: data.parameter,
+        const urlParams = new URLSearchParams({
+          test_case: testCaseParam,
+          parameter: parameterParam,
           days: 30,
         });
         
-        const url = `${API_BASE}/api/history?${params}`;
+        const url = `${API_BASE}/api/history?${urlParams}`;
         console.log('Fetching history from:', url);
-        console.log('Query params:', { test_case: data.testCase, parameter: data.parameter });
         
         const res = await fetch(url);
         
@@ -72,7 +77,6 @@ const HistoricalExecutionDetails = ({ id }) => {
         
         if (json.history && json.history.length > 0) {
           setHistoricalData(json.history);
-          // Extract metadata from first record
           if (json.history[0]) {
             setMetadata({
               imageName: json.history[0].image_name || 'Unknown',
@@ -80,7 +84,6 @@ const HistoricalExecutionDetails = ({ id }) => {
             });
           }
         } else {
-          // Database is empty - no data has been ingested yet
           setHistError('No historical data found. Click "Ingest Latest" on the dashboard to populate the database.');
           setHistoricalData([]);
         }
@@ -93,80 +96,29 @@ const HistoricalExecutionDetails = ({ id }) => {
       }
     };
     
-    // Only fetch if we have test case and parameter
-    if (data.testCase && data.parameter) {
+    if (testCaseParam && parameterParam) {
       fetchHistory();
     } else {
-      console.warn('Missing test case or parameter:', { testCase: data.testCase, parameter: data.parameter });
+      console.warn('Missing test case or parameter:', { testCase: testCaseParam, parameter: parameterParam });
       setHistLoading(false);
       setHistError('Invalid test case or parameter');
     }
-  }, [data.testCase, data.parameter]);
-
-
-
-  // Calculate chart dimensions and scaling
-  const chartWidth = 1000;
-  const chartHeight = 240;
-  const padding = { top: 20, right: 20, bottom: 40, left: 60 };
-  const innerWidth = chartWidth - padding.left - padding.right;
-  const innerHeight = chartHeight - padding.top - padding.bottom;
-
-  const yMaxThroughput = historicalData.length > 0 ? Math.max(...historicalData.map(d => getNum(d.throughput))) : 100;
-  const yMinThroughput = historicalData.length > 0 ? Math.min(...historicalData.map(d => getNum(d.throughput))) : 0;
-  const yRange = yMaxThroughput - yMinThroughput;
-  // For single data point, create a reasonable scale around the value (±20%)
-  const yPadding = yRange === 0 ? Math.max(yMaxThroughput * 0.2, 10) : yRange * 0.1;
-
-  const scaleY = (value) => {
-    const num = getNum(value);
-    const normalized = (num - (yMinThroughput - yPadding)) / (yRange + 2 * yPadding);
-    return innerHeight - (normalized * innerHeight);
-  };
-
-  const scaleX = (index) => {
-    if (historicalData.length === 1) return innerWidth / 2; // Center single point
-    return (index / (historicalData.length - 1)) * innerWidth;
-  };
-
-  // Generate path for the line chart (only if multiple points)
-  const linePath = historicalData.length > 1 ? historicalData
-    .map((point, index) => {
-      const x = scaleX(index) + padding.left;
-      const y = scaleY(point.throughput) + padding.top;
-      return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
-    })
-    .join(' ') : '';
-
-  // Generate path for the area fill (only if multiple points)
-  const areaPath = historicalData.length > 1 
-    ? `${linePath} L ${scaleX(historicalData.length - 1) + padding.left},${innerHeight + padding.top} L ${padding.left},${innerHeight + padding.top} Z`
-    : '';
+  }, [testCaseParam, parameterParam]);
 
   const handlePointHover = (point, index, event) => {
-    // Get the SVG element and calculate exact position
     const svg = event.currentTarget.ownerSVGElement;
     const svgRect = svg.getBoundingClientRect();
-    
-    // Get the circle's center in SVG coordinates
     const circle = event.currentTarget;
     const cx = parseFloat(circle.getAttribute('cx'));
     const cy = parseFloat(circle.getAttribute('cy'));
+    const chartWidth = 1000;
+    const chartHeight = 240;
+    const scaleXFactor = svgRect.width / chartWidth;
+    const scaleYFactor = svgRect.height / chartHeight;
+    const screenX = svgRect.left + (cx * scaleXFactor);
+    const screenY = svgRect.top + (cy * scaleYFactor);
     
-    // Calculate scale factors for responsive SVG
-    const scaleX = svgRect.width / chartWidth;
-    const scaleY = svgRect.height / chartHeight;
-    
-    // Convert SVG coordinates to screen coordinates
-    const screenX = svgRect.left + (cx * scaleX);
-    const screenY = svgRect.top + (cy * scaleY);
-    
-    setHoveredPoint({ 
-      ...point, 
-      index,
-      screenX,
-      screenY
-    });
+    setHoveredPoint({ ...point, index, screenX, screenY });
   };
 
   const handlePointLeave = () => {
@@ -175,46 +127,6 @@ const HistoricalExecutionDetails = ({ id }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16 relative overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-        
-        .font-jetbrains {
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        @keyframes floatBlob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -40px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-blob { animation: floatBlob 15s infinite alternate ease-in-out; }
-        .animate-fade-in-up {
-          opacity: 0;
-          animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        /* Custom Light Premium Scrollbar */
-        ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-          background: rgba(241, 245, 249, 0.5);
-          border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb {
-          background: rgba(16, 185, 129, 0.4);
-          border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-          background: rgba(16, 185, 129, 0.7);
-        }
-      `}</style>
 
       {/* Dynamic Atmospheric Glows */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
@@ -260,11 +172,11 @@ const HistoricalExecutionDetails = ({ id }) => {
               </div>
               
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">
-                {data.testCase}
+                {testCaseParam}
               </h1>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-slate-500">Parameter:</span>
-                <span className="text-sm font-bold text-slate-800 font-mono bg-slate-100 px-2.5 py-1 rounded border border-slate-200">{data.parameter}</span>
+                <span className="text-sm font-bold text-slate-800 font-mono bg-slate-100 px-2.5 py-1 rounded border border-slate-200">{parameterParam}</span>
               </div>
             </div>
             <div className="flex gap-3">
@@ -281,7 +193,7 @@ const HistoricalExecutionDetails = ({ id }) => {
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8 relative z-10">
         
-        {/* KPI Cards (Top Row) */}
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <div className="bg-white/95 backdrop-blur-xl rounded-xl p-5 border border-slate-300 shadow-lg hover:shadow-xl transition-all duration-300">
             <div className="flex items-center gap-2 mb-2">
@@ -291,7 +203,7 @@ const HistoricalExecutionDetails = ({ id }) => {
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Average</p>
             </div>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-extrabold text-slate-900 leading-none">{avgThroughput}</p>
+              <p className="text-3xl font-extrabold text-slate-900 leading-none">{stats.avg}</p>
               <p className="text-sm font-bold text-slate-400 mb-0.5">KPPS</p>
             </div>
           </div>
@@ -307,11 +219,11 @@ const HistoricalExecutionDetails = ({ id }) => {
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Peak CPU</p>
             </div>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-extrabold text-slate-900 leading-none">{peakCpu}</p>
+              <p className="text-3xl font-extrabold text-slate-900 leading-none">{stats.peakCpu}</p>
               <p className="text-sm font-bold text-slate-400 mb-0.5">%</p>
             </div>
             <div className="mt-3 w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-orange-400 to-orange-500 rounded-full transition-all duration-500" style={{ width: `${peakCpu}%` }}></div>
+              <div className="h-full bg-gradient-to-r from-orange-400 to-orange-500 rounded-full transition-all duration-500" style={{ width: `${stats.peakCpu}%` }}></div>
             </div>
           </div>
 
@@ -323,7 +235,7 @@ const HistoricalExecutionDetails = ({ id }) => {
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Minimum</p>
             </div>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-extrabold text-blue-600 leading-none">{minThpt}</p>
+              <p className="text-3xl font-extrabold text-blue-600 leading-none">{stats.min}</p>
               <p className="text-sm font-bold text-slate-400 mb-0.5">KPPS</p>
             </div>
           </div>
@@ -336,515 +248,62 @@ const HistoricalExecutionDetails = ({ id }) => {
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Maximum</p>
             </div>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-extrabold text-emerald-600 leading-none">{maxThpt}</p>
+              <p className="text-3xl font-extrabold text-emerald-600 leading-none">{stats.max}</p>
               <p className="text-sm font-bold text-slate-400 mb-0.5">KPPS</p>
             </div>
           </div>
         </div>
 
-        {/* Three Separate Charts - Throughput, CPU, Memory */}
+        {/* Charts — using reusable LineChart component */}
         <div className="grid grid-cols-1 gap-6">
           
           {/* Throughput Chart */}
-          <div className="bg-white/95 backdrop-blur-xl rounded-xl border border-slate-300 shadow-lg overflow-hidden animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800 tracking-tight">Throughput Performance</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">Historical trend analysis</p>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                  <span className="text-xs font-bold text-emerald-700">{historicalData.length} {historicalData.length === 1 ? 'Record' : 'Records'}</span>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
-              {histLoading ? (
-                <div className="h-[240px] flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
-                </div>
-              ) : histError ? (
-                <div className="h-[240px] flex items-center justify-center text-center">
-                  <div className="max-w-md">
-                    <p className="text-slate-600 font-medium mb-2">No Data Available</p>
-                    <p className="text-slate-400 text-sm">{histError}</p>
-                  </div>
-                </div>
-              ) : historicalData.length === 0 ? (
-                <div className="h-[240px] flex items-center justify-center text-center">
-                  <div>
-                    <p className="text-slate-400 text-sm">No historical data found</p>
-                    <p className="text-slate-300 text-xs mt-1">Click "Ingest Latest" on the dashboard</p>
-                  </div>
-                </div>
-              ) : (
-                <svg ref={chartRef} viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-auto" style={{ maxHeight: '240px' }}>
-                  {/* Grid lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                    const y = padding.top + innerHeight * ratio;
-                    return (
-                      <line
-                        key={ratio}
-                        x1={padding.left}
-                        y1={y}
-                        x2={chartWidth - padding.right}
-                        y2={y}
-                        stroke="#e2e8f0"
-                        strokeWidth="1"
-                        strokeDasharray={ratio === 0 || ratio === 1 ? "0" : "4 4"}
-                      />
-                    );
-                  })}
-
-                  {/* Area fill */}
-                  {historicalData.length > 1 && (
-                    <path
-                      d={areaPath}
-                      fill="url(#throughputGradient)"
-                      opacity="0.2"
-                    />
-                  )}
-
-                  {/* Line path */}
-                  {historicalData.length > 1 && (
-                    <path
-                      d={linePath}
-                      fill="none"
-                      stroke="#10b981"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  )}
-
-                  {/* Data points */}
-                  {historicalData.map((point, index) => {
-                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
-                    const y = scaleY(point.throughput) + padding.top;
-                    return (
-                      <g key={index}>
-                        <circle
-                          cx={x}
-                          cy={y}
-                          r="6"
-                          fill="white"
-                          stroke="#10b981"
-                          strokeWidth="2.5"
-                          className="cursor-pointer transition-all"
-                          onMouseEnter={(e) => handlePointHover(point, index, e)}
-                          onMouseLeave={handlePointLeave}
-                        />
-                        <circle
-                          cx={x}
-                          cy={y}
-                          r="3"
-                          fill="#10b981"
-                          className="pointer-events-none"
-                        />
-                      </g>
-                    );
-                  })}
-
-                  {/* Single data point indicator */}
-                  {historicalData.length === 1 && (
-                    <text
-                      x={chartWidth / 2}
-                      y={padding.top + innerHeight + 15}
-                      textAnchor="middle"
-                      fontSize="11"
-                      fill="#94a3b8"
-                      fontWeight="500"
-                      fontStyle="italic"
-                    >
-                      Single data point available • Trend will appear as more data is collected
-                    </text>
-                  )}
-
-                  {/* Y-axis labels */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                    const y = padding.top + innerHeight * ratio;
-                    const value = (yMaxThroughput + yPadding) - ratio * (yRange + 2 * yPadding);
-                    return (
-                      <text
-                        key={ratio}
-                        x={padding.left - 10}
-                        y={y}
-                        textAnchor="end"
-                        alignmentBaseline="middle"
-                        fontSize="11"
-                        fill="#64748b"
-                        fontWeight="600"
-                        fontFamily="'JetBrains Mono', monospace"
-                      >
-                        {value.toFixed(0)}
-                      </text>
-                    );
-                  })}
-
-                  {/* X-axis labels (show dates for first, middle, last) */}
-                  {historicalData.length > 0 && [0, Math.floor(historicalData.length / 2), historicalData.length - 1].map((index) => {
-                    if (index >= historicalData.length) return null;
-                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
-                    return (
-                      <text
-                        key={index}
-                        x={x}
-                        y={chartHeight - padding.bottom + 20}
-                        textAnchor="middle"
-                        fontSize="10"
-                        fill="#94a3b8"
-                        fontWeight="600"
-                      >
-                        {historicalData[index].date}
-                      </text>
-                    );
-                  })}
-
-                  {/* Gradient definition */}
-                  <defs>
-                    <linearGradient id="throughputGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.5" />
-                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              )}
-            </div>
-          </div>
+          <LineChart
+            data={historicalData}
+            dataKey="throughput"
+            color="#10b981"
+            title="Throughput Performance"
+            subtitle="Historical trend analysis"
+            badgeColor="emerald"
+            loading={histLoading}
+            error={histError}
+            onPointHover={handlePointHover}
+            onPointLeave={handlePointLeave}
+            showAreaFill={true}
+            animationDelay="200ms"
+          />
 
           {/* CPU Chart */}
-          <div className="bg-white/95 backdrop-blur-xl rounded-xl border border-slate-300 shadow-lg overflow-hidden animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800 tracking-tight">CPU Utilization</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">Processor usage metrics</p>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span className="text-xs font-bold text-orange-700">{historicalData.length} {historicalData.length === 1 ? 'Record' : 'Records'}</span>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
-              {histLoading ? (
-                <div className="h-[240px] flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
-                </div>
-              ) : histError ? (
-                <div className="h-[240px] flex items-center justify-center text-center">
-                  <div className="max-w-md">
-                    <p className="text-slate-600 font-medium mb-2">No Data Available</p>
-                    <p className="text-slate-400 text-sm">{histError}</p>
-                  </div>
-                </div>
-              ) : historicalData.length === 0 ? (
-                <div className="h-[240px] flex items-center justify-center text-center">
-                  <div>
-                    <p className="text-slate-400 text-sm">No historical data found</p>
-                  </div>
-                </div>
-              ) : (
-                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-auto" style={{ maxHeight: '240px' }}>
-                  {/* Grid lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                    const y = padding.top + innerHeight * ratio;
-                    return (
-                      <line
-                        key={ratio}
-                        x1={padding.left}
-                        y1={y}
-                        x2={chartWidth - padding.right}
-                        y2={y}
-                        stroke="#e2e8f0"
-                        strokeWidth="1"
-                        strokeDasharray={ratio === 0 || ratio === 1 ? "0" : "4 4"}
-                      />
-                    );
-                  })}
-
-                  {/* CPU line path */}
-                  {historicalData.length > 1 && (
-                    <path
-                      d={historicalData.map((point, index) => {
-                        const x = (index / (historicalData.length - 1)) * innerWidth + padding.left;
-                        const cpuVal = parseInt(point.cpu || '0');
-                        const y = padding.top + innerHeight * (1 - cpuVal / 100);
-                        return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
-                      }).join(' ')}
-                      fill="none"
-                      stroke="#fb923c"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  )}
-
-                  {/* CPU data points */}
-                  {historicalData.map((point, index) => {
-                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
-                    const cpuVal = parseInt(point.cpu || '0');
-                    const y = padding.top + innerHeight * (1 - cpuVal / 100);
-                    return (
-                      <g key={index}>
-                        <circle
-                          cx={x}
-                          cy={y}
-                          r="6"
-                          fill="white"
-                          stroke="#fb923c"
-                          strokeWidth="2.5"
-                          className="cursor-pointer transition-all"
-                          onMouseEnter={(e) => handlePointHover(point, index, e)}
-                          onMouseLeave={handlePointLeave}
-                        />
-                        <circle
-                          cx={x}
-                          cy={y}
-                          r="3"
-                          fill="#fb923c"
-                          className="pointer-events-none"
-                        />
-                      </g>
-                    );
-                  })}
-
-                  {/* Single data point indicator */}
-                  {historicalData.length === 1 && (
-                    <text
-                      x={chartWidth / 2}
-                      y={padding.top + innerHeight + 15}
-                      textAnchor="middle"
-                      fontSize="11"
-                      fill="#94a3b8"
-                      fontWeight="500"
-                      fontStyle="italic"
-                    >
-                      Single data point available • Trend will appear as more data is collected
-                    </text>
-                  )}
-
-                  {/* Y-axis labels (0-100%) */}
-                  {[0, 25, 50, 75, 100].map((value) => {
-                    const y = padding.top + innerHeight * (1 - value / 100);
-                    return (
-                      <text
-                        key={value}
-                        x={padding.left - 10}
-                        y={y}
-                        textAnchor="end"
-                        alignmentBaseline="middle"
-                        fontSize="11"
-                        fill="#64748b"
-                        fontWeight="600"
-                        fontFamily="'JetBrains Mono', monospace"
-                      >
-                        {value}%
-                      </text>
-                    );
-                  })}
-
-                  {/* X-axis labels */}
-                  {historicalData.length > 0 && [0, Math.floor(historicalData.length / 2), historicalData.length - 1].map((index) => {
-                    if (index >= historicalData.length) return null;
-                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
-                    return (
-                      <text
-                        key={index}
-                        x={x}
-                        y={chartHeight - padding.bottom + 20}
-                        textAnchor="middle"
-                        fontSize="10"
-                        fill="#94a3b8"
-                        fontWeight="600"
-                      >
-                        {historicalData[index].date}
-                      </text>
-                    );
-                  })}
-                </svg>
-              )}
-            </div>
-          </div>
+          <LineChart
+            data={cpuChartData}
+            dataKey="cpuValue"
+            color="#fb923c"
+            title="CPU Utilization"
+            subtitle="Processor usage metrics"
+            badgeColor="orange"
+            yAxisSuffix="%"
+            yScale={{ min: 0, max: 100 }}
+            loading={histLoading}
+            error={histError}
+            onPointHover={handlePointHover}
+            onPointLeave={handlePointLeave}
+            animationDelay="300ms"
+          />
 
           {/* Memory Chart */}
-          <div className="bg-white/95 backdrop-blur-xl rounded-xl border border-slate-300 shadow-lg overflow-hidden animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800 tracking-tight">Memory Consumption</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">RAM usage statistics</p>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-xs font-bold text-blue-700">{historicalData.length} {historicalData.length === 1 ? 'Record' : 'Records'}</span>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
-              {histLoading ? (
-                <div className="h-[240px] flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
-                </div>
-              ) : histError ? (
-                <div className="h-[240px] flex items-center justify-center text-center">
-                  <div className="max-w-md">
-                    <p className="text-slate-600 font-medium mb-2">No Data Available</p>
-                    <p className="text-slate-400 text-sm">{histError}</p>
-                  </div>
-                </div>
-              ) : historicalData.length === 0 ? (
-                <div className="h-[240px] flex items-center justify-center text-center">
-                  <div>
-                    <p className="text-slate-400 text-sm">No historical data found</p>
-                  </div>
-                </div>
-              ) : (
-                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-auto" style={{ maxHeight: '240px' }}>
-                  {/* Grid lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                    const y = padding.top + innerHeight * ratio;
-                    return (
-                      <line
-                        key={ratio}
-                        x1={padding.left}
-                        y1={y}
-                        x2={chartWidth - padding.right}
-                        y2={y}
-                        stroke="#e2e8f0"
-                        strokeWidth="1"
-                        strokeDasharray={ratio === 0 || ratio === 1 ? "0" : "4 4"}
-                      />
-                    );
-                  })}
-
-                  {/* Memory line path */}
-                  {historicalData.length > 1 && (() => {
-                    const memValues = historicalData.map(p => parseInt(p.memory || '0'));
-                    const maxMem = Math.max(...memValues);
-                    const minMem = Math.min(...memValues);
-                    const memRange = maxMem - minMem || 1;
-                    
-                    return (
-                      <path
-                        d={historicalData.map((point, index) => {
-                          const x = (index / (historicalData.length - 1)) * innerWidth + padding.left;
-                          const memVal = parseInt(point.memory || '0');
-                          const normalized = (memVal - minMem) / memRange;
-                          const y = padding.top + innerHeight * (1 - normalized);
-                          return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
-                        }).join(' ')}
-                        fill="none"
-                        stroke="#60a5fa"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    );
-                  })()}
-
-                  {/* Memory data points */}
-                  {(() => {
-                    const memValues = historicalData.map(p => parseInt(p.memory || '0'));
-                    const maxMem = Math.max(...memValues);
-                    const minMem = Math.min(...memValues);
-                    const memRange = maxMem - minMem || 1;
-                    
-                    return historicalData.map((point, index) => {
-                      const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
-                      const memVal = parseInt(point.memory || '0');
-                      const normalized = (memVal - minMem) / memRange;
-                      const y = padding.top + innerHeight * (1 - normalized);
-                      return (
-                        <g key={index}>
-                          <circle
-                            cx={x}
-                            cy={y}
-                            r="6"
-                            fill="white"
-                            stroke="#60a5fa"
-                            strokeWidth="2.5"
-                            className="cursor-pointer transition-all"
-                            onMouseEnter={(e) => handlePointHover(point, index, e)}
-                            onMouseLeave={handlePointLeave}
-                          />
-                          <circle
-                            cx={x}
-                            cy={y}
-                            r="3"
-                            fill="#60a5fa"
-                            className="pointer-events-none"
-                          />
-                        </g>
-                      );
-                    });
-                  })()}
-
-                  {/* Single data point indicator */}
-                  {historicalData.length === 1 && (
-                    <text
-                      x={chartWidth / 2}
-                      y={padding.top + innerHeight + 15}
-                      textAnchor="middle"
-                      fontSize="11"
-                      fill="#94a3b8"
-                      fontWeight="500"
-                      fontStyle="italic"
-                    >
-                      Single data point available • Trend will appear as more data is collected
-                    </text>
-                  )}
-
-                  {/* Y-axis labels (dynamic based on data) */}
-                  {(() => {
-                    const memValues = historicalData.map(p => parseInt(p.memory || '0'));
-                    const maxMem = Math.max(...memValues);
-                    const minMem = Math.min(...memValues);
-                    
-                    return [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                      const y = padding.top + innerHeight * ratio;
-                      const value = maxMem - ratio * (maxMem - minMem);
-                      return (
-                        <text
-                          key={ratio}
-                          x={padding.left - 10}
-                          y={y}
-                          textAnchor="end"
-                          alignmentBaseline="middle"
-                          fontSize="11"
-                          fill="#64748b"
-                          fontWeight="600"
-                          fontFamily="'JetBrains Mono', monospace"
-                        >
-                          {value.toFixed(0)}
-                        </text>
-                      );
-                    });
-                  })()}
-
-                  {/* X-axis labels */}
-                  {historicalData.length > 0 && [0, Math.floor(historicalData.length / 2), historicalData.length - 1].map((index) => {
-                    if (index >= historicalData.length) return null;
-                    const x = (historicalData.length === 1 ? 0.5 : index / (historicalData.length - 1)) * innerWidth + padding.left;
-                    return (
-                      <text
-                        key={index}
-                        x={x}
-                        y={chartHeight - padding.bottom + 20}
-                        textAnchor="middle"
-                        fontSize="10"
-                        fill="#94a3b8"
-                        fontWeight="600"
-                      >
-                        {historicalData[index].date}
-                      </text>
-                    );
-                  })}
-                </svg>
-              )}
-            </div>
-          </div>
+          <LineChart
+            data={memoryChartData}
+            dataKey="memoryValue"
+            color="#60a5fa"
+            title="Memory Consumption"
+            subtitle="RAM usage statistics"
+            badgeColor="blue"
+            loading={histLoading}
+            error={histError}
+            onPointHover={handlePointHover}
+            onPointLeave={handlePointLeave}
+            animationDelay="400ms"
+          />
 
         </div>
 
@@ -899,7 +358,7 @@ const HistoricalExecutionDetails = ({ id }) => {
         </div>
       </main>
 
-      {/* Footer matching dashboard */}
+      {/* Footer */}
       <footer className="bg-white border-t border-slate-200 shadow-sm relative z-10">
         <div className="max-w-7xl mx-auto px-6 py-3">
           <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
@@ -913,7 +372,7 @@ const HistoricalExecutionDetails = ({ id }) => {
         </div>
       </footer>
 
-      {/* Custom Tooltip Portal */}
+      {/* Tooltip Portal */}
       {hoveredPoint && (
         <div
           className="fixed z-[9999] pointer-events-none"
@@ -946,7 +405,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                 <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', fontWeight: 600, color: '#c084fc' }}>{hoveredPoint.shm}</span>
               </div>
             </div>
-            {/* Arrow tucked inside the relative container, flush at the bottom */}
+            {/* Arrow */}
             <div style={{
               position: 'absolute',
               bottom: '-8px',
@@ -958,7 +417,6 @@ const HistoricalExecutionDetails = ({ id }) => {
               borderRight: '8px solid transparent',
               borderTop: '8px solid #334155'
             }}>
-              {/* Inner fill triangle to mask the border-top colour */}
               <div style={{
                 position: 'absolute',
                 top: '-9px',
