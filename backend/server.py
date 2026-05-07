@@ -204,6 +204,14 @@ def ingest_csv(file_path: str, force: bool = False) -> dict:
                  cur.execute("DELETE FROM sanity_runs WHERE csv_filename=%s AND run_date=%s", (filename, run_date))
 
             for row in rows:
+                # Skip rows where throughput is purely numeric — those are
+                # PR/GNATS issue numbers, not actual performance data
+                throughput_val = row['throughput'].strip()
+                if throughput_val.isdigit():
+                    logger.debug(f"Skipping PR row: {row['test_case']} → {throughput_val}")
+                    skipped += 1
+                    continue
+
                 cur.execute(
                     """
                     INSERT INTO sanity_runs

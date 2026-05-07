@@ -22,32 +22,43 @@ const HistoricalExecutionDetails = ({ id }) => {
     return isNaN(parsed) ? 0 : parsed;
   };
 
+  // Filter out rows where throughput is a pure PR number (numeric-only = GNATS issue, not data)
+  const isNumericOnly = (v) => /^\d+$/.test((v || '').trim());
+
   const stats = useMemo(() => {
-    if (historicalData.length === 0) return { avg: '0', min: '0', max: '0', peakCpu: '0' };
-    const values = historicalData.map(d => getNum(d.throughput));
+    // Exclude PR rows from stats
+    const dataRows = historicalData.filter(d => !isNumericOnly(d.throughput));
+    if (dataRows.length === 0) return { avg: '0', min: '0', max: '0', peakCpu: '0' };
+    const values = dataRows.map(d => getNum(d.throughput));
+    const cpuValues = dataRows.map(d => parseInt(d.cpu || '0')).filter(v => !isNaN(v));
     return {
       avg: (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2),
       min: Math.min(...values).toFixed(2),
       max: Math.max(...values).toFixed(2),
-      peakCpu: Math.max(...historicalData.map(d => parseInt(d.cpu || '0'))),
+      peakCpu: cpuValues.length > 0 ? Math.max(...cpuValues) : '0',
     };
+  }, [historicalData]);
+
+  // Filter to only real performance data (exclude PR/GNATS numbers)
+  const performanceData = useMemo(() => {
+    return historicalData.filter(d => !isNumericOnly(d.throughput));
   }, [historicalData]);
 
   // Prepare CPU chart data — normalize to numeric percentages
   const cpuChartData = useMemo(() => {
-    return historicalData.map(d => ({
+    return performanceData.map(d => ({
       ...d,
       cpuValue: parseInt(d.cpu || '0'),
     }));
-  }, [historicalData]);
+  }, [performanceData]);
 
   // Prepare Memory chart data — normalize to numeric values
   const memoryChartData = useMemo(() => {
-    return historicalData.map(d => ({
+    return performanceData.map(d => ({
       ...d,
       memoryValue: parseInt(d.memory || '0'),
     }));
-  }, [historicalData]);
+  }, [performanceData]);
 
   // Fetch real 30-day history from the backend
   useEffect(() => {
@@ -259,7 +270,7 @@ const HistoricalExecutionDetails = ({ id }) => {
           
           {/* Throughput Chart */}
           <LineChart
-            data={historicalData}
+            data={performanceData}
             dataKey="throughput"
             color="#10b981"
             title="Throughput Performance"
@@ -342,15 +353,24 @@ const HistoricalExecutionDetails = ({ id }) => {
                     </td>
                   </tr>
                 ) : (
-                  historicalData.slice(-10).reverse().map((row, index) => (
-                    <tr key={index} className="hover:bg-slate-50 transition-colors">
+                  historicalData.slice(-10).reverse().map((row, index) => {
+                    const isPR = isNumericOnly(row.throughput);
+                    return (
+                    <tr key={index} className={`hover:bg-slate-50 transition-colors ${isPR ? 'opacity-50' : ''}`}>
                       <td className="px-6 py-3 text-sm text-slate-600 font-medium">{row.date}</td>
-                      <td className="px-6 py-3 text-sm font-jetbrains font-semibold text-emerald-600">{row.throughput}</td>
-                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.cpu}</td>
-                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.memory}</td>
-                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.shm}</td>
+                      <td className="px-6 py-3 text-sm font-jetbrains font-semibold">
+                        {isPR ? (
+                          <span className="text-slate-400">PR:{row.throughput}</span>
+                        ) : (
+                          <span className="text-emerald-600">{row.throughput}</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.cpu || 'N/A'}</td>
+                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.memory || 'N/A'}</td>
+                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.shm || 'N/A'}</td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
