@@ -22,12 +22,16 @@ const HistoricalExecutionDetails = ({ id }) => {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // Filter out rows where throughput is a pure PR number (numeric-only = GNATS issue, not data)
-  const isNumericOnly = (v) => /^\d+$/.test(String(v || '').trim());
+  // Filter out rows where throughput is a GNATS PR number (6+ digit pure number)
+  // Short numbers like 744, 2100, 3286 are legitimate throughput values
+  const isPRNumber = (v) => {
+    const s = String(v || '').trim();
+    return /^\d+$/.test(s) && s.length >= 6;
+  };
 
   const stats = useMemo(() => {
     // Exclude PR rows from stats
-    const dataRows = historicalData.filter(d => !isNumericOnly(d.throughput));
+    const dataRows = historicalData.filter(d => !isPRNumber(d.throughput));
     if (dataRows.length === 0) return { avg: '0', min: '0', max: '0', peakCpu: '0' };
     const values = dataRows.map(d => getNum(d.throughput));
     const cpuValues = dataRows.map(d => parseInt(d.cpu || '0')).filter(v => !isNaN(v));
@@ -41,7 +45,7 @@ const HistoricalExecutionDetails = ({ id }) => {
 
   // Filter to only real performance data (exclude PR/GNATS numbers)
   const performanceData = useMemo(() => {
-    return historicalData.filter(d => !isNumericOnly(d.throughput));
+    return historicalData.filter(d => !isPRNumber(d.throughput));
   }, [historicalData]);
 
   // Prepare CPU chart data — normalize to numeric percentages
@@ -71,21 +75,21 @@ const HistoricalExecutionDetails = ({ id }) => {
           parameter: parameterParam,
           days: 30,
         });
-        
+
         const url = `${API_BASE}/api/history?${urlParams}`;
         console.log('Fetching history from:', url);
-        
+
         const res = await fetch(url);
-        
+
         if (!res.ok) {
           const errorText = await res.text();
           console.error('API error:', errorText);
           throw new Error(`API returned ${res.status}: ${errorText}`);
         }
-        
+
         const json = await res.json();
         console.log('History API response:', json);
-        
+
         if (json.history && json.history.length > 0) {
           setHistoricalData(json.history);
           if (json.history[0]) {
@@ -106,7 +110,7 @@ const HistoricalExecutionDetails = ({ id }) => {
         setHistLoading(false);
       }
     };
-    
+
     if (testCaseParam && parameterParam) {
       fetchHistory();
     } else {
@@ -128,7 +132,7 @@ const HistoricalExecutionDetails = ({ id }) => {
     const scaleYFactor = svgRect.height / chartHeight;
     const screenX = svgRect.left + (cx * scaleXFactor);
     const screenY = svgRect.top + (cy * scaleYFactor);
-    
+
     setHoveredPoint({ ...point, index, screenX, screenY });
   };
 
@@ -148,8 +152,8 @@ const HistoricalExecutionDetails = ({ id }) => {
       {/* Header Section */}
       <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50 relative">
         <div className="max-w-7xl mx-auto px-6 py-5">
-          <a 
-            href="#" 
+          <a
+            href="#"
             className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-emerald-600 transition-colors mb-4 group"
           >
             <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,7 +185,7 @@ const HistoricalExecutionDetails = ({ id }) => {
                   </div>
                 </div>
               </div>
-              
+
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">
                 {testCaseParam}
               </h1>
@@ -203,7 +207,7 @@ const HistoricalExecutionDetails = ({ id }) => {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8 relative z-10">
-        
+
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <div className="bg-white/95 backdrop-blur-xl rounded-xl p-5 border border-slate-300 shadow-lg hover:shadow-xl transition-all duration-300">
@@ -218,7 +222,7 @@ const HistoricalExecutionDetails = ({ id }) => {
               <p className="text-sm font-bold text-slate-400 mb-0.5">KPPS</p>
             </div>
           </div>
-          
+
           <div className="bg-white/95 backdrop-blur-xl rounded-xl p-5 border-t-[3px] border-orange-500 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <svg className="w-12 h-12 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -267,7 +271,7 @@ const HistoricalExecutionDetails = ({ id }) => {
 
         {/* Charts — using reusable LineChart component */}
         <div className="grid grid-cols-1 gap-6">
-          
+
           {/* Throughput Chart */}
           <LineChart
             data={performanceData}
@@ -354,21 +358,21 @@ const HistoricalExecutionDetails = ({ id }) => {
                   </tr>
                 ) : (
                   historicalData.slice(-10).reverse().map((row, index) => {
-                    const isPR = isNumericOnly(row.throughput);
+                    const isPR = isPRNumber(row.throughput);
                     return (
-                    <tr key={index} className={`hover:bg-slate-50 transition-colors ${isPR ? 'opacity-50' : ''}`}>
-                      <td className="px-6 py-3 text-sm text-slate-600 font-medium">{row.date}</td>
-                      <td className="px-6 py-3 text-sm font-jetbrains font-semibold">
-                        {isPR ? (
-                          <span className="text-slate-400">PR:{row.throughput}</span>
-                        ) : (
-                          <span className="text-emerald-600">{row.throughput}</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.cpu || 'N/A'}</td>
-                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.memory || 'N/A'}</td>
-                      <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.shm || 'N/A'}</td>
-                    </tr>
+                      <tr key={index} className={`hover:bg-slate-50 transition-colors ${isPR ? 'opacity-50' : ''}`}>
+                        <td className="px-6 py-3 text-sm text-slate-600 font-medium">{row.date}</td>
+                        <td className="px-6 py-3 text-sm font-jetbrains font-semibold">
+                          {isPR ? (
+                            <span className="text-slate-400">PR:{row.throughput}</span>
+                          ) : (
+                            <span className="text-emerald-600">{row.throughput}</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.cpu || 'N/A'}</td>
+                        <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.memory || 'N/A'}</td>
+                        <td className="px-6 py-3 text-sm font-jetbrains text-slate-700">{row.shm || 'N/A'}</td>
+                      </tr>
                     );
                   })
                 )}
