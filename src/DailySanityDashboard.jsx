@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
+import { SANITY_TEST_CASES } from './config/sanityTestCases';
 import { API_BASE } from './config/api';
 
 // ─── Tooltip Portal ──────────────────────────────────────────
@@ -55,10 +56,15 @@ const DailySanityDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeView, setActiveView] = useState('sanity');
   const [expandedGroups, setExpandedGroups] = useState({});
   const [hoveredCell, setHoveredCell] = useState(null);
   const [ingestStatus, setIngestStatus] = useState(null);
   const [ingestMessage, setIngestMessage] = useState('');
+  const [showCompare, setShowCompare] = useState(false);
+
+  const isSanity = activeView === 'sanity';
+  const show3XX = isSanity && showCompare;
 
   // ── Load XLSX on mount ──
   useEffect(() => {
@@ -100,11 +106,36 @@ const DailySanityDashboard = () => {
     }
   };
 
-  // ── Search filter ──
-  const filteredData = useMemo(() => {
-    if (!searchTerm.trim()) return mergedData;
+  // ── View filter: sanity vs. regression ──
+  const viewFilteredData = useMemo(() => {
+    if (activeView === 'regression') return mergedData;
+
+    // Sanity view: collect matching rows, re-group by sanity label
+    const sanityGroups = SANITY_TEST_CASES.map(sc => ({
+      category: sc.label,
+      tests: [],
+    }));
+
+    for (const section of mergedData) {
+      for (const test of section.tests) {
+        const tcName = test.testCase.trim();
+        for (let i = 0; i < SANITY_TEST_CASES.length; i++) {
+          if (SANITY_TEST_CASES[i].match(tcName)) {
+            sanityGroups[i].tests.push(test);
+            break;
+          }
+        }
+      }
+    }
+
+    return sanityGroups.filter(g => g.tests.length > 0);
+  }, [mergedData, activeView]);
+
+  // ── Search filter (applied on top of view filter) ──
+  const displayData = useMemo(() => {
+    if (!searchTerm.trim()) return viewFilteredData;
     const lower = searchTerm.toLowerCase();
-    return mergedData
+    return viewFilteredData
       .map(section => ({
         ...section,
         tests: section.tests.filter(t =>
@@ -113,7 +144,7 @@ const DailySanityDashboard = () => {
         ),
       }))
       .filter(section => section.tests.length > 0);
-  }, [mergedData, searchTerm]);
+  }, [viewFilteredData, searchTerm]);
 
   const toggleGroup = (cat) => {
     setExpandedGroups(prev => ({ ...prev, [cat]: !prev[cat] }));
@@ -202,6 +233,38 @@ const DailySanityDashboard = () => {
           />
         </div>
 
+        {/* View Toggle — Pill Segmented Control */}
+        <div className="animate-fade-in-up flex items-center justify-center" style={{ animationDelay: '220ms' }}>
+          <div className="inline-flex items-center bg-slate-900 rounded-full p-1 shadow-lg border border-slate-700">
+            <button
+              onClick={() => setActiveView('sanity')}
+              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                activeView === 'sanity'
+                  ? 'bg-emerald-500 text-white shadow-[0_0_16px_rgba(16,185,129,0.4)]'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Daily Sanity
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveView('regression')}
+              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                activeView === 'regression'
+                  ? 'bg-blue-500 text-white shadow-[0_0_16px_rgba(59,130,246,0.4)]'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                Full Regression
+              </span>
+            </button>
+          </div>
+        </div>
+
         {/* Release Info Bar */}
         <div className="animate-fade-in-up bg-white/90 backdrop-blur-md border border-slate-200 border-l-[3px] border-l-teal-500 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)]" style={{ animationDelay: '250ms' }}>
           <div className="px-5 py-2.5 flex items-center justify-between flex-wrap gap-3">
@@ -227,19 +290,42 @@ const DailySanityDashboard = () => {
         <div className="animate-fade-in-up bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.06)] border border-slate-200/80 overflow-hidden" style={{ animationDelay: '300ms' }}>
 
           {/* Table Header */}
-          <div className="grid grid-cols-12 gap-0 px-6 py-3 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700">
-            <div className="col-span-3 text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] pl-1">Test Case</div>
-            <div className="col-span-3 text-xs font-semibold text-slate-300 uppercase tracking-[0.1em]">SRX 400</div>
-            <div className="col-span-3 text-xs font-semibold text-slate-300 uppercase tracking-[0.1em]">SRX 440</div>
-            <div className="col-span-3 text-xs font-semibold text-slate-300 uppercase tracking-[0.1em]">Comments</div>
+          <div className={`grid gap-0 px-6 py-3 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700 transition-all duration-300 ${show3XX ? 'grid-cols-[2fr_repeat(5,1fr)]' : 'grid-cols-12'}`}>
+            <div className={`text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] pl-1 ${show3XX ? '' : 'col-span-3'}`}>Test Case</div>
+            <div className={`text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] ${show3XX ? '' : 'col-span-3'}`}>SRX 400</div>
+            <div className={`text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] ${show3XX ? '' : 'col-span-3'}`}>SRX 440</div>
+            {show3XX ? (
+              <>
+                <div className="text-xs font-semibold text-orange-300 uppercase tracking-[0.1em]">SRX 300</div>
+                <div className="text-xs font-semibold text-orange-300 uppercase tracking-[0.1em]">SRX 320</div>
+                <div className="text-xs font-semibold text-orange-300 uppercase tracking-[0.1em] flex items-center justify-between">
+                  SRX 340
+                  <button onClick={() => setShowCompare(false)} className="ml-2 text-slate-400 hover:text-white transition-colors" title="Close comparison">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="col-span-3 text-xs font-semibold text-slate-300 uppercase tracking-[0.1em]">
+                {isSanity ? (
+                  <button
+                    onClick={() => setShowCompare(true)}
+                    className="flex items-center gap-1.5 text-orange-300 hover:text-orange-200 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    Compare 3XX
+                  </button>
+                ) : 'Comments'}
+              </div>
+            )}
           </div>
 
           {/* Table Body — Accordion Sections */}
           <div className="flex flex-col bg-white">
-            {filteredData.length === 0 ? (
+            {displayData.length === 0 ? (
               <div className="px-6 py-20 text-center"><p className="text-slate-500 font-medium text-sm">No results found. Adjust your search.</p></div>
             ) : (
-              filteredData.map((section, sIdx) => {
+              displayData.map((section, sIdx) => {
                 const isExpanded = expandedGroups[section.category] ?? true;
                 const styles = getCategoryStyles(section.category);
                 const testCount = section.tests.filter(t => t.srx400.throughput || t.srx440.throughput).length;
@@ -277,29 +363,29 @@ const DailySanityDashboard = () => {
                             const comments = item.srx440.comments || item.srx400.comments || '';
 
                             return (
-                              <div key={idx} className={`grid grid-cols-12 gap-0 px-6 py-2.5 items-center group/row hover:bg-slate-50 transition-all duration-200 relative ${!isLast ? 'border-b border-slate-100' : ''}`}>
+                              <div key={idx} className={`grid gap-0 px-6 py-2.5 items-center group/row hover:bg-slate-50 transition-all duration-200 relative ${show3XX ? 'grid-cols-[2fr_repeat(5,1fr)]' : 'grid-cols-12'} ${!isLast ? 'border-b border-slate-100' : ''}`}>
 
                                 {/* Tree connector */}
                                 <div className="absolute left-[33px] top-0 bottom-0 w-px bg-slate-200 group-hover/row:bg-emerald-300 transition-colors"></div>
 
                                 {/* Test Case Name */}
-                                <div className="col-span-3 flex items-center pl-8">
+                                <div className={`flex items-center pl-8 ${show3XX ? '' : 'col-span-3'}`}>
                                   <div className="w-3 h-px bg-slate-200 mr-3 group-hover/row:bg-emerald-300 transition-colors"></div>
                                   <span className="text-sm font-medium text-slate-700 leading-relaxed">{item.testCase}</span>
                                 </div>
 
                                 {/* SRX 400 */}
                                 <div
-                                  className="col-span-3 flex flex-col justify-center gap-1 px-2"
+                                  className={`flex flex-col justify-center gap-1 px-2 ${show3XX ? '' : 'col-span-3'}`}
                                   onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: item.srx400.cpu, shm: item.srx400.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has400 ? (
-                                    <span className="font-jetbrains text-sm font-medium text-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] leading-tight group-hover/row:from-emerald-50 group-hover/row:to-emerald-100/80 group-hover/row:text-emerald-700 group-hover/row:border-emerald-300 transition-all cursor-default w-fit">
+                                    <span className="font-jetbrains text-xs font-medium text-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 px-2 py-1 rounded-lg border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] leading-tight group-hover/row:from-emerald-50 group-hover/row:to-emerald-100/80 group-hover/row:text-emerald-700 group-hover/row:border-emerald-300 transition-all cursor-default w-fit">
                                       {item.srx400.throughput}
                                     </span>
                                   ) : (
-                                    <span className="font-jetbrains text-sm text-slate-300 select-none">—</span>
+                                    <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
                                   )}
                                   <MetricsTooltip
                                     position={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
@@ -310,16 +396,16 @@ const DailySanityDashboard = () => {
 
                                 {/* SRX 440 */}
                                 <div
-                                  className="col-span-3 flex flex-col justify-center gap-1 px-2"
+                                  className={`flex flex-col justify-center gap-1 px-2 ${show3XX ? '' : 'col-span-3'}`}
                                   onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: item.srx440.cpu, shm: item.srx440.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has440 ? (
-                                    <span className="font-jetbrains text-sm font-medium text-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] leading-tight group-hover/row:from-blue-50 group-hover/row:to-blue-100/80 group-hover/row:text-blue-700 group-hover/row:border-blue-300 transition-all cursor-default w-fit">
+                                    <span className="font-jetbrains text-xs font-medium text-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 px-2 py-1 rounded-lg border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] leading-tight group-hover/row:from-blue-50 group-hover/row:to-blue-100/80 group-hover/row:text-blue-700 group-hover/row:border-blue-300 transition-all cursor-default w-fit">
                                       {item.srx440.throughput}
                                     </span>
                                   ) : (
-                                    <span className="font-jetbrains text-sm text-slate-300 select-none">—</span>
+                                    <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
                                   )}
                                   <MetricsTooltip
                                     position={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
@@ -328,14 +414,38 @@ const DailySanityDashboard = () => {
                                   />
                                 </div>
 
-                                {/* Comments */}
-                                <div className="col-span-3 px-2">
-                                  {comments ? (
-                                    <span className="font-jetbrains text-xs text-slate-500 leading-relaxed">{comments}</span>
-                                  ) : (
-                                    <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
-                                  )}
-                                </div>
+                                {/* Last columns: 3XX data OR Compare button OR Comments */}
+                                {show3XX ? (
+                                  <>
+                                    <div className="px-2">
+                                      <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                    </div>
+                                    <div className="px-2">
+                                      <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                    </div>
+                                    <div className="px-2">
+                                      <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="col-span-3 px-2">
+                                    {isSanity ? (
+                                      <button
+                                        onClick={() => setShowCompare(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 text-xs font-bold uppercase tracking-wider hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50 transition-all duration-200"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                                        Compare
+                                      </button>
+                                    ) : (
+                                      comments ? (
+                                        <span className="font-jetbrains text-xs text-slate-500 leading-relaxed">{comments}</span>
+                                      ) : (
+                                        <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                      )
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
