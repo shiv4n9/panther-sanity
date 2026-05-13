@@ -1,31 +1,35 @@
 /**
- * Daily Sanity Test Case definitions.
+ * Daily Sanity Test Case definitions — grouped by Excel section heading.
  *
- * Each entry maps a human-friendly label (displayed in the dashboard)
- * to a regex matcher that identifies the corresponding Excel row(s).
+ * Each entry defines a dashboard section with a label (heading) and
+ * an array of matchers. Tests matching any matcher in the array are
+ * collected under that section.
  *
- * To add a new daily sanity test case, add an object here.
- * The `match` function receives the trimmed test case name from the Excel sheet.
+ * Optional `category` regex restricts matching to tests under a
+ * specific Excel section (for test names that appear in multiple sections).
  */
 export const SANITY_TEST_CASES = [
   {
-    label: 'Firewall Throughput',
-    match: (tc) => /^firewall udp throughput-/i.test(tc),
+    label: 'HTTP Throughput via CPS Method (Payload: 64KB)',
+    matchers: [
+      { match: (tc) => /^appsec$/i.test(tc.trim()) },
+    ],
   },
   {
-    label: 'IPSEC VPN Throughput (S2S, PSK, AES256-GCM)',
-    match: (tc) => /^ipsec.*throughput.*aes-gcm256/i.test(tc),
+    label: 'CPS Performance (Payload: 64B)',
+    matchers: [
+      { match: (tc) => /^firewall tcp cps$/i.test(tc.trim()) },
+      { match: (tc) => /^appsec \+ ssl\(tls1\.2\)\s*$/i.test(tc.trim()), category: /cps performance/i },
+    ],
   },
   {
-    label: 'AppSec Throughput',
-    match: (tc) => /^appsec$/i.test(tc.trim()),
-  },
-  {
-    label: 'AppSec + SSL Throughput',
-    match: (tc) => /^appsec \+ ssl\(tls1\.2\)/i.test(tc.trim()),
-  },
-  {
-    label: 'AppSec CPS',
-    match: (tc) => /^appsec cps$/i.test(tc.trim()),
+    label: 'UDP/IPSec Throughput',
+    matchers: [
+      { match: (tc) => /^firewall udp throughput-\s*packet size imix/i.test(tc) },
+      { match: (tc) => /^firewall udp throughput-\s*packet size 1518/i.test(tc) },
+      { match: (tc) => /^packet mode udp throughput-\s*packet size imix/i.test(tc) },
+      { match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256-\s*packet size imix/i.test(tc) },
+      { match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256-\s*packet size 1400/i.test(tc) },
+    ],
   },
 ];

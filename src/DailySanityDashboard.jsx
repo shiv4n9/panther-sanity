@@ -119,10 +119,17 @@ const DailySanityDashboard = () => {
     for (const section of mergedData) {
       for (const test of section.tests) {
         const tcName = test.testCase.trim();
-        for (let i = 0; i < SANITY_TEST_CASES.length; i++) {
-          if (SANITY_TEST_CASES[i].match(tcName)) {
-            sanityGroups[i].tests.push(test);
-            break;
+        // Check each sanity group's matchers
+        let matched = false;
+        for (let i = 0; i < SANITY_TEST_CASES.length && !matched; i++) {
+          for (const m of SANITY_TEST_CASES[i].matchers) {
+            // If the matcher specifies a category constraint, check the parent section
+            if (m.category && !m.category.test(section.category)) continue;
+            if (m.match(tcName)) {
+              sanityGroups[i].tests.push(test);
+              matched = true;
+              break;
+            }
           }
         }
       }
@@ -158,10 +165,14 @@ const DailySanityDashboard = () => {
   // ── Render ──
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
-          <p className="text-slate-600 font-medium">Loading SRX4XX Datasheet…</p>
+          <div className="relative inline-flex items-center justify-center mb-6">
+            <div className="absolute w-16 h-16 rounded-full border-2 border-emerald-400/30 animate-pulse-ring"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-transparent border-t-emerald-400 border-r-blue-400"></div>
+          </div>
+          <p className="text-slate-300 font-medium tracking-wide">Loading SRX4XX Datasheet…</p>
+          <p className="text-slate-500 text-xs mt-1">Parsing Excel telemetry data</p>
         </div>
       </div>
     );
@@ -181,34 +192,37 @@ const DailySanityDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20 text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
 
       {/* Atmospheric Glows */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-40 -right-20 w-[50rem] h-[50rem] rounded-full blur-[100px] animate-blob bg-emerald-100/30"></div>
-        <div className="absolute top-60 -left-40 w-[40rem] h-[40rem] rounded-full blur-[100px] animate-blob bg-blue-100/20" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute -top-40 -right-20 w-[50rem] h-[50rem] rounded-full blur-[120px] animate-blob bg-gradient-to-br from-emerald-200/40 to-teal-100/30"></div>
+        <div className="absolute top-60 -left-40 w-[40rem] h-[40rem] rounded-full blur-[120px] animate-blob bg-gradient-to-br from-blue-200/30 to-indigo-100/20" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute bottom-20 right-1/3 w-[30rem] h-[30rem] rounded-full blur-[100px] animate-blob bg-gradient-to-br from-purple-100/20 to-pink-100/15" style={{ animationDelay: '8s' }}></div>
       </div>
 
       {/* ── Header ── */}
-      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)] sticky top-0 z-50">
-        <div className="max-w-[90rem] mx-auto px-6 py-5">
+      <header className="glass sticky top-0 z-50 border-b border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)]">
+        <div className="h-[2px] w-full bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 animate-gradient"></div>
+        <div className="max-w-[90rem] mx-auto px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-                <span className="w-1.5 h-8 bg-gradient-to-b from-emerald-400 to-teal-600 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.4)]"></span>
-                <span className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text">PANTHER</span>
-                <span className="font-semibold text-slate-600">Daily Sanity Dashboard</span>
+              <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-3">
+                <span className="relative w-2 h-9 rounded-full overflow-hidden">
+                  <span className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-blue-500 to-purple-500 animate-gradient"></span>
+                  <span className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-blue-500 to-purple-500 blur-md opacity-60"></span>
+                </span>
+                <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent animate-gradient">PANTHER</span>
+                <span className="font-semibold text-slate-700">Daily Sanity Dashboard</span>
               </h1>
               <p className="text-sm font-medium text-slate-400 mt-1 ml-[1.85rem] tracking-wide">SRX4XX Performance Telemetry — XLSX Pipeline</p>
             </div>
             <div className="flex items-center gap-2">
-              {/* AppSec Button */}
-              <a href="#/appsec-performance" className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-purple-200 bg-gradient-to-b from-purple-50 to-purple-100/80 text-purple-700 text-xs font-bold uppercase tracking-wider shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200" title="View SRX440 AppSec Performance Results">
+              <a href="#/appsec-performance" className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-purple-200/80 bg-gradient-to-r from-purple-50 to-fuchsia-50 text-purple-700 text-xs font-bold uppercase tracking-wider shadow-sm hover:shadow-lg hover:shadow-purple-200/50 hover:border-purple-300 hover:-translate-y-0.5 transition-all duration-300" title="View SRX440 AppSec Performance Results">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                 AppSec
               </a>
-              {/* Ingest Button */}
-              <button onClick={triggerIngest} disabled={ingestStatus === 'loading'} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-200 ${ingestStatus === 'loading' ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait' : ingestStatus === 'success' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : ingestStatus === 'error' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700'}`}>
+              <button onClick={triggerIngest} disabled={ingestStatus === 'loading'} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${ingestStatus === 'loading' ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait' : ingestStatus === 'success' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : ingestStatus === 'error' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 hover:shadow-lg hover:shadow-emerald-200/50'}`}>
                 {ingestStatus === 'loading' ? 'Ingesting…' : ingestStatus === 'success' ? ingestMessage : ingestStatus === 'error' ? ingestMessage : 'Ingest Latest'}
               </button>
             </div>
@@ -229,18 +243,18 @@ const DailySanityDashboard = () => {
             placeholder="Search test cases…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-5 py-3.5 bg-white/90 backdrop-blur-md border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all duration-300 text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)]"
+            className="w-full pl-12 pr-5 py-3.5 glass rounded-2xl border border-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-300 transition-all duration-300 text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
           />
         </div>
 
         {/* View Toggle — Pill Segmented Control */}
         <div className="animate-fade-in-up flex items-center justify-center" style={{ animationDelay: '220ms' }}>
-          <div className="inline-flex items-center bg-slate-900 rounded-full p-1 shadow-lg border border-slate-700">
+          <div className="inline-flex items-center glass-dark rounded-full p-1 shadow-xl border border-white/10">
             <button
-              onClick={() => setActiveView('sanity')}
+              onClick={() => { setActiveView('sanity'); setShowCompare(false); }}
               className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'sanity'
-                  ? 'bg-emerald-500 text-white shadow-[0_0_16px_rgba(16,185,129,0.4)]'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -253,7 +267,7 @@ const DailySanityDashboard = () => {
               onClick={() => setActiveView('regression')}
               className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'regression'
-                  ? 'bg-blue-500 text-white shadow-[0_0_16px_rgba(59,130,246,0.4)]'
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -266,20 +280,21 @@ const DailySanityDashboard = () => {
         </div>
 
         {/* Release Info Bar */}
-        <div className="animate-fade-in-up bg-white/90 backdrop-blur-md border border-slate-200 border-l-[3px] border-l-teal-500 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)]" style={{ animationDelay: '250ms' }}>
+        <div className="animate-fade-in-up glass rounded-xl border border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.04)]" style={{ animationDelay: '250ms' }}>
+          <div className="h-[2px] rounded-t-xl bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400"></div>
           <div className="px-5 py-2.5 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">SRX400</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">SRX400</span>
                 <span className="font-jetbrains text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{releases.srx400}</span>
               </div>
-              <div className="h-4 w-px bg-slate-300"></div>
+              <div className="h-4 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent"></div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">SRX440</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">SRX440</span>
                 <span className="font-jetbrains text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{releases.srx440}</span>
               </div>
             </div>
-            <button onClick={() => window.open('http://10.204.134.80:3000/?device=snpsrx400c-proto', '_blank')} className="flex items-center gap-1.5 px-3 py-1 rounded-md border border-blue-400 bg-white text-blue-600 text-xs font-semibold uppercase tracking-wider shadow-sm hover:bg-blue-50 transition-all duration-200" title="View SRX 400 telemetry in Longevity Portal">
+            <button onClick={() => window.open('http://10.204.134.80:3000/?device=snpsrx400c-proto', '_blank')} className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-blue-300 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 text-xs font-semibold uppercase tracking-wider shadow-sm hover:shadow-md hover:shadow-blue-200/50 hover:-translate-y-0.5 transition-all duration-300" title="View SRX 400 telemetry in Longevity Portal">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
               Longevity
             </button>
@@ -287,10 +302,10 @@ const DailySanityDashboard = () => {
         </div>
 
         {/* ── Data Table ── */}
-        <div className="animate-fade-in-up bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.06)] border border-slate-200/80 overflow-hidden" style={{ animationDelay: '300ms' }}>
+        <div className="animate-fade-in-up glass rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-white/30 overflow-hidden" style={{ animationDelay: '300ms' }}>
 
           {/* Table Header */}
-          <div className={`grid gap-0 px-6 py-3 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700 transition-all duration-300 ${show3XX ? 'grid-cols-[2fr_repeat(5,1fr)]' : 'grid-cols-12'}`}>
+          <div className={`grid gap-0 px-6 py-3 bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 border-b border-slate-700/50 transition-all duration-300 ${show3XX ? 'grid-cols-[2fr_repeat(5,1fr)]' : 'grid-cols-12'}`}>
             <div className={`text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] pl-1 ${show3XX ? '' : 'col-span-3'}`}>Test Case</div>
             <div className={`text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] ${show3XX ? '' : 'col-span-3'}`}>SRX 400</div>
             <div className={`text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] ${show3XX ? '' : 'col-span-3'}`}>SRX 440</div>
@@ -461,8 +476,8 @@ const DailySanityDashboard = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white/80 backdrop-blur-md border-t border-slate-200/60">
-        <div className="h-px bg-gradient-to-r from-transparent via-emerald-300/40 to-transparent"></div>
+      <footer className="glass border-t border-white/20">
+        <div className="h-[2px] bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-500 animate-gradient"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-3.5">
           <div className="flex items-center justify-center gap-2.5 text-xs text-slate-500">
             <div className="flex items-center gap-1.5 text-emerald-600">
@@ -472,7 +487,7 @@ const DailySanityDashboard = () => {
               </span>
             </div>
             <span className="font-medium">Data Source:</span>
-            <span className="font-jetbrains font-semibold text-slate-700">SRX4XX_Datasheet.xlsx</span>
+            <span className="font-jetbrains font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">SRX4XX_Datasheet.xlsx</span>
             <span className="text-slate-300">•</span>
             <span className="text-slate-400">{new Date().toLocaleDateString()}</span>
           </div>
