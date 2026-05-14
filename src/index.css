@@ -114,9 +114,7 @@ code, .font-mono {
 
 /* ─── Glassmorphism ───────────────────────────────────────────── */
 .glass {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px) saturate(1.8);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .glass-dark {
@@ -276,11 +274,8 @@ code, .font-mono {
 }
 
 /* ─── Table Row Hover ─────────────────────────────────────────── */
-.row-hover {
-  transition: all 0.2s ease;
-}
 .row-hover:hover {
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.03), rgba(59, 130, 246, 0.03), rgba(139, 92, 246, 0.03)) !important;
+  background-color: #f8fafc;
 }
 
 /* ─── Compare Button Fade ─────────────────────────────────────── */
