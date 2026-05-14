@@ -16,11 +16,6 @@ code, .font-mono {
 }
 
 /* ─── Shared Keyframes ────────────────────────────────────────── */
-@keyframes scan {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
-}
-
 @keyframes floatBlob {
   0% { transform: translate(0px, 0px) scale(1); }
   33% { transform: translate(30px, -40px) scale(1.1); }
@@ -29,8 +24,8 @@ code, .font-mono {
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes shimmer {
@@ -43,14 +38,47 @@ code, .font-mono {
   50% { background-position: 100% 50%; }
 }
 
-@keyframes pulse-ring {
-  0% { transform: scale(0.8); opacity: 1; }
-  100% { transform: scale(2.2); opacity: 0; }
+@keyframes float-slow {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
 }
 
-@keyframes slide-right {
-  0% { transform: translateX(-100%); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
+@keyframes shine {
+  0% { left: -75%; }
+  100% { left: 125%; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 6px currentColor; }
+  50% { box-shadow: 0 0 16px currentColor, 0 0 24px currentColor; }
+}
+
+@keyframes slide-row {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.85); }
+  60% { transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes border-rainbow {
+  0% { border-color: #10b981; }
+  25% { border-color: #3b82f6; }
+  50% { border-color: #8b5cf6; }
+  75% { border-color: #f59e0b; }
+  100% { border-color: #10b981; }
+}
+
+@keyframes mesh-move {
+  0% { background-position: 0% 0%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+  100% { background-position: 0% 0%; }
 }
 
 .animate-blob {
@@ -72,48 +100,96 @@ code, .font-mono {
   animation: gradient-shift 6s ease infinite;
 }
 
-.animate-pulse-ring {
-  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+.animate-float-slow {
+  animation: float-slow 5s ease-in-out infinite;
 }
 
-.animate-slide-right {
-  animation: slide-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-slide-row {
+  animation: slide-row 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ─── Glassmorphism Utility ───────────────────────────────────── */
+.animate-pop-in {
+  animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ─── Glassmorphism ───────────────────────────────────────────── */
 .glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px) saturate(1.8);
-  -webkit-backdrop-filter: blur(16px) saturate(1.8);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
 }
 
 .glass-dark {
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
 }
 
-/* ─── Custom Scrollbar (Light Premium) ────────────────────────── */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* ─── Animated Mesh Background ────────────────────────────────── */
+.mesh-bg {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 40% 30%, rgba(6, 182, 212, 0.06) 0%, transparent 40%),
+    linear-gradient(135deg, #f0fdf4 0%, #eff6ff 35%, #f5f3ff 65%, #ecfeff 100%);
+  background-size: 200% 200%;
+  animation: mesh-move 20s ease-in-out infinite;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(241, 245, 249, 0.5);
-  border-radius: 4px;
+/* ─── Shine Effect on Hover ───────────────────────────────────── */
+.shine-on-hover {
+  position: relative;
+  overflow: hidden;
+}
+.shine-on-hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  transition: none;
+}
+.shine-on-hover:hover::after {
+  animation: shine 0.6s ease forwards;
 }
 
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.5), rgba(59, 130, 246, 0.5));
-  border-radius: 4px;
+/* ─── Data Cell ───────────────────────────────────────────────── */
+.data-cell {
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.data-cell:hover {
+  transform: translateY(-2px) scale(1.02);
+  z-index: 1;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.8), rgba(59, 130, 246, 0.8));
+/* ─── Section Underline Animation ─────────────────────────────── */
+.section-underline {
+  position: relative;
+}
+.section-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, currentColor, transparent);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.section-underline:hover::after {
+  width: 100%;
 }
 
-/* ─── Section Row Hover ───────────────────────────────────────── */
+/* ─── Section Hover Sweep ─────────────────────────────────────── */
 .section-row-hover {
   position: relative;
   overflow: hidden;
@@ -122,10 +198,119 @@ code, .font-mono {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
   transform: translateX(-100%);
   transition: transform 0.5s ease;
 }
 .section-row-hover:hover::before {
   transform: translateX(100%);
+}
+
+/* ─── Metric Badge Variants ───────────────────────────────────── */
+.metric-badge-400 {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #065f46;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.1);
+}
+.metric-badge-400:hover {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2), 0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+
+.metric-badge-440 {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #1e40af;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
+}
+.metric-badge-440:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2), 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.metric-badge-3xx {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  color: #9a3412;
+  box-shadow: 0 1px 3px rgba(249, 115, 22, 0.08);
+}
+.metric-badge-3xx:hover {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  border-color: rgba(249, 115, 22, 0.5);
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.2), 0 0 0 3px rgba(249, 115, 22, 0.06);
+}
+
+/* ─── PR Badge ────────────────────────────────────────────────── */
+.pr-badge {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #dc2626;
+}
+.pr-badge:hover {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border-color: rgba(239, 68, 68, 0.7);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+/* ─── Custom Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.4), rgba(59, 130, 246, 0.4));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.7), rgba(59, 130, 246, 0.7));
+}
+
+/* ─── Table Row Hover ─────────────────────────────────────────── */
+.row-hover {
+  transition: all 0.2s ease;
+}
+.row-hover:hover {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.03), rgba(59, 130, 246, 0.03), rgba(139, 92, 246, 0.03)) !important;
+}
+
+/* ─── Compare Button Fade ─────────────────────────────────────── */
+.group\/row:not(:hover) button[title*="Compare"] {
+  pointer-events: none;
+}
+
+.group\/row:hover button[title*="Compare"] {
+  animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ─── Release Chip ────────────────────────────────────────────── */
+.release-chip {
+  position: relative;
+  overflow: hidden;
+}
+.release-chip::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.release-chip:hover::before {
+  opacity: 1;
 }

@@ -2,7 +2,21 @@ import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
 import { SANITY_TEST_CASES } from './config/sanityTestCases';
+import { BRANCH_DEVICES, getBranchData } from './config/branchData';
 import { API_BASE } from './config/api';
+
+// ─── PR Links for known blocked test cases ───────────────────
+const PR_LINKS = [
+  {
+    match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256/i.test(tc),
+    pr: '1940446',
+  },
+];
+
+function getPR(testCaseName) {
+  const entry = PR_LINKS.find(p => p.match(testCaseName));
+  return entry ? entry.pr : null;
+}
 
 // ─── Tooltip Portal ──────────────────────────────────────────
 const MetricsTooltip = ({ position, isVisible, data }) => {
@@ -33,20 +47,18 @@ const MetricsTooltip = ({ position, isVisible, data }) => {
   );
 };
 
-// ─── Category Color Map ──────────────────────────────────────
+// ─── Category Color Map (Vivid Light Theme) ─────────────────
 const getCategoryStyles = (category) => {
   const lc = category.toLowerCase();
-  if (lc.includes('http ') && lc.includes('cps'))
-    return { bg: 'bg-blue-50/60', hover: 'hover:bg-blue-50/80', text: 'text-blue-800', border: 'border-blue-200', accent: 'border-l-blue-500', dot: 'bg-blue-500', dotGlow: 'shadow-[0_0_8px_rgba(59,130,246,0.5)]' };
-  if (lc.includes('https'))
-    return { bg: 'bg-indigo-50/60', hover: 'hover:bg-indigo-50/80', text: 'text-indigo-800', border: 'border-indigo-200', accent: 'border-l-indigo-500', dot: 'bg-indigo-500', dotGlow: 'shadow-[0_0_8px_rgba(99,102,241,0.5)]' };
+  if (lc.includes('http') && lc.includes('throughput'))
+    return { bg: 'bg-gradient-to-r from-sky-50 to-blue-50/80', hover: 'hover:from-sky-100 hover:to-blue-100/80', text: 'text-sky-700', border: 'border-sky-200', accent: 'border-l-sky-500', dot: 'bg-sky-500', dotGlow: 'shadow-[0_0_10px_rgba(14,165,233,0.6)]', badge: 'bg-sky-100 text-sky-700 border-sky-200' };
   if (lc.includes('cps'))
-    return { bg: 'bg-amber-50/60', hover: 'hover:bg-amber-50/80', text: 'text-amber-800', border: 'border-amber-200', accent: 'border-l-amber-500', dot: 'bg-amber-500', dotGlow: 'shadow-[0_0_8px_rgba(245,158,11,0.5)]' };
+    return { bg: 'bg-gradient-to-r from-amber-50 to-orange-50/80', hover: 'hover:from-amber-100 hover:to-orange-100/80', text: 'text-amber-700', border: 'border-amber-200', accent: 'border-l-amber-500', dot: 'bg-amber-500', dotGlow: 'shadow-[0_0_10px_rgba(245,158,11,0.6)]', badge: 'bg-amber-100 text-amber-700 border-amber-200' };
   if (lc.includes('udp') || lc.includes('ipsec'))
-    return { bg: 'bg-rose-50/60', hover: 'hover:bg-rose-50/80', text: 'text-rose-800', border: 'border-rose-200', accent: 'border-l-rose-500', dot: 'bg-rose-500', dotGlow: 'shadow-[0_0_8px_rgba(244,63,94,0.5)]' };
+    return { bg: 'bg-gradient-to-r from-rose-50 to-pink-50/80', hover: 'hover:from-rose-100 hover:to-pink-100/80', text: 'text-rose-700', border: 'border-rose-200', accent: 'border-l-rose-500', dot: 'bg-rose-500', dotGlow: 'shadow-[0_0_10px_rgba(244,63,94,0.6)]', badge: 'bg-rose-100 text-rose-700 border-rose-200' };
   if (lc.includes('scaling'))
-    return { bg: 'bg-teal-50/60', hover: 'hover:bg-teal-50/80', text: 'text-teal-800', border: 'border-teal-200', accent: 'border-l-teal-500', dot: 'bg-teal-500', dotGlow: 'shadow-[0_0_8px_rgba(20,184,166,0.5)]' };
-  return { bg: 'bg-slate-50/60', hover: 'hover:bg-slate-50/80', text: 'text-slate-700', border: 'border-slate-200', accent: 'border-l-slate-400', dot: 'bg-slate-400', dotGlow: 'shadow-[0_0_8px_rgba(148,163,184,0.5)]' };
+    return { bg: 'bg-gradient-to-r from-teal-50 to-emerald-50/80', hover: 'hover:from-teal-100 hover:to-emerald-100/80', text: 'text-teal-700', border: 'border-teal-200', accent: 'border-l-teal-500', dot: 'bg-teal-500', dotGlow: 'shadow-[0_0_10px_rgba(20,184,166,0.6)]', badge: 'bg-teal-100 text-teal-700 border-teal-200' };
+  return { bg: 'bg-gradient-to-r from-violet-50 to-purple-50/80', hover: 'hover:from-violet-100 hover:to-purple-100/80', text: 'text-violet-700', border: 'border-violet-200', accent: 'border-l-violet-500', dot: 'bg-violet-500', dotGlow: 'shadow-[0_0_10px_rgba(139,92,246,0.6)]', badge: 'bg-violet-100 text-violet-700 border-violet-200' };
 };
 
 // ─── Main Component ──────────────────────────────────────────
@@ -191,38 +203,46 @@ const DailySanityDashboard = () => {
     );
   }
 
+  // ── Computed stats ──
+  const totalTests = displayData.reduce((sum, s) => sum + s.tests.length, 0);
+  const testedCount = displayData.reduce((sum, s) => sum + s.tests.filter(t => t.srx400.throughput || t.srx440.throughput).length, 0);
+  const passRate = totalTests > 0 ? Math.round((testedCount / totalTests) * 100) : 0;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20 text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen mesh-bg text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
 
       {/* Atmospheric Glows */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-40 -right-20 w-[50rem] h-[50rem] rounded-full blur-[120px] animate-blob bg-gradient-to-br from-emerald-200/40 to-teal-100/30"></div>
-        <div className="absolute top-60 -left-40 w-[40rem] h-[40rem] rounded-full blur-[120px] animate-blob bg-gradient-to-br from-blue-200/30 to-indigo-100/20" style={{ animationDelay: '4s' }}></div>
-        <div className="absolute bottom-20 right-1/3 w-[30rem] h-[30rem] rounded-full blur-[100px] animate-blob bg-gradient-to-br from-purple-100/20 to-pink-100/15" style={{ animationDelay: '8s' }}></div>
+        <div className="absolute -top-40 -right-20 w-[60rem] h-[60rem] rounded-full blur-[140px] animate-blob bg-gradient-to-br from-emerald-200/50 to-teal-100/40"></div>
+        <div className="absolute top-60 -left-40 w-[50rem] h-[50rem] rounded-full blur-[140px] animate-blob bg-gradient-to-br from-blue-200/40 to-indigo-100/30" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute bottom-20 right-1/3 w-[40rem] h-[40rem] rounded-full blur-[120px] animate-blob bg-gradient-to-br from-purple-100/30 to-pink-100/20" style={{ animationDelay: '8s' }}></div>
+        {/* Floating micro-particles */}
+        <div className="absolute top-[20%] left-[15%] w-1.5 h-1.5 rounded-full bg-emerald-400/40 animate-float-slow"></div>
+        <div className="absolute top-[45%] right-[20%] w-2 h-2 rounded-full bg-blue-400/30 animate-float-slow" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute bottom-[30%] left-[40%] w-1 h-1 rounded-full bg-purple-400/40 animate-float-slow" style={{ animationDelay: '3s' }}></div>
       </div>
 
       {/* ── Header ── */}
-      <header className="glass sticky top-0 z-50 border-b border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)]">
-        <div className="h-[2px] w-full bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 animate-gradient"></div>
+      <header className="glass sticky top-0 z-50 border-b border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.06)]">
+        <div className="h-[3px] w-full bg-gradient-to-r from-emerald-500 via-cyan-500 via-blue-500 to-purple-500 animate-gradient"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-3">
                 <span className="relative w-2 h-9 rounded-full overflow-hidden">
-                  <span className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-blue-500 to-purple-500 animate-gradient"></span>
-                  <span className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-blue-500 to-purple-500 blur-md opacity-60"></span>
+                  <span className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-cyan-500 to-purple-500 animate-gradient"></span>
+                  <span className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-cyan-500 to-purple-500 blur-lg opacity-70"></span>
                 </span>
-                <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent animate-gradient">PANTHER</span>
-                <span className="font-semibold text-slate-700">Daily Sanity Dashboard</span>
+                <span className="bg-gradient-to-r from-emerald-600 via-cyan-600 to-purple-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-shimmer font-black tracking-tighter">PANTHER</span>
+                <span className="font-semibold text-slate-700">Dashboard</span>
               </h1>
-              <p className="text-sm font-medium text-slate-400 mt-1 ml-[1.85rem] tracking-wide">SRX4XX Performance Telemetry — XLSX Pipeline</p>
             </div>
             <div className="flex items-center gap-2">
-              <a href="#/appsec-performance" className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-purple-200/80 bg-gradient-to-r from-purple-50 to-fuchsia-50 text-purple-700 text-xs font-bold uppercase tracking-wider shadow-sm hover:shadow-lg hover:shadow-purple-200/50 hover:border-purple-300 hover:-translate-y-0.5 transition-all duration-300" title="View SRX440 AppSec Performance Results">
+              <a href="#/appsec-performance" className="shine-on-hover flex items-center gap-1.5 px-4 py-2 rounded-xl border border-purple-200/80 bg-gradient-to-r from-purple-50 to-fuchsia-50 text-purple-700 text-xs font-bold uppercase tracking-wider shadow-sm hover:shadow-lg hover:shadow-purple-200/50 hover:border-purple-300 hover:-translate-y-0.5 transition-all duration-300" title="View SRX440 AppSec Performance Results">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                 AppSec
               </a>
-              <button onClick={triggerIngest} disabled={ingestStatus === 'loading'} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${ingestStatus === 'loading' ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait' : ingestStatus === 'success' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : ingestStatus === 'error' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 hover:shadow-lg hover:shadow-emerald-200/50'}`}>
+              <button onClick={triggerIngest} disabled={ingestStatus === 'loading'} className={`shine-on-hover flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${ingestStatus === 'loading' ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait' : ingestStatus === 'success' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : ingestStatus === 'error' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 hover:shadow-lg hover:shadow-emerald-200/50'}`}>
                 {ingestStatus === 'loading' ? 'Ingesting…' : ingestStatus === 'success' ? ingestMessage : ingestStatus === 'error' ? ingestMessage : 'Ingest Latest'}
               </button>
             </div>
@@ -243,19 +263,19 @@ const DailySanityDashboard = () => {
             placeholder="Search test cases…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-5 py-3.5 glass rounded-2xl border border-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-300 transition-all duration-300 text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
+            className="w-full pl-12 pr-5 py-3.5 glass rounded-2xl border border-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-300 transition-all duration-300 text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
           />
         </div>
 
         {/* View Toggle — Pill Segmented Control */}
         <div className="animate-fade-in-up flex items-center justify-center" style={{ animationDelay: '220ms' }}>
-          <div className="inline-flex items-center glass-dark rounded-full p-1 shadow-xl border border-white/10">
+          <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-full p-1 shadow-lg shadow-slate-200/50 border border-slate-200/60">
             <button
               onClick={() => { setActiveView('sanity'); setShowCompare(false); }}
               className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'sanity'
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-300/40'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
               }`}
             >
               <span className="flex items-center gap-2">
@@ -267,8 +287,8 @@ const DailySanityDashboard = () => {
               onClick={() => setActiveView('regression')}
               className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'regression'
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-300/40'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
               }`}
             >
               <span className="flex items-center gap-2">
@@ -281,17 +301,18 @@ const DailySanityDashboard = () => {
 
         {/* Release Info Bar */}
         <div className="animate-fade-in-up glass rounded-xl border border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.04)]" style={{ animationDelay: '250ms' }}>
-          <div className="h-[2px] rounded-t-xl bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400"></div>
+          <div className="h-[2px] rounded-t-xl bg-gradient-to-r from-emerald-400 via-cyan-400 via-blue-400 to-purple-400 animate-gradient"></div>
           <div className="px-5 py-2.5 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">SRX400</span>
-                <span className="font-jetbrains text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{releases.srx400}</span>
+              <div className="flex items-center gap-2 release-chip rounded-lg px-3 py-1 bg-emerald-50/80 border border-emerald-200 transition-all hover:shadow-md hover:shadow-emerald-200/30">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">SRX400</span>
+                <div className="h-3 w-px bg-emerald-200"></div>
+                <span className="font-jetbrains text-xs font-semibold text-emerald-700">{releases.srx400}</span>
               </div>
-              <div className="h-4 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent"></div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">SRX440</span>
-                <span className="font-jetbrains text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{releases.srx440}</span>
+              <div className="flex items-center gap-2 release-chip rounded-lg px-3 py-1 bg-blue-50/80 border border-blue-200 transition-all hover:shadow-md hover:shadow-blue-200/30">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-600">SRX440</span>
+                <div className="h-3 w-px bg-blue-200"></div>
+                <span className="font-jetbrains text-xs font-semibold text-blue-700">{releases.srx440}</span>
               </div>
             </div>
             <button onClick={() => window.open('http://10.204.134.80:3000/?device=snpsrx400c-proto', '_blank')} className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-blue-300 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 text-xs font-semibold uppercase tracking-wider shadow-sm hover:shadow-md hover:shadow-blue-200/50 hover:-translate-y-0.5 transition-all duration-300" title="View SRX 400 telemetry in Longevity Portal">
@@ -302,23 +323,25 @@ const DailySanityDashboard = () => {
         </div>
 
         {/* ── Data Table ── */}
-        <div className="animate-fade-in-up glass rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-white/30 overflow-hidden" style={{ animationDelay: '300ms' }}>
+        <div className="animate-fade-in-up rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden bg-white" style={{ animationDelay: '300ms' }}>
 
           {/* Table Header */}
-          <div className={`grid gap-0 px-6 py-3 bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 border-b border-slate-700/50 transition-all duration-300 ${show3XX ? 'grid-cols-[2fr_repeat(5,1fr)]' : 'grid-cols-12'}`}>
+          <div className={`grid gap-0 px-6 py-3 bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 border-b border-slate-700/50 transition-all duration-300 ${show3XX ? 'grid-cols-[2fr_repeat(7,1fr)]' : 'grid-cols-12'}`}>
             <div className={`text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] pl-1 ${show3XX ? '' : 'col-span-3'}`}>Test Case</div>
             <div className={`text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] ${show3XX ? '' : 'col-span-3'}`}>SRX 400</div>
             <div className={`text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] ${show3XX ? '' : 'col-span-3'}`}>SRX 440</div>
             {show3XX ? (
               <>
-                <div className="text-xs font-semibold text-orange-300 uppercase tracking-[0.1em]">SRX 300</div>
-                <div className="text-xs font-semibold text-orange-300 uppercase tracking-[0.1em]">SRX 320</div>
-                <div className="text-xs font-semibold text-orange-300 uppercase tracking-[0.1em] flex items-center justify-between">
-                  SRX 340
-                  <button onClick={() => setShowCompare(false)} className="ml-2 text-slate-400 hover:text-white transition-colors" title="Close comparison">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
+                {BRANCH_DEVICES.map((dev, i) => (
+                  <div key={dev} className={`text-xs font-semibold text-orange-300 uppercase tracking-[0.1em] ${i === BRANCH_DEVICES.length - 1 ? 'flex items-center justify-between' : ''}`}>
+                    {dev}
+                    {i === BRANCH_DEVICES.length - 1 && (
+                      <button onClick={() => setShowCompare(false)} className="ml-1 text-slate-400 hover:text-white transition-colors" title="Close comparison">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
               </>
             ) : (
               <div className="col-span-3 text-xs font-semibold text-slate-300 uppercase tracking-[0.1em]">
@@ -348,10 +371,9 @@ const DailySanityDashboard = () => {
                 return (
                   <div key={section.category} className="animate-fade-in-up flex flex-col border-b border-slate-200 last:border-0" style={{ animationDelay: `${400 + sIdx * 80}ms` }}>
 
-                    {/* Section Header */}
                     <div
                       onClick={() => toggleGroup(section.category)}
-                      className={`grid grid-cols-12 gap-0 px-6 py-3.5 items-center cursor-pointer transition-all duration-200 border-l-[3px] ${styles.accent} ${styles.bg} ${styles.hover}`}
+                      className={`grid grid-cols-12 gap-0 px-6 py-3.5 items-center cursor-pointer transition-all duration-200 border-l-[3px] ${styles.accent} ${styles.bg} ${styles.hover} section-row-hover shine-on-hover`}
                     >
                       <div className="col-span-12 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -359,11 +381,23 @@ const DailySanityDashboard = () => {
                             <svg className={`w-3.5 h-3.5 ${styles.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                           </div>
                           <span className={`relative flex items-center justify-center w-2.5 h-2.5`}>
-                            <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${styles.dot} ${styles.dotGlow} ring-[3px] ring-slate-400/30`}></span>
+                            <span className={`absolute inline-flex w-2.5 h-2.5 rounded-full ${styles.dot} opacity-40 animate-ping`}></span>
+                            <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${styles.dot} ${styles.dotGlow}`}></span>
                           </span>
-                          <span className={`text-sm font-semibold tracking-tight ${styles.text}`}>{section.category}</span>
+                          <span className={`text-sm font-semibold tracking-tight section-underline ${styles.text}`}>{section.category}</span>
                         </div>
-                        <span className="text-xs font-jetbrains text-slate-400">{testCount} / {section.tests.length} tested</span>
+                        <div className="flex items-center gap-3">
+                          {/* Mini progress bar */}
+                          <div className="hidden sm:flex items-center gap-2">
+                            <div className="w-20 h-1.5 bg-slate-200/60 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${testCount === section.tests.length ? 'bg-emerald-500' : testCount > 0 ? 'bg-amber-400' : 'bg-slate-300'}`}
+                                style={{ width: `${section.tests.length > 0 ? (testCount / section.tests.length) * 100 : 0}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                          <span className={`text-xs font-jetbrains px-2 py-0.5 rounded-md ${testCount === section.tests.length ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : testCount > 0 ? 'text-amber-700 bg-amber-50 border border-amber-200' : 'text-slate-400 bg-slate-50 border border-slate-200'}`}>{testCount} / {section.tests.length} tested</span>
+                        </div>
                       </div>
                     </div>
 
@@ -378,7 +412,7 @@ const DailySanityDashboard = () => {
                             const comments = item.srx440.comments || item.srx400.comments || '';
 
                             return (
-                              <div key={idx} className={`grid gap-0 px-6 py-2.5 items-center group/row hover:bg-slate-50 transition-all duration-200 relative ${show3XX ? 'grid-cols-[2fr_repeat(5,1fr)]' : 'grid-cols-12'} ${!isLast ? 'border-b border-slate-100' : ''}`}>
+                              <div key={idx} className={`animate-slide-row grid gap-0 px-6 py-2.5 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[2fr_repeat(7,1fr)]' : 'grid-cols-12'} ${!isLast ? 'border-b border-slate-100/80' : ''}`} style={{ animationDelay: `${idx * 50}ms`, fontVariantNumeric: 'tabular-nums' }}>
 
                                 {/* Tree connector */}
                                 <div className="absolute left-[33px] top-0 bottom-0 w-px bg-slate-200 group-hover/row:bg-emerald-300 transition-colors"></div>
@@ -396,7 +430,7 @@ const DailySanityDashboard = () => {
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has400 ? (
-                                    <span className="font-jetbrains text-xs font-medium text-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 px-2 py-1 rounded-lg border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] leading-tight group-hover/row:from-emerald-50 group-hover/row:to-emerald-100/80 group-hover/row:text-emerald-700 group-hover/row:border-emerald-300 transition-all cursor-default w-fit">
+                                    <span className="data-cell font-jetbrains text-xs font-semibold px-2.5 py-1 rounded-lg leading-tight cursor-default w-fit bg-slate-50 text-slate-800 border border-slate-200/80 shadow-sm hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 hover:shadow-emerald-100">
                                       {item.srx400.throughput}
                                     </span>
                                   ) : (
@@ -416,12 +450,27 @@ const DailySanityDashboard = () => {
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has440 ? (
-                                    <span className="font-jetbrains text-xs font-medium text-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 px-2 py-1 rounded-lg border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] leading-tight group-hover/row:from-blue-50 group-hover/row:to-blue-100/80 group-hover/row:text-blue-700 group-hover/row:border-blue-300 transition-all cursor-default w-fit">
+                                    <span className="data-cell font-jetbrains text-xs font-semibold px-2.5 py-1 rounded-lg leading-tight cursor-default w-fit bg-slate-50 text-slate-800 border border-slate-200/80 shadow-sm hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 hover:shadow-blue-100">
                                       {item.srx440.throughput}
                                     </span>
-                                  ) : (
-                                    <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
-                                  )}
+                                  ) : (() => {
+                                    const pr = getPR(item.testCase);
+                                    return pr ? (
+                                      <a
+                                        href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
+                                        title={`Open PR ${pr} in GNATS`}
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                                        PR:{pr}
+                                      </a>
+                                    ) : (
+                                      <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                    );
+                                  })()
+                                  }
                                   <MetricsTooltip
                                     position={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
                                     isVisible={hoveredCell?.id === `440-${sIdx}-${idx}`}
@@ -429,28 +478,35 @@ const DailySanityDashboard = () => {
                                   />
                                 </div>
 
-                                {/* Last columns: 3XX data OR Compare button OR Comments */}
+                                {/* Last columns: Branch 3XX data OR Compare button OR Comments */}
                                 {show3XX ? (
                                   <>
-                                    <div className="px-2">
-                                      <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
-                                    </div>
-                                    <div className="px-2">
-                                      <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
-                                    </div>
-                                    <div className="px-2">
-                                      <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
-                                    </div>
+                                    {BRANCH_DEVICES.map(dev => {
+                                      const bd = getBranchData(item.testCase);
+                                      const val = bd ? bd[dev] : null;
+                                      return (
+                                        <div key={dev} className="px-1">
+                                          {val ? (
+                                            <span className="data-cell font-jetbrains text-[11px] font-semibold px-1.5 py-0.5 rounded-md leading-tight cursor-default w-fit block whitespace-nowrap bg-slate-50 text-slate-700 border border-slate-200/80 shadow-sm hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200">
+                                              {val}
+                                            </span>
+                                          ) : (
+                                            <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </>
                                 ) : (
-                                  <div className="col-span-3 px-2">
+                                  <div className="col-span-3 px-2 relative">
                                     {isSanity ? (
                                       <button
                                         onClick={() => setShowCompare(true)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 text-xs font-bold uppercase tracking-wider hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50 transition-all duration-200"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200/60 bg-white/80 backdrop-blur-sm text-slate-400 text-xs font-bold uppercase tracking-wider opacity-0 group-hover/row:opacity-100 hover:border-emerald-300 hover:bg-emerald-50/80 hover:text-emerald-600 hover:shadow-md hover:shadow-emerald-100/50 hover:-translate-y-0.5 transition-all duration-300"
+                                        title="Compare with SRX 3XX branch devices"
                                       >
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                                        Compare
+                                        Compare 3XX
                                       </button>
                                     ) : (
                                       comments ? (
