@@ -5,6 +5,7 @@ import { SANITY_TEST_CASES } from './config/sanityTestCases';
 import { BRANCH_DEVICES, getBranchData } from './config/branchData';
 import { API_BASE } from './config/api';
 import HistoryModal from './components/HistoryModal';
+import ChangelogBanner from './components/ChangelogBanner';
 
 // ─── PR Links for known blocked test cases ───────────────────
 const PR_LINKS = [
@@ -361,6 +362,9 @@ const DailySanityDashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* ── Changelog Banner ── */}
+        <ChangelogBanner />
 
         {/* ── Data Table ── */}
         <div className="rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden bg-white">
