@@ -521,26 +521,39 @@ def ingest_xlsx():
 
         conn = get_db()
         try:
+            # First pass: parse all sheets to collect releases for the log entry
+            parsed_sheets = {}
             for sheet_name in ['SRX400', 'SRX440']:
                 if sheet_name not in wb.sheetnames:
                     logger.warning(f"Sheet '{sheet_name}' not found, skipping")
                     continue
-
                 ws = wb[sheet_name]
-                parsed = _parse_xlsx_sheet(ws)
-                platform = sheet_name
-                releases[sheet_name.lower()] = parsed['release']
+                parsed_sheets[sheet_name] = _parse_xlsx_sheet(ws)
+                releases[sheet_name.lower()] = parsed_sheets[sheet_name]['release']
 
-                # Get previous snapshot for diff computation
+            # Create ingestion_log entry FIRST to get a unique ID
+            import json as json_mod
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO ingestion_log
+                      (release_400, release_440, source_file, tests_added, tests_updated, diff_json)
+                    VALUES (%s, %s, %s, 0, 0, '{}'::jsonb)
+                    RETURNING id
+                """, (
+                    releases.get('srx400', ''),
+                    releases.get('srx440', ''),
+                    filename,
+                ))
+                ingestion_id = cur.fetchone()[0]
+
+            # Second pass: compute diffs and insert rows
+            for sheet_name, parsed in parsed_sheets.items():
+                platform = sheet_name
+
+                # Get previous snapshot for diff (excludes current ingestion)
                 prev = _get_previous_snapshot(conn, platform)
 
                 with conn.cursor() as cur:
-                    # Delete existing rows for today (force re-insert)
-                    cur.execute(
-                        "DELETE FROM sanity_runs WHERE csv_filename=%s AND run_date=%s AND platform=%s",
-                        (filename, run_date, platform)
-                    )
-
                     for section in parsed['sections']:
                         category = section['category']
                         for test in section['tests']:
@@ -577,10 +590,10 @@ def ingest_xlsx():
                             """, (
                                 run_date,
                                 test['test_case'],
-                                category,  # use category as parameter for XLSX rows
+                                category,
                                 test['throughput'],
                                 test['cpu'],
-                                None,  # memory
+                                None,
                                 test['shm'],
                                 platform,
                                 parsed['release'],
@@ -590,21 +603,13 @@ def ingest_xlsx():
                             ))
                             total_inserted += 1
 
-            # Log the ingestion
+            # Update the ingestion_log with actual diff counts
             with conn.cursor() as cur:
-                import json
                 cur.execute("""
-                    INSERT INTO ingestion_log
-                      (release_400, release_440, source_file, tests_added, tests_updated, diff_json)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (
-                    releases.get('srx400', ''),
-                    releases.get('srx440', ''),
-                    filename,
-                    total_added,
-                    total_updated,
-                    json.dumps(diff_data),
-                ))
+                    UPDATE ingestion_log
+                    SET tests_added = %s, tests_updated = %s, diff_json = %s
+                    WHERE id = %s
+                """, (total_added, total_updated, json_mod.dumps(diff_data), ingestion_id))
 
             conn.commit()
             wb.close()
@@ -612,6 +617,7 @@ def ingest_xlsx():
             return jsonify({
                 'status': 'success',
                 'run_date': str(run_date),
+                'ingestion_id': ingestion_id,
                 'inserted': total_inserted,
                 'updated': total_updated,
                 'added': total_added,
@@ -690,7 +696,7 @@ def get_sanity_history():
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 query = """
-                    SELECT run_date, throughput, cpu, shm, release, image_name
+                    SELECT run_date, throughput, cpu, shm, release, image_name, created_at
                     FROM sanity_runs
                     WHERE test_case = %s AND platform = %s AND run_date >= %s
                 """
@@ -700,7 +706,7 @@ def get_sanity_history():
                     query += " AND category = %s"
                     params.append(category)
 
-                query += " ORDER BY run_date ASC"
+                query += " ORDER BY created_at ASC"
                 cur.execute(query, params)
                 rows = cur.fetchall()
         finally:
@@ -709,7 +715,7 @@ def get_sanity_history():
         history = []
         for row in rows:
             history.append({
-                'date': str(row['run_date']),
+                'date': row['created_at'].strftime('%Y-%m-%d %H:%M') if row['created_at'] else str(row['run_date']),
                 'throughput': row['throughput'],
                 'throughput_numeric': _extract_throughput_value(row['throughput']),
                 'cpu': row['cpu'] or '',
