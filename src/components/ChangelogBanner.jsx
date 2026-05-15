@@ -5,13 +5,14 @@ import { API_BASE } from '../config/api';
  * ChangelogBanner — Collapsible banner showing what changed in the latest ingestion.
  * Displays count of updated/new tests with expandable diff details.
  */
-const ChangelogBanner = () => {
+const ChangelogBanner = ({ refreshKey = 0 }) => {
   const [changelog, setChangelog] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchChangelog = async () => {
+      setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/changelog?limit=1`);
         if (!res.ok) return;
@@ -26,7 +27,7 @@ const ChangelogBanner = () => {
       }
     };
     fetchChangelog();
-  }, []);
+  }, [refreshKey]);
 
   if (loading || !changelog) return null;
 

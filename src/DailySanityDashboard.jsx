@@ -79,6 +79,7 @@ const DailySanityDashboard = () => {
   const [showCompare, setShowCompare] = useState(false);
   const [historyModal, setHistoryModal] = useState({ open: false, testCase: '', platform: '', category: '', value: '' });
   const [isNormalized, setIsNormalized] = useState(false);
+  const [changelogRefresh, setChangelogRefresh] = useState(0);
 
   const isSanity = activeView === 'sanity';
   const show3XX = isSanity && showCompare;
@@ -124,6 +125,7 @@ const DailySanityDashboard = () => {
       if (json.added > 0) parts.push(`${json.added} new`);
       setIngestStatus('success');
       setIngestMessage(parts.join(', '));
+      setChangelogRefresh(prev => prev + 1);
     } catch (err) {
       setIngestStatus('error');
       setIngestMessage(err.message);
@@ -383,7 +385,7 @@ const DailySanityDashboard = () => {
         </div>
 
         {/* ── Changelog Banner ── */}
-        <ChangelogBanner />
+        <ChangelogBanner refreshKey={changelogRefresh} />
 
         {/* ── Data Table ── */}
         <div className="rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden bg-white">
