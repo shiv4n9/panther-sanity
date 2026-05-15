@@ -6,6 +6,7 @@ import { BRANCH_DEVICES, getBranchData } from './config/branchData';
 import { API_BASE } from './config/api';
 import HistoryModal from './components/HistoryModal';
 import ChangelogBanner from './components/ChangelogBanner';
+import { normalizeTo90Cpu } from './utils/normalize';
 
 // ─── PR Links for known blocked test cases ───────────────────
 const PR_LINKS = [
@@ -77,6 +78,7 @@ const DailySanityDashboard = () => {
   const [ingestMessage, setIngestMessage] = useState('');
   const [showCompare, setShowCompare] = useState(false);
   const [historyModal, setHistoryModal] = useState({ open: false, testCase: '', platform: '', category: '', value: '' });
+  const [isNormalized, setIsNormalized] = useState(false);
 
   const isSanity = activeView === 'sanity';
   const show3XX = isSanity && showCompare;
@@ -308,6 +310,23 @@ const DailySanityDashboard = () => {
                 Full Regression
               </span>
             </button>
+
+            {/* Normalize Toggle */}
+            <button
+              onClick={() => setIsNormalized(!isNormalized)}
+              className={`relative px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
+                isNormalized
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-300/40 border-amber-400'
+                  : 'bg-white text-slate-400 hover:text-amber-600 hover:border-amber-300 hover:bg-amber-50/50 border-slate-200'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {isNormalized ? 'Normalized @90%' : 'Normalize CPU'}
+              </span>
+            </button>
           </div>
         </div>
 
@@ -446,6 +465,10 @@ const DailySanityDashboard = () => {
                             const has440 = !!item.srx440.throughput;
                             const comments = item.srx440.comments || item.srx400.comments || '';
 
+                            // CPU normalization
+                            const norm400 = isNormalized && has400 ? normalizeTo90Cpu(item.srx400.throughput, item.srx400.cpu) : { value: item.srx400.throughput, wasNormalized: false };
+                            const norm440 = isNormalized && has440 ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu) : { value: item.srx440.throughput, wasNormalized: false };
+
                             return (
                               <div key={idx} className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[3fr_repeat(7,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'} border-b border-slate-200`} style={{ fontVariantNumeric: 'tabular-nums' }}>
 
@@ -461,10 +484,14 @@ const DailySanityDashboard = () => {
                                 >
                                   {has400 ? (
                                     <span
-                                      className="font-jetbrains text-xs font-semibold text-slate-800 cursor-pointer hover:text-emerald-600 hover:underline underline-offset-2 transition-colors"
+                                      className={`font-jetbrains text-xs font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
+                                        norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-emerald-600'
+                                      }`}
                                       onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
+                                      title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
                                     >
-                                      {item.srx400.throughput}
+                                      {norm400.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
+                                      {norm400.value}
                                     </span>
                                   ) : (
                                     <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
@@ -483,10 +510,14 @@ const DailySanityDashboard = () => {
                                 >
                                   {has440 ? (
                                     <span
-                                      className="font-jetbrains text-xs font-semibold text-slate-800 cursor-pointer hover:text-blue-600 hover:underline underline-offset-2 transition-colors"
+                                      className={`font-jetbrains text-xs font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
+                                        norm440.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-blue-600'
+                                      }`}
                                       onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
+                                      title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
                                     >
-                                      {item.srx440.throughput}
+                                      {norm440.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
+                                      {norm440.value}
                                     </span>
                                   ) : (() => {
                                     const pr = getPR(item.testCase);
