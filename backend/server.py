@@ -494,13 +494,13 @@ def ingest_xlsx():
         import openpyxl
 
         body = request.get_json(silent=True) or {}
-        xlsx_path = body.get('path', '/app/public/data/SRX4XX_Datasheet.xlsx')
+        xlsx_path = body.get('path', '/data/xlsx/SRX4XX_Datasheet.xlsx')
 
         # Also check common local dev paths
         if not os.path.exists(xlsx_path):
             for alt in [
                 os.path.join(os.path.dirname(__file__), '..', 'public', 'data', 'SRX4XX_Datasheet.xlsx'),
-                '/data/SRX4XX_Datasheet.xlsx',
+                '/app/public/data/SRX4XX_Datasheet.xlsx',
             ]:
                 if os.path.exists(alt):
                     xlsx_path = alt

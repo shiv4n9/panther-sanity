@@ -107,33 +107,25 @@ const DailySanityDashboard = () => {
     setIngestStatus('loading');
     setIngestMessage('');
     try {
-      // Try XLSX ingest first (stores versioned data for history/changelog)
-      const xlsxRes = await fetch(`${API_BASE}/api/ingest-xlsx`, {
+      const res = await fetch(`${API_BASE}/api/ingest-xlsx`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      const xlsxJson = await xlsxRes.json();
+      const json = await res.json();
 
-      if (xlsxRes.ok) {
-        const parts = [`${xlsxJson.inserted} rows stored`];
-        if (xlsxJson.updated > 0) parts.push(`${xlsxJson.updated} updated`);
-        if (xlsxJson.added > 0) parts.push(`${xlsxJson.added} new`);
-        setIngestStatus('success');
-        setIngestMessage(parts.join(', '));
-      } else {
-        // Fall back to legacy CSV ingest
-        const res = await fetch(`${API_BASE}/api/ingest?force=true`, { method: 'POST' });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Ingest failed');
-        setIngestStatus('success');
-        setIngestMessage(json.status === 'skipped' ? 'Already up to date' : `Ingested ${json.inserted} rows`);
-      }
+      if (!res.ok) throw new Error(json.error || 'Ingest failed');
+
+      const parts = [`${json.inserted} rows stored`];
+      if (json.updated > 0) parts.push(`${json.updated} updated`);
+      if (json.added > 0) parts.push(`${json.added} new`);
+      setIngestStatus('success');
+      setIngestMessage(parts.join(', '));
     } catch (err) {
       setIngestStatus('error');
       setIngestMessage(err.message);
     } finally {
-      setTimeout(() => setIngestStatus(null), 4000);
+      setTimeout(() => setIngestStatus(null), 5000);
     }
   };
 

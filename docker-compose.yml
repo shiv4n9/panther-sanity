@@ -34,6 +34,8 @@ services:
     volumes:
       # Mount the host CSV directory into the container (read-only for safety)
       - ${CSV_DIR:-/root/gramasub/PANTHER_SANITY}:/data/csvs:ro
+      # Mount the XLSX datasheet directory for ingest-xlsx endpoint
+      - ./public/data:/data/xlsx:ro
     depends_on:
       db:
         condition: service_healthy
