@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS sanity_runs (
   platform      TEXT,
   image_name    TEXT,
   csv_filename  TEXT,
+  release       TEXT,
+  category      TEXT,
   created_at    TIMESTAMPTZ  DEFAULT NOW()
 );
 
@@ -23,3 +25,19 @@ CREATE INDEX IF NOT EXISTS idx_sanity_runs_lookup
 -- Index for CSV deduplication
 CREATE INDEX IF NOT EXISTS idx_sanity_runs_csv_date
   ON sanity_runs (csv_filename, run_date);
+
+-- Index for platform-specific queries
+CREATE INDEX IF NOT EXISTS idx_sanity_runs_platform
+  ON sanity_runs (platform, test_case, run_date DESC);
+
+-- Track each ingestion event with diff info
+CREATE TABLE IF NOT EXISTS ingestion_log (
+  id            SERIAL PRIMARY KEY,
+  ingested_at   TIMESTAMPTZ  DEFAULT NOW(),
+  release_400   TEXT,
+  release_440   TEXT,
+  source_file   TEXT,
+  tests_added   INTEGER      DEFAULT 0,
+  tests_updated INTEGER      DEFAULT 0,
+  diff_json     JSONB        DEFAULT '{}'::jsonb
+);

@@ -4,6 +4,7 @@ import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
 import { SANITY_TEST_CASES } from './config/sanityTestCases';
 import { BRANCH_DEVICES, getBranchData } from './config/branchData';
 import { API_BASE } from './config/api';
+import HistoryModal from './components/HistoryModal';
 
 // ─── PR Links for known blocked test cases ───────────────────
 const PR_LINKS = [
@@ -74,6 +75,7 @@ const DailySanityDashboard = () => {
   const [ingestStatus, setIngestStatus] = useState(null);
   const [ingestMessage, setIngestMessage] = useState('');
   const [showCompare, setShowCompare] = useState(false);
+  const [historyModal, setHistoryModal] = useState({ open: false, testCase: '', platform: '', category: '', value: '' });
 
   const isSanity = activeView === 'sanity';
   const show3XX = isSanity && showCompare;
@@ -100,16 +102,33 @@ const DailySanityDashboard = () => {
     })();
   }, []);
 
-  // ── Ingest trigger (kept for legacy DB pipeline) ──
+  // ── Ingest trigger — stores XLSX snapshot to DB for history tracking ──
   const triggerIngest = async () => {
     setIngestStatus('loading');
     setIngestMessage('');
     try {
-      const res = await fetch(`${API_BASE}/api/ingest?force=true`, { method: 'POST' });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Ingest failed');
-      setIngestStatus('success');
-      setIngestMessage(json.status === 'skipped' ? 'Already up to date' : `Ingested ${json.inserted} rows`);
+      // Try XLSX ingest first (stores versioned data for history/changelog)
+      const xlsxRes = await fetch(`${API_BASE}/api/ingest-xlsx`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const xlsxJson = await xlsxRes.json();
+
+      if (xlsxRes.ok) {
+        const parts = [`${xlsxJson.inserted} rows stored`];
+        if (xlsxJson.updated > 0) parts.push(`${xlsxJson.updated} updated`);
+        if (xlsxJson.added > 0) parts.push(`${xlsxJson.added} new`);
+        setIngestStatus('success');
+        setIngestMessage(parts.join(', '));
+      } else {
+        // Fall back to legacy CSV ingest
+        const res = await fetch(`${API_BASE}/api/ingest?force=true`, { method: 'POST' });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Ingest failed');
+        setIngestStatus('success');
+        setIngestMessage(json.status === 'skipped' ? 'Already up to date' : `Ingested ${json.inserted} rows`);
+      }
     } catch (err) {
       setIngestStatus('error');
       setIngestMessage(err.message);
@@ -445,7 +464,10 @@ const DailySanityDashboard = () => {
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has400 ? (
-                                    <span className="font-jetbrains text-xs font-semibold text-slate-800">
+                                    <span
+                                      className="font-jetbrains text-xs font-semibold text-slate-800 cursor-pointer hover:text-emerald-600 hover:underline underline-offset-2 transition-colors"
+                                      onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
+                                    >
                                       {item.srx400.throughput}
                                     </span>
                                   ) : (
@@ -464,7 +486,10 @@ const DailySanityDashboard = () => {
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has440 ? (
-                                    <span className="font-jetbrains text-xs font-semibold text-slate-800">
+                                    <span
+                                      className="font-jetbrains text-xs font-semibold text-slate-800 cursor-pointer hover:text-blue-600 hover:underline underline-offset-2 transition-colors"
+                                      onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
+                                    >
                                       {item.srx440.throughput}
                                     </span>
                                   ) : (() => {
@@ -551,6 +576,16 @@ const DailySanityDashboard = () => {
           </div>
         </div>
       </footer>
+
+      {/* History Modal */}
+      <HistoryModal
+        isOpen={historyModal.open}
+        onClose={() => setHistoryModal({ open: false, testCase: '', platform: '', category: '', value: '' })}
+        testCase={historyModal.testCase}
+        platform={historyModal.platform}
+        category={historyModal.category}
+        currentValue={historyModal.value}
+      />
     </div>
   );
 };
