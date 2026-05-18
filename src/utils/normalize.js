@@ -1,4 +1,13 @@
 /**
+ * Scaling/capacity sections (session limits, RIB routes, etc.) are not
+ * throughput metrics and must never be CPU-normalized.
+ */
+export function isScalingCategory(category) {
+  if (!category) return false;
+  return category.toLowerCase().includes('scaling');
+}
+
+/**
  * CPU Normalization Utility
  *
  * Scales throughput metrics to a 90% CPU baseline.
@@ -48,4 +57,56 @@ export function normalizeTo90Cpu(metric, cpuStr) {
   });
 
   return { value: normalized, wasNormalized: true };
+}
+
+/**
+ * Extract the comparable numeric value from a throughput string.
+ * - Compound: "1700 CPS / 940 Mbps" → 940
+ * - Compound: "655.3 KPPS / 1956 Mbps" → 1956
+ * - Single:   "28009" → 28009
+ * - Empty/dash: null
+ *
+ * @param {string} str - Throughput string
+ * @returns {number|null}
+ */
+export function extractMbpsValue(str) {
+  if (!str || str.trim() === '' || str.trim() === '—' || str.trim() === '-') return null;
+
+  // If contains "/" or "Mbps", extract the Mbps portion
+  if (str.includes('/') || /mbps/i.test(str)) {
+    // Split on "/" and find the part with "Mbps"
+    const parts = str.split('/');
+    for (const part of parts) {
+      if (/mbps/i.test(part)) {
+        const m = part.match(/([\d.]+)/);
+        return m ? parseFloat(m[1]) : null;
+      }
+    }
+    // If no "Mbps" found but has "/", take the last numeric value
+    const lastPart = parts[parts.length - 1];
+    const m = lastPart.match(/([\d.]+)/);
+    return m ? parseFloat(m[1]) : null;
+  }
+
+  // Single value — extract first number
+  const m = str.match(/([\d.]+)/);
+  return m ? parseFloat(m[1]) : null;
+}
+
+/**
+ * Calculate percentage difference between SRX400 and SRX440 throughput.
+ * Returns { pct, val400, val440 } or null if comparison isn't possible.
+ *
+ * @param {string} raw400 - SRX400 throughput string
+ * @param {string} raw440 - SRX440 throughput string
+ * @returns {{ pct: number, val400: number, val440: number } | null}
+ */
+export function calculatePercentageDiff(raw400, raw440) {
+  const val400 = extractMbpsValue(raw400);
+  const val440 = extractMbpsValue(raw440);
+
+  if (val400 === null || val440 === null || val400 === 0) return null;
+
+  const pct = ((val440 - val400) / val400) * 100;
+  return { pct: parseFloat(pct.toFixed(1)), val400, val440 };
 }
