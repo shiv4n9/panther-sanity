@@ -50,6 +50,52 @@ const MetricsTooltip = ({ position, isVisible, data }) => {
   );
 };
 
+const DiffTooltip = ({ position, isVisible, data }) => {
+  if (!isVisible || !position || !data) return null;
+  const { diff, val400, val440 } = data;
+  
+  return createPortal(
+    <div
+      className="fixed z-[9999] animate-fade-in-up pointer-events-none"
+      style={{ top: `${position.y + 8}px`, left: `${position.x}px`, animationDuration: '200ms' }}
+    >
+      <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[240px]">
+        {/* Header — matches System Metrics style */}
+        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
+          <div className="w-2 h-2 bg-cyan-500 rounded-full shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
+          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Performance Diff</span>
+        </div>
+        {/* Data rows — same layout as CPU/SHM */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-400">SRX 400:</span>
+            <span className="font-jetbrains text-sm font-semibold text-emerald-400">
+              {diff ? diff.val400 : val400 || '—'}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-400">SRX 440:</span>
+            <span className="font-jetbrains text-sm font-semibold text-blue-400">
+              {diff ? diff.val440 : val440 || '—'}
+            </span>
+          </div>
+          {diff && (
+            <div className="flex justify-between items-center pt-1.5 mt-0.5 border-t border-slate-700">
+              <span className="text-xs text-slate-400">Difference:</span>
+              <span className={`font-jetbrains text-sm font-bold ${
+                diff.pct >= 0 ? 'text-emerald-400' : 'text-red-400'
+              }`}>
+                {diff.pct >= 0 ? '▲' : '▼'} {Math.abs(diff.pct)}%
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 // ─── Category Color Map (Vivid Light Theme) ─────────────────
 const getCategoryStyles = (category) => {
   const lc = category.toLowerCase();
@@ -74,6 +120,7 @@ const DailySanityDashboard = () => {
   const [activeView, setActiveView] = useState('sanity');
   const [expandedGroups, setExpandedGroups] = useState({});
   const [hoveredCell, setHoveredCell] = useState(null);
+  const [hoveredDiff, setHoveredDiff] = useState(null);
   const [ingestStatus, setIngestStatus] = useState(null);
   const [ingestMessage, setIngestMessage] = useState('');
   const [showCompare, setShowCompare] = useState(false);
@@ -188,6 +235,12 @@ const DailySanityDashboard = () => {
   const handleCellEnter = (e, cellId, metrics) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setHoveredCell({ id: cellId, x: rect.left, y: rect.bottom, ...metrics });
+  };
+
+  const handleDiffEnter = (e, cellId, val400, val440) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const diff = calculatePercentageDiff(val400, val440);
+    setHoveredDiff({ id: cellId, x: rect.left, y: rect.bottom, diff, val400, val440 });
   };
 
   // ── Render ──
@@ -476,49 +529,18 @@ const DailySanityDashboard = () => {
                               <div key={idx} className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[3fr_repeat(7,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'} border-b border-slate-200`} style={{ fontVariantNumeric: 'tabular-nums' }}>
 
                                 {/* Test Case Name + Comparison Tooltip */}
-                                <div className="flex items-center px-6 relative group/tc">
-                                  <span className="text-[13px] font-medium text-slate-700 leading-snug cursor-default">{item.testCase}</span>
-
-                                  {/* Hover tooltip — CSS only, mirrors MetricsTooltip design */}
-                                  {(has400 || has440) && (() => {
-                                    const diff = calculatePercentageDiff(item.srx400.throughput, item.srx440.throughput);
-                                    return (
-                                      <div className="absolute left-6 top-full mt-2 hidden group-hover/tc:block z-[9999] pointer-events-none">
-                                        <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[240px]">
-                                          {/* Header — matches System Metrics style */}
-                                          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
-                                            <div className="w-2 h-2 bg-cyan-500 rounded-full shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
-                                            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Performance Diff</span>
-                                          </div>
-                                          {/* Data rows — same layout as CPU/SHM */}
-                                          <div className="space-y-1.5">
-                                            <div className="flex justify-between items-center">
-                                              <span className="text-xs text-slate-400">SRX 400:</span>
-                                              <span className="font-jetbrains text-sm font-semibold text-emerald-400">
-                                                {diff ? diff.val400 : item.srx400.throughput || '—'}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                              <span className="text-xs text-slate-400">SRX 440:</span>
-                                              <span className="font-jetbrains text-sm font-semibold text-blue-400">
-                                                {diff ? diff.val440 : item.srx440.throughput || '—'}
-                                              </span>
-                                            </div>
-                                            {diff && (
-                                              <div className="flex justify-between items-center pt-1.5 mt-0.5 border-t border-slate-700">
-                                                <span className="text-xs text-slate-400">Difference:</span>
-                                                <span className={`font-jetbrains text-sm font-bold ${
-                                                  diff.pct >= 0 ? 'text-emerald-400' : 'text-red-400'
-                                                }`}>
-                                                  {diff.pct >= 0 ? '▲' : '▼'} {Math.abs(diff.pct)}%
-                                                </span>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })()}
+                                <div 
+                                  className="flex items-center px-6 relative cursor-default"
+                                  onMouseEnter={(e) => (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, item.srx400.throughput, item.srx440.throughput)}
+                                  onMouseLeave={() => setHoveredDiff(null)}
+                                >
+                                  <span className="text-[13px] font-medium text-slate-700 leading-snug">{item.testCase}</span>
+                                  
+                                  <DiffTooltip 
+                                    position={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
+                                    isVisible={hoveredDiff?.id === `tc-${sIdx}-${idx}`}
+                                    data={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
+                                  />
                                 </div>
 
                                 <div
