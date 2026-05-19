@@ -2,11 +2,11 @@
 
 /* ─── Juniper Networks Brand Colors ──────────────────────────── */
 @theme {
-  --color-juniper: #9EEB47;
-  --color-juniper-dark: #6BBF1A;
-  --color-juniper-darker: #4A8A0E;
-  --color-juniper-light: #E8FBCD;
-  --color-juniper-glow: #9EEB47;
+  --color-juniper: #85B135;
+  --color-juniper-dark: #6C912A;
+  --color-juniper-darker: #4E6B1D;
+  --color-juniper-light: #E7EED7;
+  --color-juniper-glow: #85B135;
 }
 
 /* ─── Base Typography ─────────────────────────────────────────── */
