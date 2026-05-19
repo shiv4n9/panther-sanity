@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* ─── Juniper Networks Brand Colors ──────────────────────────── */
+@theme {
+  --color-juniper: #9EEB47;
+  --color-juniper-dark: #6BBF1A;
+  --color-juniper-darker: #4A8A0E;
+  --color-juniper-light: #E8FBCD;
+  --color-juniper-glow: #9EEB47;
+}
+
 /* ─── Base Typography ─────────────────────────────────────────── */
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -7,7 +16,8 @@ body {
   padding: 0;
 }
 
-code, .font-mono {
+code,
+.font-mono {
   font-family: 'JetBrains Mono', 'Courier New', monospace;
 }
 
@@ -17,68 +27,163 @@ code, .font-mono {
 
 /* ─── Shared Keyframes ────────────────────────────────────────── */
 @keyframes floatBlob {
-  0% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(30px, -40px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-  100% { transform: translate(0px, 0px) scale(1); }
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+
+  33% {
+    transform: translate(30px, -40px) scale(1.1);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
 }
 
 @keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 @keyframes float-slow {
-  0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(2deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
+
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
 }
 
 @keyframes shine {
-  0% { left: -75%; }
-  100% { left: 125%; }
+  0% {
+    left: -75%;
+  }
+
+  100% {
+    left: 125%;
+  }
 }
 
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 6px currentColor; }
-  50% { box-shadow: 0 0 16px currentColor, 0 0 24px currentColor; }
+
+  0%,
+  100% {
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  50% {
+    box-shadow: 0 0 16px currentColor, 0 0 24px currentColor;
+  }
 }
 
 @keyframes slide-row {
-  from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes pop-in {
-  0% { opacity: 0; transform: scale(0.85); }
-  60% { transform: scale(1.03); }
-  100% { opacity: 1; transform: scale(1); }
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+
+  60% {
+    transform: scale(1.03);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes border-rainbow {
-  0% { border-color: #10b981; }
-  25% { border-color: #3b82f6; }
-  50% { border-color: #8b5cf6; }
-  75% { border-color: #f59e0b; }
-  100% { border-color: #10b981; }
+  0% {
+    border-color: #10b981;
+  }
+
+  25% {
+    border-color: #3b82f6;
+  }
+
+  50% {
+    border-color: #8b5cf6;
+  }
+
+  75% {
+    border-color: #f59e0b;
+  }
+
+  100% {
+    border-color: #10b981;
+  }
 }
 
 @keyframes mesh-move {
-  0% { background-position: 0% 0%; }
-  25% { background-position: 100% 0%; }
-  50% { background-position: 100% 100%; }
-  75% { background-position: 0% 100%; }
-  100% { background-position: 0% 0%; }
+  0% {
+    background-position: 0% 0%;
+  }
+
+  25% {
+    background-position: 100% 0%;
+  }
+
+  50% {
+    background-position: 100% 100%;
+  }
+
+  75% {
+    background-position: 0% 100%;
+  }
+
+  100% {
+    background-position: 0% 0%;
+  }
 }
 
 .animate-blob {
@@ -140,6 +245,7 @@ code, .font-mono {
   position: relative;
   overflow: hidden;
 }
+
 .shine-on-hover::after {
   content: '';
   position: absolute;
@@ -147,14 +253,13 @@ code, .font-mono {
   left: -75%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(
-    120deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(120deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%);
   transition: none;
 }
+
 .shine-on-hover:hover::after {
   animation: shine 0.6s ease forwards;
 }
@@ -164,6 +269,7 @@ code, .font-mono {
   position: relative;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .data-cell:hover {
   transform: translateY(-2px) scale(1.02);
   z-index: 1;
@@ -173,6 +279,7 @@ code, .font-mono {
 .section-underline {
   position: relative;
 }
+
 .section-underline::after {
   content: '';
   position: absolute;
@@ -183,6 +290,7 @@ code, .font-mono {
   background: linear-gradient(90deg, currentColor, transparent);
   transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .section-underline:hover::after {
   width: 100%;
 }
@@ -192,29 +300,32 @@ code, .font-mono {
   position: relative;
   overflow: hidden;
 }
+
 .section-row-hover::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transform: translateX(-100%);
   transition: transform 0.5s ease;
 }
+
 .section-row-hover:hover::before {
   transform: translateX(100%);
 }
 
 /* ─── Metric Badge Variants ───────────────────────────────────── */
 .metric-badge-400 {
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #065f46;
-  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.1);
+  background: linear-gradient(135deg, rgba(158, 235, 71, 0.08) 0%, rgba(158, 235, 71, 0.15) 100%);
+  border: 1px solid rgba(158, 235, 71, 0.35);
+  color: #4A8A0E;
+  box-shadow: 0 1px 3px rgba(158, 235, 71, 0.1);
 }
+
 .metric-badge-400:hover {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  border-color: rgba(16, 185, 129, 0.6);
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2), 0 0 0 3px rgba(16, 185, 129, 0.08);
+  background: linear-gradient(135deg, rgba(158, 235, 71, 0.15) 0%, rgba(158, 235, 71, 0.25) 100%);
+  border-color: rgba(158, 235, 71, 0.6);
+  box-shadow: 0 4px 16px rgba(158, 235, 71, 0.2), 0 0 0 3px rgba(158, 235, 71, 0.08);
 }
 
 .metric-badge-440 {
@@ -223,6 +334,7 @@ code, .font-mono {
   color: #1e40af;
   box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
 }
+
 .metric-badge-440:hover {
   background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
   border-color: rgba(59, 130, 246, 0.6);
@@ -235,6 +347,7 @@ code, .font-mono {
   color: #9a3412;
   box-shadow: 0 1px 3px rgba(249, 115, 22, 0.08);
 }
+
 .metric-badge-3xx:hover {
   background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
   border-color: rgba(249, 115, 22, 0.5);
@@ -247,6 +360,7 @@ code, .font-mono {
   border: 1px solid rgba(239, 68, 68, 0.35);
   color: #dc2626;
 }
+
 .pr-badge:hover {
   background: linear-gradient(135deg, #fee2e2, #fecaca);
   border-color: rgba(239, 68, 68, 0.7);
@@ -265,17 +379,17 @@ code, .font-mono {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.4), rgba(59, 130, 246, 0.4));
+  background: linear-gradient(180deg, rgba(158, 235, 71, 0.4), rgba(59, 130, 246, 0.4));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.7), rgba(59, 130, 246, 0.7));
+  background: linear-gradient(180deg, rgba(158, 235, 71, 0.7), rgba(59, 130, 246, 0.7));
 }
 
 /* ─── Table Row Hover ─────────────────────────────────────────── */
 .row-hover:hover {
-  background-color: #f8fafc;
+  background-color: rgba(158, 235, 71, 0.04);
 }
 
 /* ─── Compare Button Fade ─────────────────────────────────────── */
@@ -292,6 +406,7 @@ code, .font-mono {
   position: relative;
   overflow: hidden;
 }
+
 .release-chip::before {
   content: '';
   position: absolute;
@@ -306,6 +421,7 @@ code, .font-mono {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
+
 .release-chip:hover::before {
   opacity: 1;
 }

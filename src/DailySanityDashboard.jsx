@@ -31,13 +31,13 @@ const MetricsTooltip = ({ position, isVisible, data }) => {
     >
       <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[200px]">
         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+          <div className="w-2 h-2 bg-juniper rounded-full shadow-[0_0_8px_var(--color-juniper-glow)]"></div>
           <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">System Metrics</span>
         </div>
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-400">CPU Usage:</span>
-            <span className="font-jetbrains text-sm font-semibold text-emerald-400">{data.cpu || 'N/A'}</span>
+            <span className="font-jetbrains text-sm font-semibold text-juniper">{data.cpu || 'N/A'}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-400">Global Data SHM:</span>
@@ -62,14 +62,14 @@ const DiffTooltip = ({ position, isVisible, data }) => {
       <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[240px]">
         {/* Header — matches System Metrics style */}
         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
-          <div className="w-2 h-2 bg-cyan-500 rounded-full shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
+          <div className="w-2 h-2 bg-juniper rounded-full shadow-[0_0_8px_var(--color-juniper-glow)]"></div>
           <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Performance Diff</span>
         </div>
         {/* Data rows — same layout as CPU/SHM */}
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-400">SRX 400:</span>
-            <span className="font-jetbrains text-sm font-semibold text-emerald-400">
+            <span className="font-jetbrains text-sm font-semibold text-juniper">
               {diff ? diff.val400 : val400 || '—'}
             </span>
           </div>
@@ -83,7 +83,7 @@ const DiffTooltip = ({ position, isVisible, data }) => {
             <div className="flex justify-between items-center pt-1.5 mt-0.5 border-t border-slate-700">
               <span className="text-xs text-slate-400">Difference:</span>
               <span className={`font-jetbrains text-sm font-bold ${
-                diff.pct >= 0 ? 'text-emerald-400' : 'text-red-400'
+                diff.pct >= 0 ? 'text-juniper' : 'text-red-400'
               }`}>
                 {diff.pct >= 0 ? '▲' : '▼'} {Math.abs(diff.pct)}%
               </span>
@@ -106,7 +106,7 @@ const getCategoryStyles = (category) => {
   if (lc.includes('udp') || lc.includes('ipsec'))
     return { bg: 'bg-gradient-to-r from-rose-50 to-pink-50/80', hover: 'hover:from-rose-100 hover:to-pink-100/80', text: 'text-rose-700', border: 'border-rose-200', accent: 'border-l-rose-500', dot: 'bg-rose-500', dotGlow: 'shadow-[0_0_10px_rgba(244,63,94,0.6)]', badge: 'bg-rose-100 text-rose-700 border-rose-200' };
   if (lc.includes('scaling'))
-    return { bg: 'bg-gradient-to-r from-teal-50 to-emerald-50/80', hover: 'hover:from-teal-100 hover:to-emerald-100/80', text: 'text-teal-700', border: 'border-teal-200', accent: 'border-l-teal-500', dot: 'bg-teal-500', dotGlow: 'shadow-[0_0_10px_rgba(20,184,166,0.6)]', badge: 'bg-teal-100 text-teal-700 border-teal-200' };
+    return { bg: 'bg-gradient-to-r from-juniper-light to-juniper-light', hover: 'hover:from-juniper-light hover:to-juniper/20', text: 'text-juniper-dark', border: 'border-juniper/30', accent: 'border-l-juniper', dot: 'bg-juniper', dotGlow: 'shadow-[0_0_10px_var(--color-juniper-glow)]', badge: 'bg-juniper-light text-juniper-dark border-juniper/30' };
   return { bg: 'bg-gradient-to-r from-violet-50 to-purple-50/80', hover: 'hover:from-violet-100 hover:to-purple-100/80', text: 'text-violet-700', border: 'border-violet-200', accent: 'border-l-violet-500', dot: 'bg-violet-500', dotGlow: 'shadow-[0_0_10px_rgba(139,92,246,0.6)]', badge: 'bg-violet-100 text-violet-700 border-violet-200' };
 };
 
@@ -249,8 +249,8 @@ const DailySanityDashboard = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="relative inline-flex items-center justify-center mb-6">
-            <div className="absolute w-16 h-16 rounded-full border-2 border-emerald-400/30 animate-pulse-ring"></div>
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-transparent border-t-emerald-400 border-r-blue-400"></div>
+            <div className="absolute w-16 h-16 rounded-full border-2 border-juniper/30 animate-pulse-ring"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-transparent border-t-juniper border-r-blue-400"></div>
           </div>
           <p className="text-slate-300 font-medium tracking-wide">Loading SRX4XX Datasheet…</p>
           <p className="text-slate-500 text-xs mt-1">Parsing Excel telemetry data</p>
@@ -266,7 +266,7 @@ const DailySanityDashboard = () => {
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Failed to Load Datasheet</h2>
           <p className="text-slate-600">{error}</p>
-          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">Retry</button>
+          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-juniper-dark text-white rounded-lg hover:bg-juniper-darker transition-colors">Retry</button>
         </div>
       </div>
     );
@@ -278,22 +278,22 @@ const DailySanityDashboard = () => {
   const passRate = totalTests > 0 ? Math.round((testedCount / totalTests) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20 text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-juniper-light text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
 
 
       {/* ── Header ── */}
       <header className="bg-white sticky top-0 z-50 border-b border-slate-200 shadow-sm">
-        <div className="h-[3px] w-full bg-gradient-to-r from-emerald-500 via-cyan-500 via-blue-500 to-purple-500"></div>
+        <div className="h-[3px] w-full bg-gradient-to-r from-juniper via-juniper-dark via-blue-500 to-purple-500"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-3">
           <div className="flex items-center justify-between gap-4">
 
             {/* Left — Device Chips */}
             <div className="flex items-center gap-2.5">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50/80 border border-emerald-200/80 shadow-sm hover:shadow-md hover:shadow-emerald-200/30 transition-all duration-200">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-juniper-light border border-juniper/30 shadow-sm hover:shadow-md hover:shadow-juniper/20 transition-all duration-200">
                 <span className="relative flex h-2 w-2">
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-juniper"></span>
                 </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">SRX 400</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-juniper-darker">SRX 400</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50/80 border border-blue-200/80 shadow-sm hover:shadow-md hover:shadow-blue-200/30 transition-all duration-200">
                 <span className="relative flex h-2 w-2">
@@ -306,15 +306,15 @@ const DailySanityDashboard = () => {
             {/* Center — Title */}
             <div className="flex items-center gap-3">
               <span className="relative w-1.5 h-10 rounded-full overflow-hidden">
-                <span className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-cyan-500 to-purple-500"></span>
+                <span className="absolute inset-0 bg-gradient-to-b from-juniper via-juniper-dark to-purple-500"></span>
               </span>
               <h1 className="text-[1.6rem] font-extrabold tracking-tight flex items-center gap-2.5">
-                <span className="bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-600 bg-clip-text text-transparent font-black tracking-tight">PANTHER</span>
+                <span className="bg-gradient-to-r from-juniper via-juniper-dark to-purple-600 bg-clip-text text-transparent font-black tracking-tight">PANTHER</span>
                 <span className="font-semibold text-slate-600 tracking-tight">SNP</span>
                 <span className="font-medium text-slate-400 tracking-tight">Dashboard</span>
               </h1>
               <span className="relative w-1.5 h-10 rounded-full overflow-hidden">
-                <span className="absolute inset-0 bg-gradient-to-b from-purple-500 via-cyan-500 to-emerald-400"></span>
+                <span className="absolute inset-0 bg-gradient-to-b from-purple-500 via-juniper-dark to-juniper"></span>
               </span>
             </div>
 
@@ -324,7 +324,7 @@ const DailySanityDashboard = () => {
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                 AppSec
               </a>
-              <button onClick={triggerIngest} disabled={ingestStatus === 'loading'} className={`shine-on-hover flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${ingestStatus === 'loading' ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait' : ingestStatus === 'success' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : ingestStatus === 'error' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 hover:shadow-lg hover:shadow-emerald-200/50'}`}>
+              <button onClick={triggerIngest} disabled={ingestStatus === 'loading'} className={`shine-on-hover flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${ingestStatus === 'loading' ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait' : ingestStatus === 'success' ? 'bg-juniper-light border-juniper/40 text-juniper-darker' : ingestStatus === 'error' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-juniper-light hover:border-juniper/50 hover:text-juniper-darker hover:shadow-lg hover:shadow-juniper/20'}`}>
                 {ingestStatus === 'loading' ? 'Ingesting…' : ingestStatus === 'success' ? ingestMessage : ingestStatus === 'error' ? ingestMessage : 'Ingest Latest'}
               </button>
             </div>
@@ -343,7 +343,7 @@ const DailySanityDashboard = () => {
               onClick={() => { setActiveView('sanity'); setShowCompare(false); setExpandedGroups({}); }}
               className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'sanity'
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-300/40'
+                  ? 'bg-juniper text-black shadow-lg shadow-juniper/40'
                   : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -387,7 +387,7 @@ const DailySanityDashboard = () => {
 
         {/* Search Bar */}
         <div className="relative group">
-          <svg className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-juniper transition-colors duration-300 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -395,19 +395,19 @@ const DailySanityDashboard = () => {
             placeholder="Search test cases…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-5 py-3.5 glass rounded-2xl border border-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-300 transition-all duration-300 text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
+            className="w-full pl-12 pr-5 py-3.5 glass rounded-2xl border border-white/40 focus:outline-none focus:ring-2 focus:ring-juniper/50 focus:border-juniper transition-all duration-300 text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
           />
         </div>
 
         {/* Release Info Bar */}
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-[2px] rounded-t-xl bg-gradient-to-r from-emerald-400 via-cyan-400 via-blue-400 to-purple-400"></div>
+          <div className="h-[2px] rounded-t-xl bg-gradient-to-r from-juniper via-juniper-dark via-blue-400 to-purple-400"></div>
           <div className="px-5 py-2.5 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 release-chip rounded-lg px-3 py-1 bg-emerald-50/80 border border-emerald-200 transition-all hover:shadow-md hover:shadow-emerald-200/30">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">SRX400</span>
-                <div className="h-3 w-px bg-emerald-200"></div>
-                <span className="font-jetbrains text-xs font-semibold text-emerald-700">{releases.srx400}</span>
+              <div className="flex items-center gap-2 release-chip rounded-lg px-3 py-1 bg-juniper-light border border-juniper/30 transition-all hover:shadow-md hover:shadow-juniper/20">
+                <span className="text-xs font-bold uppercase tracking-wider text-juniper-dark">SRX400</span>
+                <div className="h-3 w-px bg-juniper/30"></div>
+                <span className="font-jetbrains text-xs font-semibold text-juniper-darker">{releases.srx400}</span>
               </div>
               <div className="flex items-center gap-2 release-chip rounded-lg px-3 py-1 bg-blue-50/80 border border-blue-200 transition-all hover:shadow-md hover:shadow-blue-200/30">
                 <span className="text-xs font-bold uppercase tracking-wider text-blue-600">SRX440</span>
@@ -444,7 +444,7 @@ const DailySanityDashboard = () => {
         <div className="rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden bg-white">
 
           {/* Table Header */}
-          <div className={`grid gap-0 px-0 py-3 bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 border-b border-slate-700/50 ${show3XX ? 'grid-cols-[3fr_repeat(7,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'}`}>
+          <div className={`grid gap-0 px-0 py-3 bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 border-b-2 border-juniper/30 ${show3XX ? 'grid-cols-[3fr_repeat(7,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'}`} style={{ boxShadow: '0 2px 12px rgba(158, 235, 71, 0.08)' }}>
             <div className="text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] px-6">Test Case</div>
             <div className="text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] px-5 border-l border-slate-700">SRX 400</div>
             <div className="text-xs font-semibold text-slate-300 uppercase tracking-[0.1em] px-5 border-l border-slate-700">SRX 440</div>
@@ -500,12 +500,12 @@ const DailySanityDashboard = () => {
                           <div className="hidden sm:flex items-center gap-2">
                             <div className="w-20 h-1.5 bg-slate-200/60 rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full transition-all duration-500 ${testCount === section.tests.length ? 'bg-emerald-500' : testCount > 0 ? 'bg-amber-400' : 'bg-slate-300'}`}
+                                className={`h-full rounded-full transition-all duration-500 ${testCount === section.tests.length ? 'bg-juniper' : testCount > 0 ? 'bg-amber-400' : 'bg-slate-300'}`}
                                 style={{ width: `${section.tests.length > 0 ? (testCount / section.tests.length) * 100 : 0}%` }}
                               ></div>
                             </div>
                           </div>
-                          <span className={`text-xs font-jetbrains px-2 py-0.5 rounded-md ${testCount === section.tests.length ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : testCount > 0 ? 'text-amber-700 bg-amber-50 border border-amber-200' : 'text-slate-400 bg-slate-50 border border-slate-200'}`}>{testCount} / {section.tests.length} tested</span>
+                          <span className={`text-xs font-jetbrains px-2 py-0.5 rounded-md ${testCount === section.tests.length ? 'text-juniper-darker bg-juniper-light border border-juniper/30' : testCount > 0 ? 'text-amber-700 bg-amber-50 border border-amber-200' : 'text-slate-400 bg-slate-50 border border-slate-200'}`}>{testCount} / {section.tests.length} tested</span>
                         </div>
                       </div>
                     </div>
@@ -531,7 +531,7 @@ const DailySanityDashboard = () => {
                                 {/* Test Case Name + Comparison Tooltip */}
                                 <div 
                                   className="flex items-center px-6 relative cursor-default"
-                                  onMouseEnter={(e) => (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, item.srx400.throughput, item.srx440.throughput)}
+                                  onMouseEnter={(e) => (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
                                   onMouseLeave={() => setHoveredDiff(null)}
                                 >
                                   <span className="text-[13px] font-medium text-slate-700 leading-snug">{item.testCase}</span>
@@ -551,7 +551,7 @@ const DailySanityDashboard = () => {
                                   {has400 ? (
                                     <span
                                       className={`font-jetbrains text-xs font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
-                                        norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-emerald-600'
+                                        norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-juniper-dark'
                                       }`}
                                       onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
                                       title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
@@ -664,16 +664,16 @@ const DailySanityDashboard = () => {
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200">
-        <div className="h-[2px] bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-500"></div>
+        <div className="h-[2px] bg-gradient-to-r from-juniper via-blue-400 to-purple-500"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-3.5">
           <div className="flex items-center justify-center gap-2.5 text-xs text-slate-500">
-            <div className="flex items-center gap-1.5 text-emerald-600">
+            <div className="flex items-center gap-1.5 text-juniper-dark">
               <span className="relative flex h-2 w-2">
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-juniper"></span>
               </span>
             </div>
             <span className="font-medium">Data Source:</span>
-            <span className="font-jetbrains font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">SRX4XX_Datasheet.xlsx</span>
+            <span className="font-jetbrains font-semibold bg-gradient-to-r from-juniper-dark to-blue-600 bg-clip-text text-transparent">SRX4XX_Datasheet.xlsx</span>
             <span className="text-slate-300">•</span>
             <span className="text-slate-400">{new Date().toLocaleDateString()}</span>
           </div>
