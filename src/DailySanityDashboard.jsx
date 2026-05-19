@@ -278,12 +278,12 @@ const DailySanityDashboard = () => {
   const passRate = totalTests > 0 ? Math.round((testedCount / totalTests) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-juniper-light text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-gradient-to-br from-green-50/40 via-juniper-light to-green-50/30 text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
 
 
       {/* ── Header ── */}
-      <header className="bg-white sticky top-0 z-50 border-b border-slate-200 shadow-sm">
-        <div className="h-[3px] w-full bg-gradient-to-r from-juniper via-juniper-dark via-blue-500 to-purple-500"></div>
+      <header className="bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-juniper/20 shadow-sm shadow-juniper/5">
+        <div className="h-[3px] w-full bg-gradient-to-r from-juniper via-juniper-dark to-juniper"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-3">
           <div className="flex items-center justify-between gap-4">
 
@@ -441,7 +441,7 @@ const DailySanityDashboard = () => {
         <ChangelogBanner refreshKey={changelogRefresh} />
 
         {/* ── Data Table ── */}
-        <div className="rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden bg-white">
+        <div className="rounded-2xl shadow-xl shadow-juniper/5 border border-juniper/15 overflow-hidden bg-white">
 
           {/* Table Header */}
           <div className={`grid gap-0 px-0 py-3 bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 border-b-2 border-juniper/30 ${show3XX ? 'grid-cols-[3fr_repeat(7,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'}`} style={{ boxShadow: '0 2px 12px rgba(158, 235, 71, 0.08)' }}>
@@ -483,29 +483,29 @@ const DailySanityDashboard = () => {
 
                     <div
                       onClick={() => toggleGroup(section.category)}
-                      className={`grid grid-cols-12 gap-0 px-6 py-3 items-center cursor-pointer border-l-[3px] ${styles.accent} ${styles.bg} ${styles.hover}`}
+                      className={`grid grid-cols-12 gap-0 px-6 py-3 items-center cursor-pointer border-l-[3px] border-l-slate-300 bg-slate-50/80 hover:bg-slate-100/80`}
                     >
                       <div className="col-span-12 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded flex items-center justify-center bg-white border ${styles.border} shadow-sm transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}>
-                            <svg className={`w-3.5 h-3.5 ${styles.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                          <div className={`w-5 h-5 rounded flex items-center justify-center bg-white border border-slate-300 shadow-sm transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}>
+                            <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                           </div>
-                          <span className={`relative flex items-center justify-center w-2.5 h-2.5`}>
-                            <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${styles.dot}`}></span>
+                          <span className="relative flex items-center justify-center w-2.5 h-2.5">
+                            <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-slate-400"></span>
                           </span>
-                          <span className={`text-sm font-semibold tracking-tight section-underline ${styles.text}`}>{section.category}</span>
+                          <span className="text-sm font-bold tracking-tight section-underline text-slate-800">{section.category}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           {/* Mini progress bar */}
                           <div className="hidden sm:flex items-center gap-2">
                             <div className="w-20 h-1.5 bg-slate-200/60 rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full transition-all duration-500 ${testCount === section.tests.length ? 'bg-juniper' : testCount > 0 ? 'bg-amber-400' : 'bg-slate-300'}`}
+                                className="h-full rounded-full transition-all duration-500 bg-slate-400"
                                 style={{ width: `${section.tests.length > 0 ? (testCount / section.tests.length) * 100 : 0}%` }}
                               ></div>
                             </div>
                           </div>
-                          <span className={`text-xs font-jetbrains px-2 py-0.5 rounded-md ${testCount === section.tests.length ? 'text-juniper-darker bg-juniper-light border border-juniper/30' : testCount > 0 ? 'text-amber-700 bg-amber-50 border border-amber-200' : 'text-slate-400 bg-slate-50 border border-slate-200'}`}>{testCount} / {section.tests.length} tested</span>
+                          <span className="text-xs font-jetbrains px-2 py-0.5 rounded-md text-slate-600 bg-slate-100 border border-slate-200">{testCount} / {section.tests.length} tested</span>
                         </div>
                       </div>
                     </div>
