@@ -126,6 +126,7 @@ const DailySanityDashboard = () => {
   const [showCompare, setShowCompare] = useState(false);
   const [historyModal, setHistoryModal] = useState({ open: false, testCase: '', platform: '', category: '', value: '' });
   const [isNormalized, setIsNormalized] = useState(false);
+  const [isOptimized, setIsOptimized] = useState(false);
   const [changelogRefresh, setChangelogRefresh] = useState(0);
 
   const isSanity = activeView === 'sanity';
@@ -213,20 +214,42 @@ const DailySanityDashboard = () => {
     return sanityGroups.filter(g => g.tests.length > 0);
   }, [mergedData, activeView]);
 
-  // ── Search filter (applied on top of view filter) ──
+  // ── Helper: detect truly-empty throughput values ──
+  const isEmptyValue = (val) => !val || val.trim() === '' || val.trim() === '-' || val.trim() === '—';
+
+  // ── Search + Optimized filter (applied on top of view filter) ──
   const displayData = useMemo(() => {
-    if (!searchTerm.trim()) return viewFilteredData;
-    const lower = searchTerm.toLowerCase();
-    return viewFilteredData
-      .map(section => ({
-        ...section,
-        tests: section.tests.filter(t =>
-          t.testCase.toLowerCase().includes(lower) ||
-          section.category.toLowerCase().includes(lower)
-        ),
-      }))
-      .filter(section => section.tests.length > 0);
-  }, [viewFilteredData, searchTerm]);
+    let data = viewFilteredData;
+
+    // Search filter
+    if (searchTerm.trim()) {
+      const lower = searchTerm.toLowerCase();
+      data = data
+        .map(section => ({
+          ...section,
+          tests: section.tests.filter(t =>
+            t.testCase.toLowerCase().includes(lower) ||
+            section.category.toLowerCase().includes(lower)
+          ),
+        }))
+        .filter(section => section.tests.length > 0);
+    }
+
+    // Optimized view: hide rows with no data for either device,
+    // and drop categories that become entirely empty.
+    if (isOptimized) {
+      data = data
+        .map(section => ({
+          ...section,
+          tests: section.tests.filter(t =>
+            !isEmptyValue(t.srx400.throughput) || !isEmptyValue(t.srx440.throughput)
+          ),
+        }))
+        .filter(section => section.tests.length > 0);
+    }
+
+    return data;
+  }, [viewFilteredData, searchTerm, isOptimized]);
 
   const toggleGroup = (cat) => {
     setExpandedGroups(prev => ({ ...prev, [cat]: !prev[cat] }));
@@ -371,6 +394,24 @@ const DailySanityDashboard = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 {isNormalized ? 'Normalized @90%' : 'Normalize CPU'}
+              </span>
+            </button>
+
+            {/* Optimized View Toggle */}
+            <button
+              onClick={() => setIsOptimized(!isOptimized)}
+              className={`relative px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
+                isOptimized
+                  ? 'text-black border-[#7BC62D]'
+                  : 'bg-white text-slate-400 hover:text-[#5a9e1a] hover:border-[#9EEB47]/60 hover:bg-[#9EEB47]/10 border-juniper/30'
+              }`}
+              style={isOptimized ? { background: 'linear-gradient(135deg, #9EEB47, #7BC62D)', boxShadow: '0 10px 15px -3px rgba(158, 235, 71, 0.4)' } : {}}
+            >
+              <span className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                {isOptimized ? 'Optimized ✓' : 'Optimized View'}
               </span>
             </button>
           </div>
