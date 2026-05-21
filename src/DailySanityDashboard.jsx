@@ -245,7 +245,7 @@ const DailySanityDashboard = () => {
         .map(section => ({
           ...section,
           tests: section.tests.filter(t =>
-            !isEmptyValue(t.srx400.throughput) || !isEmptyValue(t.srx440.throughput)
+            !isEmptyValue(t.srx400.throughput) || !isEmptyValue(t.srx440.throughput) || getPR(t.testCase)
           ),
         }))
         .filter(section => section.tests.length > 0);

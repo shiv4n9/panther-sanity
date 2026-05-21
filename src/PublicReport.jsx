@@ -1,7 +1,22 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
+import { SANITY_TEST_CASES } from './config/sanityTestCases';
+import { BRANCH_DEVICES, getBranchData } from './config/branchData';
 import { normalizeTo90Cpu, calculatePercentageDiff, isScalingCategory } from './utils/normalize';
+
+// ─── PR Links for known blocked test cases ───────────────────
+const PR_LINKS = [
+  {
+    match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256/i.test(tc),
+    pr: '1940446',
+  },
+];
+
+function getPR(testCaseName) {
+  const entry = PR_LINKS.find(p => p.match(testCaseName));
+  return entry ? entry.pr : null;
+}
 
 // ─── Tooltip Portal — Performance Diff ───────────────────────
 const DiffTooltip = ({ position, isVisible, data }) => {
@@ -48,8 +63,13 @@ const PublicReport = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeView, setActiveView] = useState('regression');
   const [expandedGroups, setExpandedGroups] = useState({});
   const [hoveredDiff, setHoveredDiff] = useState(null);
+  const [showCompare, setShowCompare] = useState(false);
+
+  const isSanity = activeView === 'sanity';
+  const show3XX = isSanity && showCompare;
 
   // ── Load XLSX on mount ──
   useEffect(() => {
@@ -81,14 +101,43 @@ const PublicReport = () => {
     setHoveredDiff({ id: cellId, x: rect.left, y: rect.bottom, diff, val400, val440 });
   };
 
+  // ── View filter: sanity vs. regression ──
+  const viewFilteredData = useMemo(() => {
+    if (activeView === 'regression') return mergedData;
+
+    const sanityGroups = SANITY_TEST_CASES.map(sc => ({
+      category: sc.label,
+      tests: [],
+    }));
+
+    for (const section of mergedData) {
+      for (const test of section.tests) {
+        const tcName = test.testCase.trim();
+        let matched = false;
+        for (let i = 0; i < SANITY_TEST_CASES.length && !matched; i++) {
+          for (const m of SANITY_TEST_CASES[i].matchers) {
+            if (m.category && !m.category.test(section.category)) continue;
+            if (m.match(tcName)) {
+              sanityGroups[i].tests.push(test);
+              matched = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return sanityGroups.filter(g => g.tests.length > 0);
+  }, [mergedData, activeView]);
+
   // ── Always normalize + filter empty rows + exclude scaling ──
   const displayData = useMemo(() => {
-    let data = mergedData
+    let data = viewFilteredData
       .filter(s => !isScalingCategory(s.category))
       .map(section => ({
         ...section,
         tests: section.tests.filter(
-          t => !isEmptyValue(t.srx400.throughput) || !isEmptyValue(t.srx440.throughput),
+          t => !isEmptyValue(t.srx400.throughput) || !isEmptyValue(t.srx440.throughput) || getPR(t.testCase),
         ),
       }))
       .filter(s => s.tests.length > 0);
@@ -109,7 +158,7 @@ const PublicReport = () => {
     }
 
     return data;
-  }, [mergedData, searchTerm]);
+  }, [viewFilteredData, searchTerm]);
 
   const toggleGroup = (cat) => {
     setExpandedGroups(prev => ({ ...prev, [cat]: !prev[cat] }));
@@ -190,9 +239,36 @@ const PublicReport = () => {
       {/* ── Main Content ── */}
       <main className="max-w-[90rem] mx-auto px-6 py-3 relative z-10 space-y-3">
 
-        {/* Sub-heading */}
+        {/* View Toggle — Pill Segmented Control */}
         <div className="flex items-center justify-center">
-          <h2 className="text-lg font-bold tracking-tight text-slate-700">Throughput Performance for Panther</h2>
+          <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg shadow-juniper/20 border border-juniper/30">
+            <button
+              onClick={() => { setActiveView('regression'); setExpandedGroups({}); }}
+              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                activeView === 'regression'
+                  ? 'bg-slate-800 text-white shadow-lg shadow-slate-800/40'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                Full Regression
+              </span>
+            </button>
+            <button
+              onClick={() => { setActiveView('sanity'); setShowCompare(false); setExpandedGroups({}); }}
+              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                activeView === 'sanity'
+                  ? 'bg-juniper text-black shadow-lg shadow-juniper/40'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Daily Sanity
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -209,11 +285,28 @@ const PublicReport = () => {
           />
         </div>
 
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-2">
+          {isSanity && (
+            <button
+              onClick={() => setShowCompare(!showCompare)}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${
+                showCompare
+                  ? 'bg-orange-50 border-orange-300 text-orange-700 shadow-orange-100/50'
+                  : 'bg-white border-juniper/30 text-slate-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              {showCompare ? 'Hide 3XX' : 'Compare 3XX'}
+            </button>
+          )}
+        </div>
+
         {/* ── Data Table ── */}
         <div className="rounded-2xl shadow-xl shadow-juniper/5 border border-juniper/15 overflow-hidden bg-white">
 
           {/* Table Header */}
-          <div className="grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center grid-cols-[4fr_3fr_3fr]">
+          <div className={`grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : 'grid-cols-[4fr_3fr_3fr]'}`}>
             <div className="text-xs font-bold text-black uppercase tracking-[0.1em] px-6">Test Case</div>
             <div className="flex flex-col gap-0.5 px-5 border-l border-juniper-dark/40">
               <span className="text-xs font-semibold text-black uppercase tracking-[0.1em]">SRX 400</span>
@@ -223,6 +316,20 @@ const PublicReport = () => {
               <span className="text-xs font-semibold text-black uppercase tracking-[0.1em]">SRX 440</span>
               <span className="font-jetbrains text-[11px] font-semibold text-black/60">{releases.srx440}</span>
             </div>
+            {show3XX && (
+              <>
+                {BRANCH_DEVICES.map((dev, i) => (
+                  <div key={dev} className={`text-xs font-bold text-black uppercase tracking-[0.1em] px-3 border-l border-juniper-dark/40 flex items-center ${i === BRANCH_DEVICES.length - 1 ? 'justify-between' : ''}`}>
+                    {dev}
+                    {i === BRANCH_DEVICES.length - 1 && (
+                      <button onClick={() => setShowCompare(false)} className="ml-1 text-black/50 hover:text-black transition-colors" title="Close comparison">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Table Body — Accordion Sections */}
@@ -259,9 +366,9 @@ const PublicReport = () => {
                       <div>
                         <div className="flex flex-col">
                           {section.tests.map((item, idx) => {
+                            const sIdx = displayData.indexOf(section);
                             const has400 = !!item.srx400.throughput && !isEmptyValue(item.srx400.throughput);
                             const has440 = !!item.srx440.throughput && !isEmptyValue(item.srx440.throughput);
-                            const comments = item.srx440.comments || item.srx400.comments || '';
 
                             // Always normalize (skip scaling/capacity sections)
                             const scaling = isScalingCategory(section.category);
@@ -273,19 +380,19 @@ const PublicReport = () => {
                               : { value: item.srx440.throughput, wasNormalized: false };
 
                             return (
-                              <div key={idx} className="grid gap-0 px-0 py-3 items-center group/row row-hover relative grid-cols-[4fr_3fr_3fr] border-b border-juniper/30" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              <div key={idx} className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative border-b border-juniper/30 ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : 'grid-cols-[4fr_3fr_3fr]'}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
 
                                 {/* Test Case Name + Diff Tooltip */}
                                 <div
                                   className="flex items-center px-6 relative cursor-default"
-                                  onMouseEnter={(e) => (has400 || has440) && handleDiffEnter(e, `tc-${idx}`, norm400.value, norm440.value)}
+                                  onMouseEnter={(e) => (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
                                   onMouseLeave={() => setHoveredDiff(null)}
                                 >
                                   <span className="text-[13px] font-medium text-slate-700 leading-snug">{item.testCase}</span>
                                   <DiffTooltip
-                                    position={hoveredDiff?.id === `tc-${idx}` ? hoveredDiff : null}
-                                    isVisible={hoveredDiff?.id === `tc-${idx}`}
-                                    data={hoveredDiff?.id === `tc-${idx}` ? hoveredDiff : null}
+                                    position={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
+                                    isVisible={hoveredDiff?.id === `tc-${sIdx}-${idx}`}
+                                    data={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
                                   />
                                 </div>
 
@@ -306,10 +413,43 @@ const PublicReport = () => {
                                     <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
                                       {norm440.value}
                                     </span>
-                                  ) : (
-                                    <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
-                                  )}
+                                  ) : (() => {
+                                    const pr = getPR(item.testCase);
+                                    return pr ? (
+                                      <a
+                                        href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
+                                        title={`Open PR ${pr} in GNATS`}
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                                        PR:{pr}
+                                      </a>
+                                    ) : (
+                                      <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
+                                    );
+                                  })()}
                                 </div>
+
+                                {/* Branch 3XX columns */}
+                                {show3XX && (
+                                  <>
+                                    {BRANCH_DEVICES.map(dev => {
+                                      const bd = getBranchData(item.testCase);
+                                      const val = bd ? bd[dev] : null;
+                                      return (
+                                        <div key={dev} className="px-4 border-l border-juniper/30 flex items-center">
+                                          {val ? (
+                                            <span className="font-jetbrains text-[13px] font-semibold text-slate-700 whitespace-nowrap">{val}</span>
+                                          ) : (
+                                            <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </>
+                                )}
                               </div>
                             );
                           })}
