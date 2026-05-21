@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DailySanityDashboard from './DailySanityDashboard';
 import HistoricalExecutionDetails from './HistoricalExecutionDetails';
 import AppSecPerformance from './AppSecPerformance';
+import PublicReport from './PublicReport';
 
 function App() {
   const [currentHash, setCurrentHash] = useState(window.location.hash);
@@ -20,6 +21,10 @@ function App() {
 
   if (currentHash === '#/appsec-performance') {
     return <AppSecPerformance />;
+  }
+
+  if (currentHash === '#/public-report') {
+    return <PublicReport />;
   }
 
   return <DailySanityDashboard />;

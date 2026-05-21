@@ -251,24 +251,32 @@ const LineChart = ({
               );
             })}
 
-            {/* X-axis labels (first, middle, last) */}
-            {data.length > 0 && [0, Math.floor(data.length / 2), data.length - 1].map((index) => {
-              if (index >= data.length) return null;
-              const x = scaleX(index) + padding.left;
-              return (
-                <text
-                  key={index}
-                  x={x}
-                  y={chartHeight - padding.bottom + 20}
-                  textAnchor="middle"
-                  fontSize="10"
-                  fill="#94a3b8"
-                  fontWeight="600"
-                >
-                  {data[index].date}
-                </text>
-              );
-            })}
+            {/* X-axis labels — show all if ≤ 10 points, otherwise first/middle/last */}
+            {data.length > 0 && (() => {
+              const indices = data.length <= 10
+                ? data.map((_, i) => i)
+                : [0, Math.floor(data.length / 2), data.length - 1];
+              return indices.map((index) => {
+                if (index >= data.length) return null;
+                const x = scaleX(index) + padding.left;
+                const label = data[index].date || data[index].day || '';
+                // Truncate long labels
+                const display = label.length > 14 ? label.slice(0, 12) + '…' : label;
+                return (
+                  <text
+                    key={index}
+                    x={x}
+                    y={chartHeight - padding.bottom + 20}
+                    textAnchor="middle"
+                    fontSize="9"
+                    fill="#94a3b8"
+                    fontWeight="600"
+                  >
+                    {display}
+                  </text>
+                );
+              });
+            })()}
 
             {/* Gradient definition */}
             {showAreaFill && (

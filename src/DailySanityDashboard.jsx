@@ -171,6 +171,9 @@ const DailySanityDashboard = () => {
       const parts = [`${json.inserted} rows stored`];
       if (json.updated > 0) parts.push(`${json.updated} updated`);
       if (json.added > 0) parts.push(`${json.added} new`);
+      if (json.skipped_platforms && json.skipped_platforms.length > 0) {
+        parts.push(`${json.skipped_platforms.join(', ')} unchanged`);
+      }
       setIngestStatus('success');
       setIngestMessage(parts.join(', '));
       setChangelogRefresh(prev => prev + 1);

@@ -264,7 +264,7 @@ const HistoryModal = ({ isOpen, onClose, testCase, platform, category, currentVa
                 <table className="w-full">
                   <thead>
                     <tr className="bg-slate-800">
-                      <th className="px-5 py-2.5 text-left text-[10px] font-bold text-slate-300 uppercase tracking-wider">Date</th>
+                      <th className="px-5 py-2.5 text-left text-[10px] font-bold text-slate-300 uppercase tracking-wider">Release</th>
                       <th className="px-5 py-2.5 text-left text-[10px] font-bold text-slate-300 uppercase tracking-wider">Throughput</th>
                       <th className="px-5 py-2.5 text-left text-[10px] font-bold text-slate-300 uppercase tracking-wider">CPU</th>
                       <th className="px-5 py-2.5 text-left text-[10px] font-bold text-slate-300 uppercase tracking-wider">SHM</th>
@@ -285,7 +285,7 @@ const HistoryModal = ({ isOpen, onClose, testCase, platform, category, currentVa
                           <td className="px-5 py-3 text-xs font-medium text-slate-600">
                             <div className="flex items-center gap-2">
                               {isLatest && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />}
-                              {row.date}
+                              <span className="font-jetbrains" title={row.release_full || row.release}>{row.date}</span>
                             </div>
                           </td>
                           <td className="px-5 py-3">
@@ -346,7 +346,7 @@ const HistoryModal = ({ isOpen, onClose, testCase, platform, category, currentVa
             {/* Date */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #334155' }}>
               <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {hoveredPoint.date || hoveredPoint.day}
+                {hoveredPoint.release_full || hoveredPoint.release || hoveredPoint.date}
               </span>
               <span style={{ fontSize: '10px', color: accent.hex, fontWeight: 700 }}>
                 {platform}

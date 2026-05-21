@@ -476,12 +476,24 @@ def _get_previous_snapshot(conn, platform):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT DISTINCT ON (test_case, category)
-                test_case, category, throughput, run_date
+                test_case, category, throughput, run_date, release
             FROM sanity_runs
             WHERE platform = %s
             ORDER BY test_case, category, run_date DESC
         """, (platform,))
         return {f"{r['category']}::{r['test_case']}": r for r in cur.fetchall()}
+
+
+def _get_latest_release(conn, platform):
+    """Get the most recently ingested release version for a platform."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT release FROM sanity_runs
+            WHERE platform = %s AND release IS NOT NULL AND release != ''
+            ORDER BY created_at DESC LIMIT 1
+        """, (platform,))
+        row = cur.fetchone()
+        return row[0] if row else None
 
 
 @app.route('/api/ingest-xlsx', methods=['POST'])
@@ -516,6 +528,8 @@ def ingest_xlsx():
         total_inserted = 0
         total_updated = 0
         total_added = 0
+        skipped_same_release = False
+        skipped_platforms = []
         diff_data = {'updated': [], 'added': []}
         releases = {}
 
@@ -549,8 +563,17 @@ def ingest_xlsx():
             # Second pass: compute diffs and insert rows
             for sheet_name, parsed in parsed_sheets.items():
                 platform = sheet_name
+                current_release = parsed['release']
 
-                # Get previous snapshot for diff (excludes current ingestion)
+                # Check if this release was already ingested for this platform
+                prev_release = _get_latest_release(conn, platform)
+                release_changed = (prev_release is None or prev_release != current_release)
+
+                if not release_changed:
+                    skipped_platforms.append(platform)
+                    logger.info(f"{platform}: release unchanged ({current_release}), skipping existing tests (new tests still added)")
+
+                # Get previous snapshot for diff
                 prev = _get_previous_snapshot(conn, platform)
 
                 with conn.cursor() as cur:
@@ -564,6 +587,11 @@ def ingest_xlsx():
                             prev_row = prev.get(key)
 
                             if prev_row:
+                                # Existing test case — only insert if release changed
+                                if not release_changed:
+                                    skipped_same_release = True
+                                    continue
+
                                 if prev_row['throughput'] != test['throughput']:
                                     diff_data['updated'].append({
                                         'test_case': test['test_case'],
@@ -574,6 +602,7 @@ def ingest_xlsx():
                                     })
                                     total_updated += 1
                             else:
+                                # New test case — always insert
                                 diff_data['added'].append({
                                     'test_case': test['test_case'],
                                     'category': category,
@@ -622,6 +651,7 @@ def ingest_xlsx():
                 'updated': total_updated,
                 'added': total_added,
                 'releases': releases,
+                'skipped_platforms': skipped_platforms,
                 'diff': diff_data,
             }), 200
 
@@ -677,9 +707,9 @@ def get_changelog():
 @app.route('/api/sanity-history', methods=['GET'])
 def get_sanity_history():
     """
-    Historical data for a specific test case across all ingestions.
+    Historical data for a specific test case across releases.
     Query: ?test_case=...&platform=...&category=...&days=90
-    Returns time-series data for charting.
+    Returns one data point per unique release version, ordered chronologically.
     """
     test_case = request.args.get('test_case', '')
     platform = request.args.get('platform', '')
@@ -695,10 +725,13 @@ def get_sanity_history():
         conn = get_db()
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # Get the latest row per release version (dedup by release)
                 query = """
-                    SELECT run_date, throughput, cpu, shm, release, image_name, created_at
+                    SELECT DISTINCT ON (release)
+                        run_date, throughput, cpu, shm, release, image_name, created_at
                     FROM sanity_runs
                     WHERE test_case = %s AND platform = %s AND run_date >= %s
+                      AND release IS NOT NULL AND release != ''
                 """
                 params = [test_case, platform, since]
 
@@ -706,22 +739,34 @@ def get_sanity_history():
                     query += " AND category = %s"
                     params.append(category)
 
-                query += " ORDER BY created_at ASC"
+                query += " ORDER BY release, created_at DESC"
                 cur.execute(query, params)
                 rows = cur.fetchall()
         finally:
             put_db(conn)
 
+        # Sort by created_at so graph is chronological
+        rows.sort(key=lambda r: r['created_at'])
+
         history = []
         for row in rows:
+            # Shorten release for display: "25.4X300-202605050112.0-EVO" → "202605050112"
+            release_full = row['release'] or ''
+            release_short = release_full
+            m = re.search(r'(\d{12})', release_full)
+            if m:
+                release_short = m.group(1)
+
             history.append({
-                'date': row['created_at'].strftime('%Y-%m-%d %H:%M') if row['created_at'] else str(row['run_date']),
+                'date': release_short,
+                'release_full': release_full,
                 'throughput': row['throughput'],
                 'throughput_numeric': _extract_throughput_value(row['throughput']),
                 'cpu': row['cpu'] or '',
                 'shm': row['shm'] or '',
-                'release': row['release'] or '',
+                'release': release_full,
                 'image_name': row['image_name'] or '',
+                'run_date': str(row['run_date']),
             })
 
         return jsonify({
