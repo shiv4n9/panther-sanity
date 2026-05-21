@@ -251,6 +251,15 @@ const DailySanityDashboard = () => {
         .filter(section => section.tests.length > 0);
     }
 
+    // Pin UDP/IPSec sections to the top
+    data.sort((a, b) => {
+      const aIsUdp = /udp|ipsec/i.test(a.category);
+      const bIsUdp = /udp|ipsec/i.test(b.category);
+      if (aIsUdp && !bIsUdp) return -1;
+      if (!aIsUdp && bIsUdp) return 1;
+      return 0;
+    });
+
     return data;
   }, [viewFilteredData, searchTerm, isOptimized]);
 

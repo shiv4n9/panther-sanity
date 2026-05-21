@@ -142,6 +142,15 @@ const PublicReport = () => {
       }))
       .filter(s => s.tests.length > 0);
 
+    // Pin UDP/IPSec sections to the top
+    data.sort((a, b) => {
+      const aIsUdp = /udp|ipsec/i.test(a.category);
+      const bIsUdp = /udp|ipsec/i.test(b.category);
+      if (aIsUdp && !bIsUdp) return -1;
+      if (!aIsUdp && bIsUdp) return 1;
+      return 0;
+    });
+
     // Search filter
     if (searchTerm.trim()) {
       const lower = searchTerm.toLowerCase();
