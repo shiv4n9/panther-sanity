@@ -16,10 +16,10 @@
       --green-darker: #4a6e1a;
       --green-light: #a3cc5a;
       --green-glow: rgba(133,177,53,0.35);
-      --bg: #f5f7fa;
-      --card-bg: #ffffff;
-      --surface: #eef1f6;
-      --border: rgba(0,0,0,0.08);
+      --bg: #f0f4ec;
+      --card-bg: #f7faf4;
+      --surface: #e8efe2;
+      --border: rgba(109,154,42,0.12);
       --text: #1e293b;
       --text-muted: #64748b;
     }
@@ -99,13 +99,13 @@
     /* ── Top bar ─────────────────────────────────────────── */
     .topbar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(255,255,255,0.85);
+      background: rgba(247,250,244,0.88);
       backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
       padding: 0 2rem; height: 56px;
       display: flex; align-items: center; justify-content: space-between;
       animation: slideDown 0.6s ease-out;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      box-shadow: 0 1px 3px rgba(109,154,42,0.06);
     }
 
     @keyframes slideDown {
@@ -234,7 +234,7 @@
     /* ── Stats bar ───────────────────────────────────────── */
     .stats-bar {
       position: relative; z-index: 1;
-      background: rgba(255,255,255,0.7);
+      background: rgba(240,244,236,0.75);
       backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
@@ -378,7 +378,7 @@
       position: relative; z-index: 1; text-align: center;
       padding: 2rem; font-size: 0.75rem; color: var(--text-muted);
       border-top: 1px solid var(--border);
-      background: rgba(255,255,255,0.5);
+      background: rgba(240,244,236,0.6);
     }
 
     .footer a { color: var(--green-dark); text-decoration: none; }
