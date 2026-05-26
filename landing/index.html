@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PANTHER — Engineering Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      background: #0b1120;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    /* Subtle animated gradient background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 40%, rgba(16,185,129,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 80% 60%, rgba(59,130,246,0.06) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1100px;
+      padding: 2rem;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+
+    .header .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 1rem;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #34d399;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.25rem;
+    }
+
+    .badge .dot {
+      width: 6px; height: 6px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(16,185,129,0.6);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      font-size: 1.05rem;
+      color: #64748b;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* Card grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+      .header h1 { font-size: 1.75rem; }
+    }
+
+    /* Cards */
+    .card {
+      background: linear-gradient(165deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%);
+      border: 1px solid rgba(148,163,184,0.1);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .card:hover {
+      border-color: rgba(148,163,184,0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+
+    .card:hover::before { opacity: 1; }
+
+    .card.sanity::before  { background: linear-gradient(90deg, #10b981, #34d399); }
+    .card.longevity::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .card.finder::before  { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+    .card-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+      font-size: 1.5rem;
+    }
+
+    .card.sanity .card-icon  { background: rgba(16,185,129,0.12); }
+    .card.longevity .card-icon { background: rgba(59,130,246,0.12); }
+    .card.finder .card-icon  { background: rgba(245,158,11,0.12); }
+
+    .card h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #f1f5f9;
+    }
+
+    .card .desc {
+      font-size: 0.875rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      flex: 1;
+      margin-bottom: 1.5rem;
+    }
+
+    .card .launch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      transition: gap 0.2s;
+    }
+
+    .card:hover .launch { gap: 0.75rem; }
+
+    .card.sanity .launch  { color: #34d399; }
+    .card.longevity .launch { color: #60a5fa; }
+    .card.finder .launch  { color: #fbbf24; }
+
+    .launch .arrow {
+      transition: transform 0.2s;
+    }
+
+    .card:hover .launch .arrow {
+      transform: translateX(2px);
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 3.5rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #475569;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="badge"><span class="dot"></span> Engineering Tools</div>
+      <h1>PANTHER Portal</h1>
+      <p>Unified access to performance testing, longevity tracking, and product discovery tools.</p>
+    </div>
+
+    <div class="grid">
+      <!-- Panther Sanity -->
+      <a class="card sanity" href="/sanity/">
+        <div class="card-icon">
+          <svg width="24" height="24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
+        </div>
+        <h2>Panther Sanity</h2>
+        <p class="desc">Daily sanity execution dashboard — visualize throughput, CPS, and CPU metrics for SRX 400 &amp; 440 platforms with historical trend tracking.</p>
+        <div class="launch">Open Dashboard <span class="arrow">→</span></div>
+      </a>
+
+      <!-- Longevity Portal -->
+      <a class="card longevity" id="card-longevity">
+        <div class="card-icon">
+          <svg width="24" height="24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h2>Longevity Portal</h2>
+        <p class="desc">Long-running stability and endurance test tracking — monitor device health, uptime, and performance degradation over extended periods.</p>
+        <div class="launch">Open Portal <span class="arrow">→</span></div>
+      </a>
+
+      <!-- Product Finder -->
+      <a class="card finder" id="card-finder">
+        <div class="card-icon">
+          <svg width="24" height="24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <h2>Product Finder</h2>
+        <p class="desc">Search and discover products across the catalog — find specifications, compatibility details, and deployment configurations.</p>
+        <div class="launch">Open Finder <span class="arrow">→</span></div>
+      </a>
+    </div>
+
+    <div class="footer">PANTHER Engineering &middot; 10.204.134.80</div>
+  </div>
+
+  <script>
+    // Build links dynamically so the page works regardless of which IP/hostname is used
+    const host = window.location.hostname;
+    document.getElementById('card-longevity').href = `http://${host}:3000/`;
+    document.getElementById('card-finder').href    = `http://${host}:8080/`;
+  </script>
+</body>
+</html>

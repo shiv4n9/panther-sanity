@@ -163,7 +163,10 @@ function parseSheet(ws) {
  * @param {string} url - Path to the XLSX file (default: /data/SRX4XX_Datasheet.xlsx)
  * @returns {Promise<{ srx400: { release, sections }, srx440: { release, sections } }>}
  */
-export async function loadDatasheet(url = '/data/SRX4XX_Datasheet.xlsx') {
+export async function loadDatasheet(url) {
+  if (!url) {
+    url = `${import.meta.env.BASE_URL}data/SRX4XX_Datasheet.xlsx`;
+  }
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch datasheet: ${response.status}`);

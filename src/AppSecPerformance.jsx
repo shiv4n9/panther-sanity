@@ -139,7 +139,7 @@ const AppSecPerformance = () => {
                 </p>
               </div>
               <a
-                href="/"
+                href="#"
                 className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
               >
                 ← Back to Dashboard
