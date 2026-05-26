@@ -3,260 +3,561 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Security — Engineering Portal</title>
+  <title>Security — Scale &amp; Performance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
       --green: #85B135;
       --green-dark: #6d9a2a;
+      --green-darker: #4a6e1a;
       --green-light: #a3cc5a;
+      --green-glow: rgba(133,177,53,0.4);
+      --dark: #0f1923;
+      --dark-card: #162230;
+      --dark-surface: #1a2b3d;
+      --dark-border: rgba(133,177,53,0.15);
+      --text: #e2e8f0;
+      --text-muted: #8899aa;
     }
 
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       min-height: 100vh;
-      background: #f4f5f7;
-      color: #1e293b;
-      display: flex;
-      flex-direction: column;
+      background: var(--dark);
+      color: var(--text);
       overflow-x: hidden;
     }
 
-    /* ── Top nav bar ────────────────────────────────────────── */
+    /* ── Animated background ─────────────────────────────── */
+    .bg-scene {
+      position: fixed; inset: 0; z-index: 0;
+      overflow: hidden; pointer-events: none;
+    }
+
+    .bg-scene .orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(80px); opacity: 0.35;
+      animation: orbFloat 20s ease-in-out infinite;
+    }
+
+    .bg-scene .orb:nth-child(1) {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, var(--green) 0%, transparent 70%);
+      top: -15%; left: -10%; animation-duration: 25s;
+    }
+
+    .bg-scene .orb:nth-child(2) {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #1e6cbb 0%, transparent 70%);
+      bottom: -20%; right: -10%; animation-duration: 30s; animation-delay: -5s;
+    }
+
+    .bg-scene .orb:nth-child(3) {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, var(--green-light) 0%, transparent 70%);
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      animation-duration: 22s; animation-delay: -10s; opacity: 0.15;
+    }
+
+    @keyframes orbFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      25%      { transform: translate(30px, -40px) scale(1.05); }
+      50%      { transform: translate(-20px, 20px) scale(0.95); }
+      75%      { transform: translate(15px, 30px) scale(1.02); }
+    }
+
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(133,177,53,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(133,177,53,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* ── Particles ───────────────────────────────────────── */
+    .particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+    .particle {
+      position: absolute; width: 3px; height: 3px;
+      background: var(--green); border-radius: 50%;
+      opacity: 0; animation: particleRise linear infinite;
+    }
+
+    @keyframes particleRise {
+      0%   { opacity: 0; transform: translateY(0) scale(0); }
+      10%  { opacity: 0.8; transform: scale(1); }
+      90%  { opacity: 0.3; }
+      100% { opacity: 0; transform: translateY(-100vh) scale(0.5); }
+    }
+
+    /* ── Top bar ─────────────────────────────────────────── */
     .topbar {
-      background: #1a1a2e;
-      padding: 0.75rem 2rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(15,25,35,0.8);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--dark-border);
+      padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      animation: slideDown 0.6s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
     }
 
     .topbar .logo {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: #ffffff;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
+      font-size: 0.85rem; font-weight: 700; color: #fff;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      display: flex; align-items: center; gap: 0.5rem;
     }
 
-    .topbar .logo span {
-      color: var(--green);
+    .topbar .logo .accent { color: var(--green); }
+
+    .topbar .logo .dot {
+      width: 8px; height: 8px; background: var(--green);
+      border-radius: 50%; box-shadow: 0 0 12px var(--green-glow);
+      animation: pulse 2s ease-in-out infinite;
     }
 
-    /* ── Hero banner ────────────────────────────────────────── */
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 8px var(--green-glow); }
+      50%      { box-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(133,177,53,0.2); }
+    }
+
+    .topbar .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+
+    .topbar .nav-link {
+      font-size: 0.8rem; font-weight: 500; color: var(--text-muted);
+      text-decoration: none; text-transform: uppercase;
+      letter-spacing: 0.06em; transition: color 0.2s; cursor: pointer;
+    }
+
+    .topbar .nav-link:hover { color: var(--green); }
+
+    /* ── Hero ─────────────────────────────────────────────── */
     .hero {
-      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
-      text-align: center;
-      padding: 3.5rem 2rem 3rem;
-      position: relative;
-      overflow: hidden;
+      position: relative; z-index: 1;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 6rem 2rem 4rem;
     }
 
-    .hero::after {
-      content: '';
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 4px;
-      background: #1a1a2e;
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.6rem;
+      padding: 0.4rem 1.2rem;
+      background: rgba(133,177,53,0.08);
+      border: 1px solid rgba(133,177,53,0.2);
+      border-radius: 999px; font-size: 0.7rem; font-weight: 600;
+      color: var(--green); text-transform: uppercase;
+      letter-spacing: 0.1em; margin-bottom: 2rem;
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+
+    .hero-badge .badge-dot {
+      width: 6px; height: 6px; background: var(--green);
+      border-radius: 50%; animation: pulse 2s ease-in-out infinite;
     }
 
     .hero h1 {
-      font-size: 3.25rem;
-      font-weight: 800;
-      color: #ffffff;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 0.25rem;
+      font-size: clamp(3rem, 8vw, 6rem); font-weight: 900;
+      line-height: 1; margin-bottom: 0.5rem;
+      animation: fadeInUp 0.8s ease-out 0.4s both;
+    }
+
+    .hero h1 .word-security {
+      background: linear-gradient(135deg, var(--green-light) 0%, var(--green) 40%, var(--green-dark) 100%);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      position: relative; display: inline-block;
+    }
+
+    .hero h1 .word-security::after {
+      content: ''; position: absolute; bottom: -4px; left: 0;
+      width: 100%; height: 4px;
+      background: linear-gradient(90deg, var(--green), transparent);
+      border-radius: 2px;
+      animation: lineExpand 1s ease-out 1.2s both;
+    }
+
+    @keyframes lineExpand {
+      from { transform: scaleX(0); transform-origin: left; }
+      to   { transform: scaleX(1); transform-origin: left; }
     }
 
     .hero h2 {
-      font-size: 1.6rem;
-      font-weight: 600;
-      color: #ffffff;
-      letter-spacing: 0.02em;
+      font-size: clamp(1.2rem, 3vw, 1.8rem); font-weight: 500;
+      color: rgba(255,255,255,0.7); letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      animation: fadeInUp 0.8s ease-out 0.6s both;
     }
 
     .hero .subtitle {
-      margin-top: 0.75rem;
-      font-size: 0.95rem;
-      color: rgba(255,255,255,0.75);
+      font-size: 1rem; color: var(--text-muted);
+      max-width: 500px; line-height: 1.6;
+      animation: fadeInUp 0.8s ease-out 0.8s both;
     }
 
-    /* ── Main content ───────────────────────────────────────── */
-    .container {
-      width: 100%;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 3rem 2rem 2rem;
-      flex: 1;
+    .scroll-indicator {
+      position: absolute; bottom: 2rem;
+      display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+      color: var(--text-muted); font-size: 0.7rem;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      animation: fadeInUp 0.8s ease-out 1.5s both;
     }
 
-    /* Card grid */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5rem;
+    .scroll-indicator .chevron {
+      width: 24px; height: 24px;
+      border-right: 2px solid var(--green);
+      border-bottom: 2px solid var(--green);
+      transform: rotate(45deg);
+      animation: bounceDown 2s ease-in-out infinite;
     }
 
-    @media (max-width: 768px) {
-      .grid { grid-template-columns: 1fr; }
-      .hero h1 { font-size: 2rem; }
-      .hero h2 { font-size: 1.1rem; }
+    @keyframes bounceDown {
+      0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.5; }
+      50%      { transform: rotate(45deg) translate(4px, 4px); opacity: 1; }
     }
 
-    /* Cards */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Stats bar ───────────────────────────────────────── */
+    .stats-bar {
+      position: relative; z-index: 1;
+      background: rgba(22,34,48,0.6);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--dark-border);
+      border-bottom: 1px solid var(--dark-border);
+      padding: 1.5rem 2rem;
+    }
+
+    .stats-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; justify-content: center; gap: 4rem; flex-wrap: wrap;
+    }
+
+    .stat-item { text-align: center; opacity: 0; animation: fadeInUp 0.6s ease-out both; }
+    .stat-item:nth-child(1) { animation-delay: 0.1s; }
+    .stat-item:nth-child(2) { animation-delay: 0.2s; }
+    .stat-item:nth-child(3) { animation-delay: 0.3s; }
+    .stat-item:nth-child(4) { animation-delay: 0.4s; }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.5rem; font-weight: 700; color: var(--green);
+    }
+
+    .stat-label {
+      font-size: 0.7rem; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.25rem;
+    }
+
+    /* ── Cards section ───────────────────────────────────── */
+    .section {
+      position: relative; z-index: 1;
+      max-width: 1200px; margin: 0 auto; padding: 5rem 2rem;
+    }
+
+    .section-header { text-align: center; margin-bottom: 3rem; }
+
+    .section-header h3 {
+      font-size: 0.75rem; font-weight: 600; color: var(--green);
+      text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.75rem;
+    }
+
+    .section-header h2 { font-size: 2rem; font-weight: 700; color: #fff; }
+
+    .section-header p {
+      color: var(--text-muted); margin-top: 0.5rem;
+      max-width: 500px; margin-left: auto; margin-right: auto;
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+      .stats-inner { gap: 2rem; }
+    }
+
+    /* ── Cards ────────────────────────────────────────────── */
     .card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      text-decoration: none;
-      color: inherit;
-      position: relative;
-      overflow: hidden;
+      position: relative; background: var(--dark-card);
+      border: 1px solid var(--dark-border); border-radius: 16px;
+      padding: 2rem; display: flex; flex-direction: column;
+      text-decoration: none; color: inherit; overflow: hidden;
+      transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), box-shadow 0.4s, border-color 0.4s;
+      cursor: pointer;
     }
 
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 4px;
-      opacity: 0;
-      transition: opacity 0.3s;
+    .card .card-glow {
+      position: absolute; inset: 0; opacity: 0;
+      transition: opacity 0.4s; border-radius: 16px; pointer-events: none;
     }
+
+    .card.sanity .card-glow    { background: radial-gradient(ellipse at 30% 0%, rgba(133,177,53,0.1) 0%, transparent 70%); }
+    .card.longevity .card-glow { background: radial-gradient(ellipse at 30% 0%, rgba(59,130,246,0.1) 0%, transparent 70%); }
+    .card.finder .card-glow    { background: radial-gradient(ellipse at 30% 0%, rgba(245,158,11,0.1) 0%, transparent 70%); }
 
     .card:hover {
-      border-color: #cbd5e1;
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+      transform: translateY(-8px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     }
 
-    .card:hover::before { opacity: 1; }
+    .card:hover .card-glow { opacity: 1; }
+
+    .card.sanity:hover    { border-color: rgba(133,177,53,0.4); }
+    .card.longevity:hover { border-color: rgba(59,130,246,0.4); }
+    .card.finder:hover    { border-color: rgba(245,158,11,0.4); }
+
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 2px; transform: scaleX(0); transition: transform 0.4s ease;
+    }
+
+    .card:hover::before { transform: scaleX(1); }
 
     .card.sanity::before    { background: var(--green); }
     .card.longevity::before { background: #3b82f6; }
     .card.finder::before    { background: #f59e0b; }
 
     .card-icon {
-      width: 52px; height: 52px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 1.25rem;
+      width: 56px; height: 56px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1.5rem; position: relative; transition: transform 0.3s;
     }
 
-    .card.sanity .card-icon    { background: rgba(133,177,53,0.12); }
-    .card.longevity .card-icon { background: rgba(59,130,246,0.1); }
-    .card.finder .card-icon    { background: rgba(245,158,11,0.1); }
+    .card:hover .card-icon { transform: scale(1.1); }
 
-    .card h2 {
-      font-size: 1.15rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      color: #0f172a;
-    }
+    .card.sanity .card-icon    { background: rgba(133,177,53,0.1); box-shadow: 0 0 0 1px rgba(133,177,53,0.15); }
+    .card.longevity .card-icon { background: rgba(59,130,246,0.1); box-shadow: 0 0 0 1px rgba(59,130,246,0.15); }
+    .card.finder .card-icon    { background: rgba(245,158,11,0.1); box-shadow: 0 0 0 1px rgba(245,158,11,0.15); }
+
+    .card h2 { font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 0.6rem; }
 
     .card .desc {
-      font-size: 0.875rem;
-      color: #64748b;
-      line-height: 1.65;
-      flex: 1;
-      margin-bottom: 1.5rem;
+      font-size: 0.85rem; color: var(--text-muted);
+      line-height: 1.7; flex: 1; margin-bottom: 1.75rem;
     }
 
     .card .launch {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      transition: gap 0.2s;
+      display: inline-flex; align-items: center; gap: 0.6rem;
+      font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; transition: gap 0.3s;
     }
 
-    .card:hover .launch { gap: 0.75rem; }
+    .card:hover .launch { gap: 1rem; }
 
-    .card.sanity .launch    { color: var(--green-dark); }
-    .card.longevity .launch { color: #2563eb; }
-    .card.finder .launch    { color: #d97706; }
+    .card.sanity .launch    { color: var(--green); }
+    .card.longevity .launch { color: #60a5fa; }
+    .card.finder .launch    { color: #fbbf24; }
 
-    .launch .arrow { transition: transform 0.2s; }
-    .card:hover .launch .arrow { transform: translateX(2px); }
+    .launch .arrow {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 50%; transition: transform 0.3s;
+    }
 
-    /* Footer */
+    .card.sanity .launch .arrow    { background: rgba(133,177,53,0.15); }
+    .card.longevity .launch .arrow { background: rgba(59,130,246,0.15); }
+    .card.finder .launch .arrow    { background: rgba(245,158,11,0.15); }
+
+    .card:hover .launch .arrow { transform: translateX(3px); }
+
+    /* ── Footer ──────────────────────────────────────────── */
     .footer {
-      text-align: center;
-      padding: 1.5rem 2rem;
-      font-size: 0.75rem;
-      color: #94a3b8;
-      border-top: 1px solid #e2e8f0;
-      background: #fff;
+      position: relative; z-index: 1; text-align: center;
+      padding: 2rem; font-size: 0.75rem; color: var(--text-muted);
+      border-top: 1px solid var(--dark-border);
     }
+
+    .footer a { color: var(--green); text-decoration: none; }
+
+    /* ── Intersection observer reveal ────────────────────── */
+    .reveal {
+      opacity: 0; transform: translateY(40px);
+      transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    .reveal:nth-child(1) { transition-delay: 0.05s; }
+    .reveal:nth-child(2) { transition-delay: 0.15s; }
+    .reveal:nth-child(3) { transition-delay: 0.25s; }
   </style>
 </head>
 <body>
+
+  <!-- Background effects -->
+  <div class="bg-scene"><div class="orb"></div><div class="orb"></div><div class="orb"></div></div>
+  <div class="bg-grid"></div>
+  <div class="particles" id="particles"></div>
+
   <!-- Top bar -->
-  <div class="topbar">
-    <span class="logo">SECURITY <span>S&amp;P</span></span>
-  </div>
+  <nav class="topbar">
+    <div class="logo">
+      <span class="dot"></span>
+      SECURITY <span class="accent">S&amp;P</span>
+    </div>
+    <div class="nav-links">
+      <a class="nav-link" href="/sanity/">Dashboard</a>
+      <a class="nav-link" id="nav-longevity">Longevity</a>
+      <a class="nav-link" id="nav-finder">Finder</a>
+    </div>
+  </nav>
 
-  <!-- Hero banner (S&P style) -->
-  <div class="hero">
-    <h1>SECURITY</h1>
-    <h2>Scale &amp; Performance Tools</h2>
-    <p class="subtitle">Unified access to performance testing, longevity tracking, and product discovery.</p>
-  </div>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Juniper Networks — Engineering Tools
+    </div>
+    <h1><span class="word-security">SECURITY</span></h1>
+    <h2>Scale &amp; Performance</h2>
+    <p class="subtitle">Unified platform for performance testing, longevity tracking, and product discovery across Juniper security products.</p>
+    <div class="scroll-indicator">
+      <span>Explore</span>
+      <div class="chevron"></div>
+    </div>
+  </section>
 
-  <div class="container">
-    <div class="grid">
-      <!-- Panther Sanity -->
-      <a class="card sanity" href="/sanity/">
-        <div class="card-icon">
-          <svg width="24" height="24" fill="none" stroke="#85B135" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
-        </div>
-        <h2>Panther Sanity</h2>
-        <p class="desc">Daily sanity execution dashboard — visualize throughput, CPS, and CPU metrics for SRX 400 &amp; 440 platforms with historical trend tracking.</p>
-        <div class="launch">Open Dashboard <span class="arrow">→</span></div>
-      </a>
-
-      <!-- Longevity Portal -->
-      <a class="card longevity" id="card-longevity">
-        <div class="card-icon">
-          <svg width="24" height="24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        </div>
-        <h2>Longevity Portal</h2>
-        <p class="desc">Long-running stability and endurance test tracking — monitor device health, uptime, and performance degradation over extended periods.</p>
-        <div class="launch">Open Portal <span class="arrow">→</span></div>
-      </a>
-
-      <!-- Product Finder -->
-      <a class="card finder" id="card-finder">
-        <div class="card-icon">
-          <svg width="24" height="24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </div>
-        <h2>Product Finder</h2>
-        <p class="desc">Search and discover products across the catalog — find specifications, compatibility details, and deployment configurations.</p>
-        <div class="launch">Open Finder <span class="arrow">→</span></div>
-      </a>
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stats-inner">
+      <div class="stat-item">
+        <div class="stat-value" data-count="3">0</div>
+        <div class="stat-label">Platforms</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" data-count="8">0</div>
+        <div class="stat-label">SRX Models</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" data-count="30">0</div>
+        <div class="stat-label">Day History</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" data-count="24">0</div>
+        <div class="stat-label">/7 Monitoring</div>
+      </div>
     </div>
   </div>
 
-  <div class="footer">&copy; Juniper Networks &middot; Security S&amp;P &middot; 10.204.134.80</div>
+  <!-- Cards -->
+  <section class="section" id="tools">
+    <div class="section-header">
+      <h3>Tools</h3>
+      <h2>Choose Your Workspace</h2>
+      <p>Three specialized portals, one unified engineering platform.</p>
+    </div>
+
+    <div class="grid">
+      <a class="card sanity reveal" href="/sanity/">
+        <div class="card-glow"></div>
+        <div class="card-icon">
+          <svg width="26" height="26" fill="none" stroke="#85B135" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v20h20"/><path d="M7 17l5-10 4 5 5-7"/></svg>
+        </div>
+        <h2>Panther Sanity</h2>
+        <p class="desc">Daily sanity execution dashboard — visualize throughput, CPS, and CPU metrics for SRX 400 &amp; 440 platforms with historical trend tracking and release-over-release comparison.</p>
+        <div class="launch">Open Dashboard <span class="arrow">→</span></div>
+      </a>
+
+      <a class="card longevity reveal" id="card-longevity">
+        <div class="card-glow"></div>
+        <div class="card-icon">
+          <svg width="26" height="26" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="13" r="10"/><polyline points="13 7 13 13 17 15"/></svg>
+        </div>
+        <h2>Longevity Portal</h2>
+        <p class="desc">Long-running stability and endurance test tracking — monitor device health, uptime, and performance degradation over extended soak test periods.</p>
+        <div class="launch">Open Portal <span class="arrow">→</span></div>
+      </a>
+
+      <a class="card finder reveal" id="card-finder">
+        <div class="card-glow"></div>
+        <div class="card-icon">
+          <svg width="26" height="26" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <h2>Product Finder</h2>
+        <p class="desc">Search and discover products across the catalog — find specifications, compatibility details, and deployment configurations for every platform.</p>
+        <div class="launch">Open Finder <span class="arrow">→</span></div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    &copy; <a href="https://www.juniper.net" target="_blank" rel="noopener">Juniper Networks</a> &middot; Security S&amp;P &middot; 10.204.134.80
+  </footer>
 
   <script>
-    // Build links dynamically so the page works regardless of which IP/hostname is used
     const host = window.location.hostname;
     document.getElementById('card-longevity').href = `http://${host}:3000/`;
     document.getElementById('card-finder').href    = `http://${host}:8080/`;
+    document.getElementById('nav-longevity').href  = `http://${host}:3000/`;
+    document.getElementById('nav-finder').href     = `http://${host}:8080/`;
+
+    // Particles
+    const particlesEl = document.getElementById('particles');
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.animationDuration = (8 + Math.random() * 14) + 's';
+      p.style.animationDelay = (Math.random() * 12) + 's';
+      p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
+      particlesEl.appendChild(p);
+    }
+
+    // Stat counters
+    const counters = document.querySelectorAll('.stat-value[data-count]');
+    const animateCounter = (el) => {
+      const target = parseInt(el.dataset.count);
+      let current = 0;
+      const step = Math.max(1, Math.floor(target / 30));
+      const timer = setInterval(() => {
+        current += step;
+        if (current >= target) { current = target; clearInterval(timer); }
+        el.textContent = current;
+      }, 40);
+    };
+
+    // Intersection Observer — cards
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Intersection Observer — stats
+    const statsObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          counters.forEach(animateCounter);
+          statsObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.5 });
+    statsObserver.observe(document.querySelector('.stats-bar'));
+
+    // Parallax orbs on mouse move
+    document.addEventListener('mousemove', (e) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 20;
+      const y = (e.clientY / window.innerHeight - 0.5) * 20;
+      document.querySelectorAll('.orb').forEach((orb, i) => {
+        const f = (i + 1) * 0.5;
+        orb.style.transform = `translate(${x * f}px, ${y * f}px)`;
+      });
+    });
   </script>
 </body>
 </html>
