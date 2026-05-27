@@ -5,6 +5,7 @@ import { SANITY_TEST_CASES } from './config/sanityTestCases';
 import { BRANCH_DEVICES, getBranchData } from './config/branchData';
 import { API_BASE } from './config/api';
 import HistoryModal from './components/HistoryModal';
+import HistoryPanel from './components/HistoryPanel';
 import ChangelogBanner from './components/ChangelogBanner';
 import { normalizeTo90Cpu, calculatePercentageDiff, isScalingCategory } from './utils/normalize';
 
@@ -281,13 +282,13 @@ const DailySanityDashboard = () => {
   // ── Render ──
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[#f0f4ec] flex items-center justify-center">
         <div className="text-center">
           <div className="relative inline-flex items-center justify-center mb-6">
             <div className="absolute w-16 h-16 rounded-full border-2 border-juniper/30 animate-pulse-ring"></div>
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-transparent border-t-juniper border-r-blue-400"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-transparent border-t-juniper border-r-juniper-dark"></div>
           </div>
-          <p className="text-slate-300 font-medium tracking-wide">Loading SRX4XX Datasheet…</p>
+          <p className="text-slate-700 font-medium tracking-wide">Loading SRX4XX Datasheet…</p>
           <p className="text-slate-500 text-xs mt-1">Parsing Excel telemetry data</p>
         </div>
       </div>
@@ -296,7 +297,7 @@ const DailySanityDashboard = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#f0f4ec] flex items-center justify-center">
         <div className="text-center max-w-md">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Failed to Load Datasheet</h2>
@@ -313,12 +314,28 @@ const DailySanityDashboard = () => {
   const passRate = totalTests > 0 ? Math.round((testedCount / totalTests) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-white text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-[#f0f4ec] text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
 
+      {/* Animated background */}
+      <div className="fixed inset-0 pointer-events-none z-0" style={{
+        backgroundImage: 'linear-gradient(rgba(133,177,53,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(133,177,53,0.06) 1px, transparent 1px)',
+        backgroundSize: '60px 60px'
+      }} />
+      <div className="fixed pointer-events-none z-0 animate-blob" style={{
+        width: '500px', height: '500px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(133,177,53,0.12) 0%, transparent 70%)',
+        filter: 'blur(80px)', top: '-10%', left: '-5%'
+      }} />
+      <div className="fixed pointer-events-none z-0 animate-blob" style={{
+        width: '400px', height: '400px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(133,177,53,0.08) 0%, transparent 70%)',
+        filter: 'blur(80px)', bottom: '-10%', right: '-5%',
+        animationDelay: '-7s'
+      }} />
 
       {/* ── Header ── */}
-      <header className="bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-juniper/20 shadow-sm shadow-juniper/5">
-        <div className="h-[3px] w-full bg-gradient-to-r from-juniper via-juniper-dark to-juniper"></div>
+      <header className="bg-[#f7faf4]/90 backdrop-blur-sm sticky top-0 z-50 border-b border-juniper/20 shadow-sm shadow-juniper/5">
+        <div className="h-[3px] w-full animate-accent-bar"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-3">
           <div className="flex items-center justify-end relative">
 
@@ -348,12 +365,18 @@ const DailySanityDashboard = () => {
         </div>
         {/* Device Chips — inside header */}
         <div className="max-w-[90rem] mx-auto px-6 pb-3 flex items-center justify-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-juniper-light border border-juniper/30 shadow-sm">
-            <span className="relative flex h-2 w-2"><span className="relative inline-flex rounded-full h-2 w-2 bg-juniper"></span></span>
+          <div className="device-chip flex items-center gap-2 px-4 py-1.5 rounded-lg bg-juniper-light border border-juniper/30 shadow-sm cursor-default">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-juniper/40"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-juniper"></span>
+            </span>
             <span className="text-xs font-bold uppercase tracking-wider text-juniper-darker">SRX 400</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-50/80 border border-blue-200/80 shadow-sm">
-            <span className="relative flex h-2 w-2"><span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span></span>
+          <div className="device-chip flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-50/80 border border-blue-200/80 shadow-sm cursor-default">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-blue-400/40"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+            </span>
             <span className="text-xs font-bold uppercase tracking-wider text-blue-700">SRX 440</span>
           </div>
         </div>
@@ -363,14 +386,17 @@ const DailySanityDashboard = () => {
       <main className="max-w-[90rem] mx-auto px-6 py-3 relative z-10 space-y-3">
 
         {/* View Toggle — Pill Segmented Control */}
-        <div className="flex items-center justify-center">
-          <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg shadow-juniper/20 border border-juniper/30">
+        {/* ── View Tabs + Filters Toolbar ── */}
+        <div className="flex items-center justify-between gap-4">
+
+          {/* Left — View Tabs */}
+          <div className="inline-flex items-center bg-[#f7faf4] rounded-2xl p-1 shadow-md shadow-juniper/10 border border-juniper/20">
             <button
               onClick={() => { setActiveView('sanity'); setShowCompare(false); setExpandedGroups({}); }}
-              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+              className={`relative px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'sanity'
                   ? 'bg-juniper text-black shadow-lg shadow-juniper/40'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-[#e8efe2]'
               }`}
             >
               <span className="flex items-center gap-2">
@@ -380,10 +406,10 @@ const DailySanityDashboard = () => {
             </button>
             <button
               onClick={() => { setActiveView('regression'); setExpandedGroups({}); }}
-              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+              className={`relative px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'regression'
                   ? 'bg-slate-800 text-white shadow-lg shadow-slate-800/40'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-[#e8efe2]'
               }`}
             >
               <span className="flex items-center gap-2">
@@ -391,16 +417,24 @@ const DailySanityDashboard = () => {
                 Full Regression
               </span>
             </button>
+          </div>
 
-            {/* Normalize Toggle */}
+          {/* Right — Filter Toggles */}
+          <div className="flex items-center gap-2">
+
+            {/* Normalize Toggle — Switch style */}
             <button
               onClick={() => setIsNormalized(!isNormalized)}
-              className={`relative px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
+              className={`group/toggle flex items-center gap-2.5 pl-3 pr-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
                 isNormalized
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-300/40 border-amber-400'
-                  : 'bg-white text-slate-400 hover:text-amber-600 hover:border-amber-300 hover:bg-amber-50/50 border-juniper/30'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-300/30 border-amber-400'
+                  : 'bg-[#f7faf4] text-slate-400 hover:text-amber-600 hover:border-amber-300 hover:bg-amber-50/50 border-juniper/20'
               }`}
             >
+              {/* Toggle Track */}
+              <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-300 ${isNormalized ? 'bg-white/30' : 'bg-slate-200'}`}>
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-300 mt-0.5 ${isNormalized ? 'translate-x-[17px]' : 'translate-x-0.5'}`} />
+              </span>
               <span className="flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -409,16 +443,20 @@ const DailySanityDashboard = () => {
               </span>
             </button>
 
-            {/* Optimized View Toggle */}
+            {/* Optimized View Toggle — Switch style */}
             <button
               onClick={() => setIsOptimized(!isOptimized)}
-              className={`relative px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
+              className={`group/toggle flex items-center gap-2.5 pl-3 pr-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
                 isOptimized
-                  ? 'text-black border-[#7BC62D]'
-                  : 'bg-white text-slate-400 hover:text-[#5a9e1a] hover:border-[#9EEB47]/60 hover:bg-[#9EEB47]/10 border-juniper/30'
+                  ? 'text-black border-[#7BC62D] shadow-lg shadow-juniper/20'
+                  : 'bg-[#f7faf4] text-slate-400 hover:text-[#5a9e1a] hover:border-[#9EEB47]/60 hover:bg-[#9EEB47]/10 border-juniper/20'
               }`}
-              style={isOptimized ? { background: 'linear-gradient(135deg, #9EEB47, #7BC62D)', boxShadow: '0 10px 15px -3px rgba(158, 235, 71, 0.4)' } : {}}
+              style={isOptimized ? { background: 'linear-gradient(135deg, #9EEB47, #7BC62D)' } : {}}
             >
+              {/* Toggle Track */}
+              <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-300 ${isOptimized ? 'bg-white/30' : 'bg-slate-200'}`}>
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-300 mt-0.5 ${isOptimized ? 'translate-x-[17px]' : 'translate-x-0.5'}`} />
+              </span>
               <span className="flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -439,7 +477,7 @@ const DailySanityDashboard = () => {
             placeholder="Search test cases…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-5 py-3.5 glass rounded-2xl border border-white/40 focus:outline-none focus:ring-2 focus:ring-juniper/50 focus:border-juniper transition-all duration-300 text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
+            className="search-input w-full pl-12 pr-5 py-3.5 glass rounded-2xl border border-juniper/15 focus:outline-none text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
           />
         </div>
 
@@ -468,7 +506,7 @@ const DailySanityDashboard = () => {
         <ChangelogBanner refreshKey={changelogRefresh} />
 
         {/* ── Data Table ── */}
-        <div className="rounded-2xl shadow-xl shadow-juniper/5 border border-juniper/15 overflow-hidden bg-white">
+        <div className="animate-table-enter rounded-2xl shadow-xl shadow-juniper/5 border border-juniper/15 overflow-hidden bg-[#f7faf4]">
 
           {/* Table Header */}
           <div className={`grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'}`}>
@@ -502,7 +540,7 @@ const DailySanityDashboard = () => {
           </div>
 
           {/* Table Body — Accordion Sections */}
-          <div className="flex flex-col bg-white">
+          <div className="flex flex-col bg-[#f7faf4]">
             {displayData.length === 0 ? (
               <div className="px-6 py-20 text-center"><p className="text-slate-500 font-medium text-sm">No results found. Adjust your search.</p></div>
             ) : (
@@ -516,7 +554,7 @@ const DailySanityDashboard = () => {
 
                     <div
                       onClick={() => toggleGroup(section.category)}
-                      className={`grid grid-cols-12 gap-0 px-6 py-3 items-center cursor-pointer border-l-[3px] border-l-slate-300 bg-slate-50/80 hover:bg-slate-100/80`}
+                      className={`section-header grid grid-cols-12 gap-0 px-6 py-3 items-center cursor-pointer border-l-[3px] border-l-slate-300 bg-[#eef3e8]/80`}
                     >
                       <div className="col-span-12 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -532,7 +570,7 @@ const DailySanityDashboard = () => {
                     </div>
 
                     {/* Expandable Content */}
-                    <div className="bg-white" style={{ display: isExpanded ? 'block' : 'none' }}>
+                    <div className="bg-[#f7faf4]" style={{ display: isExpanded ? 'block' : 'none' }}>
                       <div>
                         <div className="flex flex-col">
                           {section.tests.map((item, idx) => {
@@ -547,7 +585,7 @@ const DailySanityDashboard = () => {
                             const norm440 = shouldNormalize && has440 ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu) : { value: item.srx440.throughput, wasNormalized: false };
 
                             return (
-                              <div key={idx} className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'} border-b border-juniper/30`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              <div key={idx} className={`animate-row-enter grid gap-0 px-0 py-3 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'} border-b border-juniper/30`} style={{ fontVariantNumeric: 'tabular-nums', animationDelay: `${idx * 30}ms` }}>
 
                                 {/* Test Case Name + Comparison Tooltip */}
                                 <div 
@@ -681,16 +719,29 @@ const DailySanityDashboard = () => {
             )}
           </div>
         </div>
+
+        {/* ── Inline History Panel (Daily Sanity only) ── */}
+        {isSanity && (
+          <HistoryPanel
+            isOpen={historyModal.open}
+            onClose={() => setHistoryModal({ open: false, testCase: '', platform: '', category: '', value: '' })}
+            testCase={historyModal.testCase}
+            platform={historyModal.platform}
+            category={historyModal.category}
+            currentValue={historyModal.value}
+          />
+        )}
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-juniper/30">
+      <footer className="footer-fade bg-[#f7faf4] border-t border-juniper/30">
         <div className="h-[2px] bg-gradient-to-r from-juniper via-blue-400 to-purple-500"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-3.5">
           <div className="flex items-center justify-center gap-2.5 text-xs text-slate-500">
             <div className="flex items-center gap-1.5 text-juniper-dark">
-              <span className="relative flex h-2 w-2">
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-juniper"></span>
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-juniper/40"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-juniper"></span>
               </span>
             </div>
             <span className="font-medium">Data Source:</span>
@@ -701,15 +752,17 @@ const DailySanityDashboard = () => {
         </div>
       </footer>
 
-      {/* History Modal */}
-      <HistoryModal
-        isOpen={historyModal.open}
-        onClose={() => setHistoryModal({ open: false, testCase: '', platform: '', category: '', value: '' })}
-        testCase={historyModal.testCase}
-        platform={historyModal.platform}
-        category={historyModal.category}
-        currentValue={historyModal.value}
-      />
+      {/* History Modal (Full Regression only — Daily Sanity uses inline panel) */}
+      {!isSanity && (
+        <HistoryModal
+          isOpen={historyModal.open}
+          onClose={() => setHistoryModal({ open: false, testCase: '', platform: '', category: '', value: '' })}
+          testCase={historyModal.testCase}
+          platform={historyModal.platform}
+          category={historyModal.category}
+          currentValue={historyModal.value}
+        />
+      )}
     </div>
   );
 };

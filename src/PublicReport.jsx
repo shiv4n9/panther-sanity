@@ -176,13 +176,13 @@ const PublicReport = () => {
   // ── Loading ──
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[#f0f4ec] flex items-center justify-center">
         <div className="text-center">
           <div className="relative inline-flex items-center justify-center mb-6">
             <div className="absolute w-16 h-16 rounded-full border-2 border-juniper/30 animate-pulse-ring"></div>
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-transparent border-t-juniper border-r-blue-400"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-transparent border-t-juniper border-r-juniper-dark"></div>
           </div>
-          <p className="text-slate-300 font-medium tracking-wide">Loading SRX4XX Datasheet…</p>
+          <p className="text-slate-700 font-medium tracking-wide">Loading SRX4XX Datasheet…</p>
           <p className="text-slate-500 text-xs mt-1">Parsing Excel telemetry data</p>
         </div>
       </div>
@@ -192,7 +192,7 @@ const PublicReport = () => {
   // ── Error ──
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#f0f4ec] flex items-center justify-center">
         <div className="text-center max-w-md">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Failed to Load Datasheet</h2>
@@ -207,11 +207,28 @@ const PublicReport = () => {
   const totalTests = displayData.reduce((sum, s) => sum + s.tests.length, 0);
 
   return (
-    <div className="min-h-screen bg-white text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-[#f0f4ec] text-slate-800 relative overflow-hidden pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
+
+      {/* Animated background */}
+      <div className="fixed inset-0 pointer-events-none z-0" style={{
+        backgroundImage: 'linear-gradient(rgba(133,177,53,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(133,177,53,0.06) 1px, transparent 1px)',
+        backgroundSize: '60px 60px'
+      }} />
+      <div className="fixed pointer-events-none z-0 animate-blob" style={{
+        width: '500px', height: '500px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(133,177,53,0.12) 0%, transparent 70%)',
+        filter: 'blur(80px)', top: '-10%', left: '-5%'
+      }} />
+      <div className="fixed pointer-events-none z-0 animate-blob" style={{
+        width: '400px', height: '400px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(133,177,53,0.08) 0%, transparent 70%)',
+        filter: 'blur(80px)', bottom: '-10%', right: '-5%',
+        animationDelay: '-7s'
+      }} />
 
       {/* ── Header ── */}
-      <header className="bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-juniper/20 shadow-sm shadow-juniper/5">
-        <div className="h-[3px] w-full bg-gradient-to-r from-juniper via-juniper-dark to-juniper"></div>
+      <header className="bg-[#f7faf4]/90 backdrop-blur-sm sticky top-0 z-50 border-b border-juniper/20 shadow-sm shadow-juniper/5">
+        <div className="h-[3px] w-full animate-accent-bar"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-3">
           <div className="flex items-center justify-center relative">
 
@@ -234,12 +251,18 @@ const PublicReport = () => {
         </div>
         {/* Device Chips — inside header */}
         <div className="max-w-[90rem] mx-auto px-6 pb-3 flex items-center justify-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-juniper-light border border-juniper/30 shadow-sm">
-            <span className="relative flex h-2 w-2"><span className="relative inline-flex rounded-full h-2 w-2 bg-juniper"></span></span>
+          <div className="device-chip flex items-center gap-2 px-4 py-1.5 rounded-lg bg-juniper-light border border-juniper/30 shadow-sm cursor-default">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-juniper/40"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-juniper"></span>
+            </span>
             <span className="text-xs font-bold uppercase tracking-wider text-juniper-darker">SRX 400</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-50/80 border border-blue-200/80 shadow-sm">
-            <span className="relative flex h-2 w-2"><span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span></span>
+          <div className="device-chip flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-50/80 border border-blue-200/80 shadow-sm cursor-default">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-blue-400/40"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+            </span>
             <span className="text-xs font-bold uppercase tracking-wider text-blue-700">SRX 440</span>
           </div>
         </div>
@@ -248,15 +271,17 @@ const PublicReport = () => {
       {/* ── Main Content ── */}
       <main className="max-w-[90rem] mx-auto px-6 py-3 relative z-10 space-y-3">
 
-        {/* View Toggle — Pill Segmented Control */}
-        <div className="flex items-center justify-center">
-          <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg shadow-juniper/20 border border-juniper/30">
+        {/* ── View Tabs + Actions Toolbar ── */}
+        <div className="flex items-center justify-between gap-4">
+
+          {/* Left — View Tabs */}
+          <div className="inline-flex items-center bg-[#f7faf4] rounded-2xl p-1 shadow-md shadow-juniper/10 border border-juniper/20">
             <button
               onClick={() => { setActiveView('regression'); setExpandedGroups({}); }}
-              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+              className={`relative px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'regression'
                   ? 'bg-slate-800 text-white shadow-lg shadow-slate-800/40'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-[#e8efe2]'
               }`}
             >
               <span className="flex items-center gap-2">
@@ -266,10 +291,10 @@ const PublicReport = () => {
             </button>
             <button
               onClick={() => { setActiveView('sanity'); setShowCompare(false); setExpandedGroups({}); }}
-              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+              className={`relative px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'sanity'
                   ? 'bg-juniper text-black shadow-lg shadow-juniper/40'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-[#e8efe2]'
               }`}
             >
               <span className="flex items-center gap-2">
@@ -277,6 +302,23 @@ const PublicReport = () => {
                 Daily Sanity
               </span>
             </button>
+          </div>
+
+          {/* Right — Compare 3XX (when in sanity view) */}
+          <div className="flex items-center gap-2">
+            {isSanity && (
+              <button
+                onClick={() => setShowCompare(!showCompare)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${
+                  showCompare
+                    ? 'bg-orange-50 border-orange-300 text-orange-700 shadow-orange-100/50'
+                    : 'bg-[#f7faf4] border-juniper/20 text-slate-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                {showCompare ? 'Hide 3XX' : 'Compare 3XX'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -290,29 +332,12 @@ const PublicReport = () => {
             placeholder="Search test cases…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-5 py-3.5 glass rounded-2xl border border-white/40 focus:outline-none focus:ring-2 focus:ring-juniper/50 focus:border-juniper transition-all duration-300 text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
+            className="search-input w-full pl-12 pr-5 py-3.5 glass rounded-2xl border border-juniper/15 focus:outline-none text-slate-800 text-sm font-medium placeholder-slate-400 shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
           />
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-2">
-          {isSanity && (
-            <button
-              onClick={() => setShowCompare(!showCompare)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${
-                showCompare
-                  ? 'bg-orange-50 border-orange-300 text-orange-700 shadow-orange-100/50'
-                  : 'bg-white border-juniper/30 text-slate-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50'
-              }`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-              {showCompare ? 'Hide 3XX' : 'Compare 3XX'}
-            </button>
-          )}
-        </div>
-
         {/* ── Data Table ── */}
-        <div className="rounded-2xl shadow-xl shadow-juniper/5 border border-juniper/15 overflow-hidden bg-white">
+        <div className="animate-table-enter rounded-2xl shadow-xl shadow-juniper/5 border border-juniper/15 overflow-hidden bg-[#f7faf4]">
 
           {/* Table Header */}
           <div className={`grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : 'grid-cols-[4fr_3fr_3fr]'}`}>
@@ -342,7 +367,7 @@ const PublicReport = () => {
           </div>
 
           {/* Table Body — Accordion Sections */}
-          <div className="flex flex-col bg-white">
+          <div className="flex flex-col bg-[#f7faf4]">
             {displayData.length === 0 ? (
               <div className="px-6 py-20 text-center"><p className="text-slate-500 font-medium text-sm">No results found. Adjust your search.</p></div>
             ) : (
@@ -355,7 +380,7 @@ const PublicReport = () => {
                     {/* Section Header */}
                     <div
                       onClick={() => toggleGroup(section.category)}
-                      className="grid grid-cols-12 gap-0 px-6 py-3 items-center cursor-pointer border-l-[3px] border-l-slate-300 bg-slate-50/80 hover:bg-slate-100/80"
+                      className="section-header grid grid-cols-12 gap-0 px-6 py-3 items-center cursor-pointer border-l-[3px] border-l-slate-300 bg-[#eef3e8]/80"
                     >
                       <div className="col-span-12 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -371,7 +396,7 @@ const PublicReport = () => {
                     </div>
 
                     {/* Expandable Content */}
-                    <div className="bg-white" style={{ display: isExpanded ? 'block' : 'none' }}>
+                    <div className="bg-[#f7faf4]" style={{ display: isExpanded ? 'block' : 'none' }}>
                       <div>
                         <div className="flex flex-col">
                           {section.tests.map((item, idx) => {
@@ -389,7 +414,7 @@ const PublicReport = () => {
                               : { value: item.srx440.throughput, wasNormalized: false };
 
                             return (
-                              <div key={idx} className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative border-b border-juniper/30 ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : 'grid-cols-[4fr_3fr_3fr]'}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              <div key={idx} className={`animate-row-enter grid gap-0 px-0 py-3 items-center group/row row-hover relative border-b border-juniper/30 ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : 'grid-cols-[4fr_3fr_3fr]'}`} style={{ fontVariantNumeric: 'tabular-nums', animationDelay: `${idx * 30}ms` }}>
 
                                 {/* Test Case Name + Diff Tooltip */}
                                 <div
@@ -474,13 +499,14 @@ const PublicReport = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-juniper/30">
+      <footer className="footer-fade bg-[#f7faf4] border-t border-juniper/30">
         <div className="h-[2px] bg-gradient-to-r from-juniper via-blue-400 to-purple-500"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-3.5">
           <div className="flex items-center justify-center gap-2.5 text-xs text-slate-500">
             <div className="flex items-center gap-1.5 text-juniper-dark">
-              <span className="relative flex h-2 w-2">
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-juniper"></span>
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-juniper/40"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-juniper"></span>
               </span>
             </div>
             <span className="font-medium">Data Source:</span>

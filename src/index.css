@@ -388,8 +388,114 @@ code,
 }
 
 /* ─── Table Row Hover ─────────────────────────────────────────── */
+.row-hover {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
 .row-hover:hover {
-  background-color: rgba(158, 235, 71, 0.04);
+  background-color: rgba(133, 177, 53, 0.06);
+  box-shadow: inset 3px 0 0 0 #85B135;
+}
+
+/* ─── Staggered Row Entrance ──────────────────────────────────── */
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-row-enter {
+  animation: row-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Pulsing Status Dot ──────────────────────────────────────── */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ─── Animated Accent Bar ─────────────────────────────────────── */
+@keyframes accent-sweep {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-accent-bar {
+  background: linear-gradient(90deg, #85B135, #6C912A, #3b82f6, #8b5cf6, #85B135);
+  background-size: 300% 100%;
+  animation: accent-sweep 6s ease-in-out infinite;
+}
+
+/* ─── Search Bar Glow ─────────────────────────────────────────── */
+.search-input {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-input:focus {
+  box-shadow: 0 0 0 3px rgba(133, 177, 53, 0.15), 0 4px 20px rgba(133, 177, 53, 0.1);
+  border-color: #85B135;
+  background: #fff;
+}
+
+/* ─── Section Accordion Smooth ────────────────────────────────── */
+.section-header {
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.section-header:hover {
+  background-color: rgba(133, 177, 53, 0.08) !important;
+  border-left-color: #85B135 !important;
+}
+
+/* ─── Device Chip Hover ───────────────────────────────────────── */
+.device-chip {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.device-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* ─── Table Container Entrance ────────────────────────────────── */
+@keyframes table-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-table-enter {
+  animation: table-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+/* ─── Footer Fade In ──────────────────────────────────────────── */
+.footer-fade {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
 }
 
 /* ─── Compare Button Fade ─────────────────────────────────────── */
