@@ -280,36 +280,41 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ── Stats bar ───────────────────────────────────────── */
-    .stats-bar {
+    /* ── Capabilities strip ─────────────────────────────── */
+    .cap-strip {
       position: relative; z-index: 1;
-      background: rgba(240,244,236,0.75);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      padding: 1.5rem 2rem;
+      padding: 1.25rem 2rem;
+      display: flex; justify-content: center; flex-wrap: wrap;
+      gap: 0.6rem;
     }
 
-    .stats-inner {
-      max-width: 1200px; margin: 0 auto;
-      display: flex; justify-content: center; gap: 4rem; flex-wrap: wrap;
+    .cap-tag {
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      padding: 0.45rem 1rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.75rem; font-weight: 500; color: #475569;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      opacity: 0;
+      animation: fadeInUp 0.5s ease-out both;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
     }
 
-    .stat-item { text-align: center; opacity: 0; animation: fadeInUp 0.6s ease-out both; }
-    .stat-item:nth-child(1) { animation-delay: 0.1s; }
-    .stat-item:nth-child(2) { animation-delay: 0.2s; }
-    .stat-item:nth-child(3) { animation-delay: 0.3s; }
-    .stat-item:nth-child(4) { animation-delay: 0.4s; }
-
-    .stat-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.5rem; font-weight: 700; color: var(--green);
+    .cap-tag:hover {
+      border-color: rgba(133,177,53,0.35);
+      box-shadow: 0 3px 12px rgba(133,177,53,0.1);
+      transform: translateY(-2px);
     }
 
-    .stat-label {
-      font-size: 0.7rem; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.25rem;
-    }
+    .cap-tag:nth-child(1) { animation-delay: 0.1s; }
+    .cap-tag:nth-child(2) { animation-delay: 0.17s; }
+    .cap-tag:nth-child(3) { animation-delay: 0.24s; }
+    .cap-tag:nth-child(4) { animation-delay: 0.31s; }
+    .cap-tag:nth-child(5) { animation-delay: 0.38s; }
+    .cap-tag:nth-child(6) { animation-delay: 0.45s; }
+
+    .cap-tag svg { flex-shrink: 0; }
 
     /* ── Cards section ───────────────────────────────────── */
     .section {
@@ -462,25 +467,23 @@
     <p class="subtitle">Unified platform for performance testing, longevity tracking, and product discovery across Juniper security products.</p>
   </section>
 
-  <!-- Stats bar -->
-  <div class="stats-bar">
-    <div class="stats-inner">
-      <div class="stat-item">
-        <div class="stat-value" data-count="3">0</div>
-        <div class="stat-label">Platforms</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value" data-count="8">0</div>
-        <div class="stat-label">SRX Models</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value" data-count="30">0</div>
-        <div class="stat-label">Day History</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value" data-count="24">0</div>
-        <div class="stat-label">/7 Monitoring</div>
-      </div>
+  <!-- Capabilities -->
+  <div class="cap-strip">
+    <div class="cap-tag">
+      <svg width="14" height="14" fill="none" stroke="#85B135" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1v12h12"/><path d="M4 10l3-5 3 3 3-4"/></svg>
+      Real-time Metrics
+    </div>
+    <div class="cap-tag">
+      <svg width="14" height="14" fill="none" stroke="#85B135" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 7h12M7 1v12"/></svg>
+      Multi-Platform
+    </div>
+    <div class="cap-tag">
+      <svg width="14" height="14" fill="none" stroke="#85B135" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l5-5 3 3 4-4"/><polyline points="10 6 14 6 14 10"/></svg>
+      Trend Analysis
+    </div>
+    <div class="cap-tag">
+      <svg width="14" height="14" fill="none" stroke="#85B135" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="12" height="12" rx="2"/><path d="M4 7h6M7 4v6"/></svg>
+      SRX 400 &amp; 440
     </div>
   </div>
 
@@ -556,19 +559,6 @@
       particlesEl.appendChild(p);
     }
 
-    // Stat counters
-    const counters = document.querySelectorAll('.stat-value[data-count]');
-    const animateCounter = (el) => {
-      const target = parseInt(el.dataset.count);
-      let current = 0;
-      const step = Math.max(1, Math.floor(target / 30));
-      const timer = setInterval(() => {
-        current += step;
-        if (current >= target) { current = target; clearInterval(timer); }
-        el.textContent = current;
-      }, 40);
-    };
-
     // Intersection Observer — cards
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -579,17 +569,6 @@
       });
     }, { threshold: 0.15 });
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-    // Intersection Observer — stats
-    const statsObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          counters.forEach(animateCounter);
-          statsObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.5 });
-    statsObserver.observe(document.querySelector('.stats-bar'));
 
     // Parallax orbs on mouse move
     document.addEventListener('mousemove', (e) => {
