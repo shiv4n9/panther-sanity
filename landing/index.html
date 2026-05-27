@@ -132,22 +132,41 @@
       50%      { box-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(133,177,53,0.2); }
     }
 
-    .topbar .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .topbar .nav-links { display: flex; gap: 0.5rem; align-items: center; }
 
     .topbar .nav-link {
-      font-size: 0.8rem; font-weight: 500; color: #64748b;
+      font-size: 0.75rem; font-weight: 600; color: #475569;
       text-decoration: none; text-transform: uppercase;
-      letter-spacing: 0.06em; transition: color 0.2s; cursor: pointer;
+      letter-spacing: 0.04em;
+      padding: 0.4rem 1rem; border-radius: 8px;
+      border: 1px solid transparent;
+      background: rgba(133,177,53,0.06);
+      transition: all 0.25s; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 0.4rem;
     }
 
-    .topbar .nav-link:hover { color: var(--green); }
+    .topbar .nav-link:hover {
+      color: var(--green-dark);
+      background: rgba(133,177,53,0.14);
+      border-color: rgba(133,177,53,0.25);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(133,177,53,0.12);
+    }
+
+    .topbar .nav-link .link-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+
+    .topbar .nav-link.green .link-dot  { background: var(--green); }
+    .topbar .nav-link.blue .link-dot   { background: #3b82f6; }
+    .topbar .nav-link.amber .link-dot  { background: #f59e0b; }
 
     /* ── Hero ─────────────────────────────────────────────── */
     .hero {
       position: relative; z-index: 1;
-      min-height: 100vh; display: flex; flex-direction: column;
+      display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      text-align: center; padding: 6rem 2rem 4rem;
+      text-align: center; padding: 7rem 2rem 3rem;
     }
 
     .hero-badge {
@@ -167,8 +186,8 @@
     }
 
     .hero h1 {
-      font-size: clamp(3rem, 8vw, 6rem); font-weight: 900;
-      line-height: 1; margin-bottom: 0.5rem;
+      font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900;
+      line-height: 1; margin-bottom: 0.4rem;
       animation: fadeInUp 0.8s ease-out 0.4s both;
     }
 
@@ -205,25 +224,55 @@
       animation: fadeInUp 0.8s ease-out 0.8s both;
     }
 
-    .scroll-indicator {
-      position: absolute; bottom: 2rem;
-      display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
-      color: #94a3b8; font-size: 0.7rem;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      animation: fadeInUp 0.8s ease-out 1.5s both;
+    /* ── Flowchart connector ────────────────────────────── */
+    .connector {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 1rem 0;
     }
 
-    .scroll-indicator .chevron {
-      width: 24px; height: 24px;
-      border-right: 2px solid var(--green);
-      border-bottom: 2px solid var(--green);
-      transform: rotate(45deg);
-      animation: bounceDown 2s ease-in-out infinite;
+    .connector .line {
+      width: 2px; height: 40px;
+      background: linear-gradient(to bottom, var(--green), rgba(133,177,53,0.2));
+      animation: fadeInUp 0.6s ease-out 0.5s both;
     }
 
-    @keyframes bounceDown {
-      0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.5; }
-      50%      { transform: rotate(45deg) translate(4px, 4px); opacity: 1; }
+    .connector .node {
+      width: 12px; height: 12px;
+      background: var(--card-bg); border: 2px solid var(--green);
+      border-radius: 50%; box-shadow: 0 0 10px var(--green-glow);
+      animation: fadeInUp 0.6s ease-out 0.6s both;
+    }
+
+    .connector .branches {
+      position: relative; width: 100%; max-width: 800px;
+      height: 40px; margin-top: -1px;
+    }
+
+    .connector .branches::before {
+      content: ''; position: absolute;
+      top: 0; left: 50%; width: 2px; height: 20px;
+      background: var(--green); transform: translateX(-50%);
+    }
+
+    .connector .branches::after {
+      content: ''; position: absolute;
+      top: 20px; left: calc(16.67%); right: calc(16.67%);
+      height: 2px; background: var(--green);
+    }
+
+    .connector .branch-ends {
+      position: absolute; top: 20px;
+      left: calc(16.67%); right: calc(16.67%);
+      display: flex; justify-content: space-between;
+    }
+
+    .connector .branch-end {
+      width: 2px; height: 20px; background: var(--green);
+    }
+
+    @media (max-width: 900px) {
+      .connector .branches, .connector .branch-ends { display: none; }
     }
 
     @keyframes fadeInUp {
@@ -265,21 +314,7 @@
     /* ── Cards section ───────────────────────────────────── */
     .section {
       position: relative; z-index: 1;
-      max-width: 1200px; margin: 0 auto; padding: 5rem 2rem;
-    }
-
-    .section-header { text-align: center; margin-bottom: 3rem; }
-
-    .section-header h3 {
-      font-size: 0.75rem; font-weight: 600; color: var(--green);
-      text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.75rem;
-    }
-
-    .section-header h2 { font-size: 2rem; font-weight: 700; color: #1e293b; }
-
-    .section-header p {
-      color: var(--text-muted); margin-top: 0.5rem;
-      max-width: 500px; margin-left: auto; margin-right: auto;
+      max-width: 1200px; margin: 0 auto; padding: 0 2rem 4rem;
     }
 
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
@@ -410,9 +445,9 @@
       SECURITY <span class="accent">S&amp;P</span>
     </div>
     <div class="nav-links">
-      <a class="nav-link" href="/sanity/">Dashboard</a>
-      <a class="nav-link" id="nav-longevity">Longevity</a>
-      <a class="nav-link" id="nav-finder">Finder</a>
+      <a class="nav-link green" href="/sanity/"><span class="link-dot"></span>Dashboard</a>
+      <a class="nav-link blue" id="nav-longevity"><span class="link-dot"></span>Longevity</a>
+      <a class="nav-link amber" id="nav-finder"><span class="link-dot"></span>Finder</a>
     </div>
   </nav>
 
@@ -425,10 +460,6 @@
     <h1><span class="word-security">SECURITY</span></h1>
     <h2>Scale &amp; Performance</h2>
     <p class="subtitle">Unified platform for performance testing, longevity tracking, and product discovery across Juniper security products.</p>
-    <div class="scroll-indicator">
-      <span>Explore</span>
-      <div class="chevron"></div>
-    </div>
   </section>
 
   <!-- Stats bar -->
@@ -453,13 +484,21 @@
     </div>
   </div>
 
+  <!-- Flowchart connector -->
+  <div class="connector">
+    <div class="line"></div>
+    <div class="node"></div>
+    <div class="branches">
+      <div class="branch-ends">
+        <div class="branch-end"></div>
+        <div class="branch-end"></div>
+        <div class="branch-end"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Cards -->
   <section class="section" id="tools">
-    <div class="section-header">
-      <h3>Tools</h3>
-      <h2>Choose Your Workspace</h2>
-      <p>Three specialized portals, one unified engineering platform.</p>
-    </div>
 
     <div class="grid">
       <a class="card sanity reveal" href="/sanity/">
