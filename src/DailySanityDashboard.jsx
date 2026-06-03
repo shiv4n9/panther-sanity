@@ -461,6 +461,7 @@ const DailySanityDashboard = () => {
           {/* Right — Toggle Switches in matching pill container */}
           <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg shadow-juniper/20 border border-juniper/30 gap-1">
             {/* Normalize CPU Toggle */}
+            <div className="relative group/norm">
             <label className="flex items-center gap-2 cursor-pointer select-none px-4 py-2 rounded-full transition-all duration-300 hover:bg-slate-50">
               <div
                 onClick={() => setIsNormalized(!isNormalized)}
@@ -475,6 +476,11 @@ const DailySanityDashboard = () => {
                 Normalize CPU
               </span>
             </label>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[11px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/norm:opacity-100 transition-opacity duration-150">
+              Normalize throughput to 90% CPU baseline
+              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+            </div>
+            </div>
 
             {/* Optimized View Toggle */}
             <label className="flex items-center gap-2 cursor-pointer select-none px-4 py-2 rounded-full transition-all duration-300 hover:bg-slate-50">
@@ -511,8 +517,10 @@ const DailySanityDashboard = () => {
         {/* Action Buttons */}
         <div className="flex items-center justify-between gap-2">
           {/* DS-1 Release Selector — Sanity view only */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-1">
             {isSanity && ds1Releases.length > 0 && (
+              <>
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest pl-1">Select a release</span>
               <div className="relative inline-flex items-center gap-2 bg-gradient-to-r from-juniper-light via-white to-blue-50 border-2 border-juniper/40 rounded-xl px-3 py-1.5 shadow-lg shadow-juniper/15 hover:shadow-xl hover:shadow-juniper/25 transition-all duration-300 group">
                 <div className="flex items-center gap-1.5">
                   <svg className="w-4 h-4 text-juniper-dark animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
@@ -529,6 +537,7 @@ const DailySanityDashboard = () => {
                 </select>
                 <svg className="w-3.5 h-3.5 text-juniper-dark absolute right-3 pointer-events-none group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
               </div>
+              </>
             )}
           </div>
           <div className="flex items-center gap-2">

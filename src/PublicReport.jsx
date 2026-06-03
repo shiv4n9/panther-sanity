@@ -493,7 +493,8 @@ const PublicReport = () => {
           </div>
           <div className="flex items-center gap-2">
           {/* Normalize CPU Toggle */}
-          <label className="print-hide flex items-center gap-2 cursor-pointer select-none px-3.5 py-1.5 rounded-lg border border-juniper/30 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/50" title="Normalize throughput values to a 90% CPU baseline">
+          <div className="relative group/norm">
+          <label className="print-hide flex items-center gap-2 cursor-pointer select-none px-3.5 py-1.5 rounded-lg border border-juniper/30 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/50">
             <div
               onClick={() => setIsNormalized(!isNormalized)}
               className={`relative w-9 h-[18px] rounded-full transition-colors duration-300 ${isNormalized ? 'bg-amber-500' : 'bg-slate-300'}`}
@@ -507,6 +508,11 @@ const PublicReport = () => {
               Normalize
             </span>
           </label>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[11px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/norm:opacity-100 transition-opacity duration-150">
+            Normalize throughput to 90% CPU baseline
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+          </div>
+          </div>
           <button
             onClick={() => window.print()}
             className="print-hide flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-juniper/30 bg-white text-slate-500 text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-juniper hover:text-juniper-dark hover:bg-juniper-light hover:shadow-lg hover:shadow-juniper/15"
