@@ -755,7 +755,7 @@ const PublicReport = () => {
               </span>
             </div>
             <span className="font-medium">Data Source:</span>
-            <span className="font-jetbrains font-semibold bg-gradient-to-r from-juniper-dark to-blue-600 bg-clip-text text-transparent">SRX4XX_Datasheet.xlsx</span>
+            <span className="font-jetbrains font-semibold bg-gradient-to-r from-juniper-dark to-blue-600 bg-clip-text text-transparent">SRX4XX_Datasheet</span>
             <span className="text-slate-300">•</span>
             <span className="text-slate-400">{new Date().toLocaleDateString()}</span>
           </div>
