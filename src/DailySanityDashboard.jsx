@@ -823,7 +823,7 @@ const DailySanityDashboard = () => {
             {visitorCount && (
               <>
                 <span className="text-slate-300">•</span>
-                <span className="text-slate-400">{visitorCount.total} views{visitorCount.today > 0 ? ` (${visitorCount.today} today)` : ''}</span>
+                <span className="text-slate-400">{visitorCount.total} views ({visitorCount.unique} unique){visitorCount.today > 0 ? ` · ${visitorCount.today} today (${visitorCount.unique_today} unique)` : ''}</span>
               </>
             )}
           </div>

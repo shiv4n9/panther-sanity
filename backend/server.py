@@ -902,28 +902,30 @@ def track_visit():
 def visit_count():
     """Return total and today's visit count for a given page."""
     if not DATABASE_URL:
-        return jsonify({'total': 0, 'today': 0}), 200
+        return jsonify({'total': 0, 'today': 0, 'unique': 0, 'unique_today': 0}), 200
     page = request.args.get('page', 'public-report')
     try:
         conn = get_db()
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT COUNT(*) FROM page_visits WHERE page = %s",
+                    "SELECT COUNT(*), COUNT(DISTINCT ip) FROM page_visits WHERE page = %s",
                     (page,),
                 )
-                total = cur.fetchone()[0]
+                row = cur.fetchone()
+                total, unique = row[0], row[1]
                 cur.execute(
-                    "SELECT COUNT(*) FROM page_visits WHERE page = %s AND visited_at >= CURRENT_DATE",
+                    "SELECT COUNT(*), COUNT(DISTINCT ip) FROM page_visits WHERE page = %s AND visited_at >= CURRENT_DATE",
                     (page,),
                 )
-                today = cur.fetchone()[0]
+                row = cur.fetchone()
+                today, unique_today = row[0], row[1]
         finally:
             put_db(conn)
-        return jsonify({'total': total, 'today': today})
+        return jsonify({'total': total, 'today': today, 'unique': unique, 'unique_today': unique_today})
     except Exception as e:
         logger.error(f"visit-count error: {e}")
-        return jsonify({'total': 0, 'today': 0}), 200
+        return jsonify({'total': 0, 'today': 0, 'unique': 0, 'unique_today': 0}), 200
 
 
 @app.errorhandler(500)
