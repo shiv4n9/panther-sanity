@@ -810,7 +810,7 @@ const DailySanityDashboard = () => {
       <footer className="bg-white border-t border-juniper/30">
         <div className="h-[2px] bg-gradient-to-r from-juniper via-blue-400 to-purple-500"></div>
         <div className="max-w-[90rem] mx-auto px-6 py-3.5">
-          <div className="flex items-center justify-center gap-2.5 text-xs text-slate-500">
+          <div className="flex items-center justify-center gap-3 text-xs text-slate-500">
             <div className="flex items-center gap-1.5 text-juniper-dark">
               <span className="relative flex h-2 w-2">
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-juniper"></span>
@@ -821,10 +821,29 @@ const DailySanityDashboard = () => {
             <span className="text-slate-300">•</span>
             <span className="text-slate-400">{new Date().toLocaleDateString()}</span>
             {visitorCount && (
-              <>
-                <span className="text-slate-300">•</span>
-                <span className="text-slate-400">{visitorCount.total} views ({visitorCount.unique} unique){visitorCount.today > 0 ? ` · ${visitorCount.today} today (${visitorCount.unique_today} unique)` : ''}</span>
-              </>
+              <div className="flex items-center gap-2 ml-1 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  <span className="font-semibold text-slate-600">{visitorCount.total.toLocaleString()}</span>
+                  <span className="text-slate-400">views</span>
+                </div>
+                <span className="w-px h-3 bg-slate-200"></span>
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  <span className="font-semibold text-slate-600">{visitorCount.unique.toLocaleString()}</span>
+                  <span className="text-slate-400">unique</span>
+                </div>
+                {visitorCount.today > 0 && (
+                  <>
+                    <span className="w-px h-3 bg-slate-200"></span>
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-juniper opacity-75"></span><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-juniper"></span></span>
+                      <span className="font-semibold text-juniper-dark">{visitorCount.today}</span>
+                      <span className="text-slate-400">today</span>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
