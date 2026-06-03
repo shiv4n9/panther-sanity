@@ -586,11 +586,16 @@ code,
   opacity: 1;
 }
 
+/* ─── Print-only elements (hidden on screen, shown in PDF) ──── */
+.print-only { display: none !important; }
+
 /* ─── Print Styles for PDF Export ─────────────────────────────── */
 @media print {
   body { background: white !important; }
+  .print-only { display: block !important; }
   .print-hide, header, footer, .topbar, button, select, input,
   nav, .animate-pulse { display: none !important; }
+  .report-title-page { page-break-after: always; padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
   main { padding: 0 !important; max-width: 100% !important; }
   .rounded-2xl { border-radius: 8px !important; }
   .shadow-xl, .shadow-lg, .shadow-sm { box-shadow: none !important; }

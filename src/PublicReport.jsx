@@ -297,6 +297,100 @@ const PublicReport = () => {
         </div>
       </header>
 
+      {/* ── Title Page (PDF only) ── */}
+      <section className="report-title-page print-only max-w-4xl mx-auto px-8 py-16 print:py-0 print:px-0 print:max-w-full">
+        <div className="bg-white rounded-3xl shadow-xl shadow-juniper/10 border border-juniper/15 overflow-hidden print:shadow-none print:border-none print:rounded-none">
+          {/* Top accent bar */}
+          <div className="h-2 bg-gradient-to-r from-juniper via-juniper-dark to-purple-600"></div>
+
+          <div className="px-12 py-14 text-center space-y-10">
+            {/* Logo / Brand Mark */}
+            <div className="flex items-center justify-center gap-3 opacity-60">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-juniper to-juniper-dark flex items-center justify-center shadow-lg shadow-juniper/30">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              </div>
+              <span className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">Juniper Networks · Security S&P</span>
+            </div>
+
+            {/* Title */}
+            <div className="space-y-4">
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
+                <span className="bg-gradient-to-r from-juniper via-juniper-dark to-purple-600 bg-clip-text text-transparent">SRX4XX Platform</span>
+                <br />
+                <span className="text-slate-800">Scale & Performance Report</span>
+              </h1>
+              <p className="text-lg text-slate-400 font-medium tracking-wide">
+                Panther Sanity & Regression Analysis
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center justify-center gap-4">
+              <div className="h-px w-20 bg-gradient-to-r from-transparent to-juniper/40"></div>
+              <div className="w-2 h-2 rounded-full bg-juniper shadow-[0_0_8px_var(--color-juniper-glow)]"></div>
+              <div className="h-px w-20 bg-gradient-to-l from-transparent to-juniper/40"></div>
+            </div>
+
+            {/* Metadata Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
+              <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Release</div>
+                <div className="font-jetbrains text-sm font-bold text-slate-700">{selectedSanityRelease || releases.srx400 || '—'}</div>
+              </div>
+              <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Platforms</div>
+                <div className="font-jetbrains text-sm font-bold text-slate-700">SRX 400 / 440</div>
+              </div>
+              <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Test Cases</div>
+                <div className="font-jetbrains text-sm font-bold text-slate-700">{totalTests}</div>
+              </div>
+              <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Date</div>
+                <div className="font-jetbrains text-sm font-bold text-slate-700">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+              </div>
+            </div>
+
+            {/* Abstract */}
+            <div className="text-left max-w-2xl mx-auto space-y-5">
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-[0.15em] text-juniper-dark mb-2 flex items-center gap-2">
+                  <span className="w-6 h-px bg-juniper"></span>
+                  Abstract
+                </h2>
+                <p className="text-sm leading-relaxed text-slate-600">
+                  This report presents the scale and performance benchmarking results for the Juniper Networks SRX 400 and SRX 440 next-generation firewall platforms. Metrics include UDP/IPSec throughput, HTTP throughput, connections per second (CPS), and transactions per second (TPS) across a range of security profiles and traffic configurations.
+                </p>
+              </div>
+
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-[0.15em] text-juniper-dark mb-2 flex items-center gap-2">
+                  <span className="w-6 h-px bg-juniper"></span>
+                  Introduction
+                </h2>
+                <p className="text-sm leading-relaxed text-slate-600">
+                  The SRX4XX series platforms are purpose-built for branch and edge deployments requiring high-throughput security inspection. This daily sanity execution validates performance baselines against established thresholds, ensuring that new builds maintain expected throughput and session capacity. Each test case is executed under controlled lab conditions using standardized traffic profiles. Results are compared across the SRX 400 and SRX 440 platforms to provide a side-by-side performance perspective.
+                </p>
+              </div>
+
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-[0.15em] text-juniper-dark mb-2 flex items-center gap-2">
+                  <span className="w-6 h-px bg-juniper"></span>
+                  Methodology
+                </h2>
+                <p className="text-sm leading-relaxed text-slate-600">
+                  Tests are driven by Memory Hog and Memory Hog based traffic generators pushing through the DUT (Device Under Test) in inline mode. CPU utilization, memory (SHM), and throughput values are captured at steady state. When the Normalize CPU toggle is enabled, throughput numbers are linearly scaled to a 90% CPU baseline, removing variance caused by differing CPU utilization across test runs.
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Bottom accent */}
+          <div className="h-1 bg-gradient-to-r from-purple-600 via-juniper-dark to-juniper"></div>
+        </div>
+      </section>
+
       {/* ── Main Content ── */}
       <main className="max-w-[90rem] mx-auto px-6 py-3 relative z-10 space-y-3">
 
