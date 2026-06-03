@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
 import { SANITY_TEST_CASES } from './config/sanityTestCases';
@@ -64,12 +64,15 @@ const PublicReport = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeView, setActiveView] = useState('regression');
+  const [activeView, setActiveView] = useState('sanity');
   const [expandedGroups, setExpandedGroups] = useState({});
   const [hoveredDiff, setHoveredDiff] = useState(null);
   const [showCompare, setShowCompare] = useState(false);
   const [ds1Releases, setDs1Releases] = useState([]);
   const [selectedSanityRelease, setSelectedSanityRelease] = useState('');
+  const [isNormalized, setIsNormalized] = useState(false);
+  const [flashedCells, setFlashedCells] = useState(new Set());
+  const prevDataRef = useRef(null);
 
   const isSanity = activeView === 'sanity';
   const show3XX = isSanity && showCompare;
@@ -148,6 +151,36 @@ const PublicReport = () => {
 
     return sanityGroups.filter(g => g.tests.length > 0);
   }, [mergedData, activeView, ds1Releases, selectedSanityRelease]);
+
+  // ── Diff highlight: flash cells whose values changed on release switch ──
+  useEffect(() => {
+    if (!prevDataRef.current || !isSanity) {
+      prevDataRef.current = viewFilteredData;
+      return;
+    }
+    const changed = new Set();
+    const prevMap = {};
+    for (const sec of prevDataRef.current) {
+      for (const t of sec.tests) {
+        prevMap[t.testCase] = { t400: t.srx400?.throughput, t440: t.srx440?.throughput };
+      }
+    }
+    for (const sec of viewFilteredData) {
+      for (const t of sec.tests) {
+        const prev = prevMap[t.testCase];
+        if (prev) {
+          if (prev.t400 !== t.srx400?.throughput) changed.add(`400-${t.testCase}`);
+          if (prev.t440 !== t.srx440?.throughput) changed.add(`440-${t.testCase}`);
+        }
+      }
+    }
+    prevDataRef.current = viewFilteredData;
+    if (changed.size > 0) {
+      setFlashedCells(changed);
+      const timer = setTimeout(() => setFlashedCells(new Set()), 1600);
+      return () => clearTimeout(timer);
+    }
+  }, [viewFilteredData, isSanity]);
 
   // ── Always normalize + filter empty rows + exclude scaling ──
   const displayData = useMemo(() => {
@@ -271,19 +304,6 @@ const PublicReport = () => {
         <div className="flex items-center justify-center">
           <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg shadow-juniper/20 border border-juniper/30">
             <button
-              onClick={() => { setActiveView('regression'); setExpandedGroups({}); }}
-              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-                activeView === 'regression'
-                  ? 'bg-slate-800 text-white shadow-lg shadow-slate-800/40'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                Full Regression
-              </span>
-            </button>
-            <button
               onClick={() => { setActiveView('sanity'); setShowCompare(false); setExpandedGroups({}); }}
               className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeView === 'sanity'
@@ -294,6 +314,16 @@ const PublicReport = () => {
               <span className="flex items-center gap-2">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 Daily Sanity
+              </span>
+            </button>
+            <button
+              disabled
+              className="relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 text-slate-300 cursor-not-allowed opacity-50"
+              title="Coming soon"
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                Full Regression
               </span>
             </button>
           </div>
@@ -318,15 +348,22 @@ const PublicReport = () => {
           {/* DS-1 Release Selector — Sanity view only */}
           <div className="flex items-center gap-2">
             {isSanity && ds1Releases.length > 0 && (
-              <select
-                value={selectedSanityRelease}
-                onChange={(e) => setSelectedSanityRelease(e.target.value)}
-                className="bg-white border border-gray-300 text-gray-700 py-1.5 px-3 rounded-md shadow-sm text-xs font-bold tracking-wide focus:outline-none focus:ring-2 focus:ring-juniper"
-              >
-                {ds1Releases.map((rel) => (
-                  <option key={rel.release} value={rel.release}>{rel.release}</option>
-                ))}
-              </select>
+              <div className="relative inline-flex items-center gap-2 bg-gradient-to-r from-juniper-light via-white to-blue-50 border-2 border-juniper/40 rounded-xl px-3 py-1.5 shadow-lg shadow-juniper/15 hover:shadow-xl hover:shadow-juniper/25 transition-all duration-300 group">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-juniper-dark animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
+                  <span className="text-[10px] font-bold text-juniper-darker uppercase tracking-widest">Release</span>
+                </div>
+                <select
+                  value={selectedSanityRelease}
+                  onChange={(e) => setSelectedSanityRelease(e.target.value)}
+                  className="bg-transparent border-none text-slate-800 text-xs font-bold tracking-wide focus:outline-none cursor-pointer appearance-none pr-5"
+                >
+                  {ds1Releases.map((rel) => (
+                    <option key={rel.release} value={rel.release}>{rel.release}</option>
+                  ))}
+                </select>
+                <svg className="w-3.5 h-3.5 text-juniper-dark absolute right-3 pointer-events-none group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -343,6 +380,29 @@ const PublicReport = () => {
               {showCompare ? 'Hide 3XX' : 'Compare 3XX'}
             </button>
           )}
+          {/* Normalize CPU Toggle */}
+          <label className="print-hide flex items-center gap-2 cursor-pointer select-none px-3.5 py-1.5 rounded-lg border border-juniper/30 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/50">
+            <div
+              onClick={() => setIsNormalized(!isNormalized)}
+              className={`relative w-9 h-[18px] rounded-full transition-colors duration-300 ${isNormalized ? 'bg-amber-500' : 'bg-slate-300'}`}
+            >
+              <div className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] bg-white rounded-full shadow-sm transition-transform duration-300 ${isNormalized ? 'translate-x-[18px]' : ''}`} />
+            </div>
+            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Normalize
+            </span>
+          </label>
+          <button
+            onClick={() => window.print()}
+            className="print-hide flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-juniper/30 bg-white text-slate-500 text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-juniper hover:text-juniper-dark hover:bg-juniper-light hover:shadow-lg hover:shadow-juniper/15"
+            title="Download report as PDF"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            PDF
+          </button>
           </div>
         </div>
 
@@ -381,11 +441,11 @@ const PublicReport = () => {
             {displayData.length === 0 ? (
               <div className="px-6 py-20 text-center"><p className="text-slate-500 font-medium text-sm">No results found. Adjust your search.</p></div>
             ) : (
-              displayData.map((section) => {
+              displayData.map((section, sIdx) => {
                 const isExpanded = expandedGroups[section.category] ?? true;
 
                 return (
-                  <div key={section.category} className="flex flex-col border-b border-juniper/30 last:border-0">
+                  <div key={section.category} className="flex flex-col border-b border-juniper/30 last:border-0 animate-section-enter" style={{ animationDelay: `${sIdx * 0.1}s` }}>
 
                     {/* Section Header */}
                     <div
@@ -414,12 +474,12 @@ const PublicReport = () => {
                             const has400 = !!item.srx400.throughput && !isEmptyValue(item.srx400.throughput);
                             const has440 = !!item.srx440.throughput && !isEmptyValue(item.srx440.throughput);
 
-                            // Always normalize (skip scaling/capacity sections)
-                            const scaling = isScalingCategory(section.category);
-                            const norm400 = !scaling && has400
+                            // Normalize when toggle is on (skip scaling/capacity sections)
+                            const shouldNormalize = isNormalized && !isScalingCategory(section.category);
+                            const norm400 = shouldNormalize && has400
                               ? normalizeTo90Cpu(item.srx400.throughput, item.srx400.cpu)
                               : { value: item.srx400.throughput, wasNormalized: false };
-                            const norm440 = !scaling && has440
+                            const norm440 = shouldNormalize && has440
                               ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu)
                               : { value: item.srx440.throughput, wasNormalized: false };
 
@@ -441,18 +501,32 @@ const PublicReport = () => {
                                 </div>
 
                                 {/* SRX 400 */}
-                                <div className="flex flex-col justify-center gap-1 px-5 border-l border-juniper/30">
+                                <div className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}>
                                   {has400 ? (
                                     <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
                                       {norm400.value}
                                     </span>
-                                  ) : (
-                                    <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
-                                  )}
+                                  ) : (() => {
+                                    const pr = getPR(item.testCase);
+                                    return pr ? (
+                                      <a
+                                        href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
+                                        title={`Open PR ${pr} in GNATS`}
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                                        PR:{pr}
+                                      </a>
+                                    ) : (
+                                      <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
+                                    );
+                                  })()}
                                 </div>
 
                                 {/* SRX 440 */}
-                                <div className="flex flex-col justify-center gap-1 px-5 border-l border-juniper/30">
+                                <div className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}>
                                   {has440 ? (
                                     <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
                                       {norm440.value}
@@ -508,7 +582,28 @@ const PublicReport = () => {
         </div>
 
         {/* ── Performance Overview Chart (Sanity view only) ── */}
-        {isSanity && <SanityOverviewChart displayData={displayData} />}
+        {isSanity && (() => {
+          const chartData = isNormalized
+            ? displayData.map(section => {
+                const scaling = isScalingCategory(section.category);
+                return {
+                  ...section,
+                  tests: section.tests.map(t => {
+                    const has400 = !!t.srx400.throughput && !isEmptyValue(t.srx400.throughput);
+                    const has440 = !!t.srx440.throughput && !isEmptyValue(t.srx440.throughput);
+                    const norm400 = !scaling && has400 ? normalizeTo90Cpu(t.srx400.throughput, t.srx400.cpu) : { value: t.srx400.throughput };
+                    const norm440 = !scaling && has440 ? normalizeTo90Cpu(t.srx440.throughput, t.srx440.cpu) : { value: t.srx440.throughput };
+                    return {
+                      ...t,
+                      srx400: { ...t.srx400, throughput: norm400.value },
+                      srx440: { ...t.srx440, throughput: norm440.value },
+                    };
+                  }),
+                };
+              })
+            : displayData;
+          return <SanityOverviewChart displayData={chartData} />;
+        })()}
       </main>
 
       {/* Footer */}

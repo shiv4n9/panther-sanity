@@ -72,6 +72,21 @@ const HistoryModal = ({ isOpen, onClose, testCase, platform, category, currentVa
     return { avg: avg.toFixed(1), min: min.toFixed(1), max: max.toFixed(1), trend, change, dataPoints: values.length, latestRelease };
   }, [historyData]);
 
+  // Mini sparkline SVG path
+  const sparklinePath = useMemo(() => {
+    const values = historyData.map(d => d.throughput_numeric).filter(v => v > 0);
+    if (values.length < 2) return null;
+    const w = 80, h = 28, pad = 2;
+    const min = Math.min(...values), max = Math.max(...values);
+    const range = max - min || 1;
+    const points = values.map((v, i) => {
+      const x = pad + (i / (values.length - 1)) * (w - pad * 2);
+      const y = pad + (1 - (v - min) / range) * (h - pad * 2);
+      return `${x},${y}`;
+    });
+    return { line: `M${points.join(' L')}`, w, h, trend: values[values.length - 1] >= values[0] ? 'up' : 'down' };
+  }, [historyData]);
+
   const handlePointHover = (point, index, event) => {
     const svg = event.currentTarget.ownerSVGElement;
     const svgRect = svg.getBoundingClientRect();
@@ -163,7 +178,7 @@ const HistoryModal = ({ isOpen, onClose, testCase, platform, category, currentVa
 
           {/* KPI Cards */}
           {historyData.length > 0 && (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-5 gap-3">
               {/* Data Points */}
               <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
                 <div className="flex items-center gap-1.5 mb-2">
@@ -204,6 +219,25 @@ const HistoryModal = ({ isOpen, onClose, testCase, platform, category, currentVa
                   <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Max</p>
                 </div>
                 <p className="text-2xl font-extrabold text-emerald-600 font-jetbrains">{stats.max}</p>
+              </div>
+
+              {/* Sparkline */}
+              <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trend</p>
+                </div>
+                {sparklinePath ? (
+                  <svg viewBox={`0 0 ${sparklinePath.w} ${sparklinePath.h}`} className="w-full h-7 mt-auto" preserveAspectRatio="none">
+                    <path d={sparklinePath.line} fill="none" stroke={sparklinePath.trend === 'up' ? '#10b981' : '#ef4444'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <animate attributeName="stroke-dashoffset" from="200" to="0" dur="1s" fill="freeze" />
+                    </path>
+                  </svg>
+                ) : (
+                  <p className="text-xs text-slate-300 mt-auto">—</p>
+                )}
               </div>
             </div>
           )}

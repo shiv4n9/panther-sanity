@@ -454,15 +454,18 @@
   <section class="section" id="tools">
 
     <div class="grid">
-      <a class="card sanity reveal" href="/sanity/">
+      <div class="card sanity reveal" style="cursor:default;">
         <div class="card-glow"></div>
         <div class="card-icon">
           <svg width="26" height="26" fill="none" stroke="#85B135" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v20h20"/><path d="M7 17l5-10 4 5 5-7"/></svg>
         </div>
         <h2>Panther Sanity <span style="color:#85B135; font-weight:600">&amp; Regressions</span></h2>
         <p class="desc">Daily sanity execution dashboard — visualize throughput, CPS, and CPU metrics for SRX 400 &amp; 440 platforms with historical trend tracking and release-over-release comparison.</p>
-        <div class="launch">Open Dashboard <span class="arrow">→</span></div>
-      </a>
+        <div style="display:flex; gap:10px; margin-top:12px;">
+          <a href="/sanity/" style="display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border-radius:10px; background:#85B135; color:#fff; font-size:13px; font-weight:700; text-decoration:none; letter-spacing:0.5px; transition:all 0.3s; box-shadow:0 2px 8px rgba(133,177,53,0.3);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(133,177,53,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(133,177,53,0.3)'">Internal <span class="arrow">→</span></a>
+          <a href="/sanity/#/public-report" style="display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border-radius:10px; background:#fff; color:#1e293b; font-size:13px; font-weight:700; text-decoration:none; letter-spacing:0.5px; border:2px solid #85B135; transition:all 0.3s;" onmouseover="this.style.transform='translateY(-2px)';this.style.background='#f7faf4'" onmouseout="this.style.transform='';this.style.background='#fff'">Public <span class="arrow">→</span></a>
+        </div>
+      </div>
 
       <a class="card longevity reveal" id="card-longevity">
         <div class="card-glow"></div>

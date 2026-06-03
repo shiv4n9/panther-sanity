@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
 import { SANITY_TEST_CASES } from './config/sanityTestCases';
@@ -131,9 +131,20 @@ const DailySanityDashboard = () => {
   const [changelogRefresh, setChangelogRefresh] = useState(0);
   const [ds1Releases, setDs1Releases] = useState([]);       // [{ release, merged }]
   const [selectedSanityRelease, setSelectedSanityRelease] = useState('');
+  const [flashedCells, setFlashedCells] = useState(new Set());
+  const prevDataRef = useRef(null);
 
   const isSanity = activeView === 'sanity';
   const show3XX = isSanity && showCompare;
+
+  // Cap CPU display to 90% when normalization is active
+  const capCpu = (cpuStr) => {
+    if (!isNormalized || !cpuStr) return cpuStr;
+    const m = cpuStr.match(/(\d+)/);
+    if (!m) return cpuStr;
+    const val = parseInt(m[1], 10);
+    return val > 90 ? '90%' : cpuStr;
+  };
 
   // ── Load XLSX on mount ──
   useEffect(() => {
@@ -232,6 +243,36 @@ const DailySanityDashboard = () => {
 
     return sanityGroups.filter(g => g.tests.length > 0);
   }, [mergedData, activeView, ds1Releases, selectedSanityRelease]);
+
+  // ── Diff highlight: flash cells whose values changed on release switch ──
+  useEffect(() => {
+    if (!prevDataRef.current || !isSanity) {
+      prevDataRef.current = viewFilteredData;
+      return;
+    }
+    const changed = new Set();
+    const prevMap = {};
+    for (const sec of prevDataRef.current) {
+      for (const t of sec.tests) {
+        prevMap[t.testCase] = { t400: t.srx400?.throughput, t440: t.srx440?.throughput };
+      }
+    }
+    for (const sec of viewFilteredData) {
+      for (const t of sec.tests) {
+        const prev = prevMap[t.testCase];
+        if (prev) {
+          if (prev.t400 !== t.srx400?.throughput) changed.add(`400-${t.testCase}`);
+          if (prev.t440 !== t.srx440?.throughput) changed.add(`440-${t.testCase}`);
+        }
+      }
+    }
+    prevDataRef.current = viewFilteredData;
+    if (changed.size > 0) {
+      setFlashedCells(changed);
+      const timer = setTimeout(() => setFlashedCells(new Set()), 1600);
+      return () => clearTimeout(timer);
+    }
+  }, [viewFilteredData, isSanity]);
 
   // ── Helper: detect truly-empty throughput values ──
   const isEmptyValue = (val) => !val || val.trim() === '' || val.trim() === '-' || val.trim() === '—';
@@ -355,6 +396,13 @@ const DailySanityDashboard = () => {
 
             {/* Right — Actions */}
             <div className="flex items-center gap-2">
+              <a
+                href="#/public-report"
+                className="shine-on-hover flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-juniper/30 bg-white text-slate-600 text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-juniper-light hover:border-juniper/50 hover:text-juniper-darker hover:shadow-lg hover:shadow-juniper/20"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                Public
+              </a>
               <button onClick={triggerIngest} disabled={ingestStatus === 'loading'} className={`shine-on-hover flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${ingestStatus === 'loading' ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait' : ingestStatus === 'success' ? 'bg-juniper-light border-juniper/40 text-juniper-darker' : ingestStatus === 'error' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-juniper-light hover:border-juniper/50 hover:text-juniper-darker hover:shadow-lg hover:shadow-juniper/20'}`}>
                 {ingestStatus === 'loading' ? 'Ingesting…' : ingestStatus === 'success' ? ingestMessage : ingestStatus === 'error' ? ingestMessage : 'Ingest Latest'}
               </button>
@@ -465,15 +513,22 @@ const DailySanityDashboard = () => {
           {/* DS-1 Release Selector — Sanity view only */}
           <div className="flex items-center gap-2">
             {isSanity && ds1Releases.length > 0 && (
-              <select
-                value={selectedSanityRelease}
-                onChange={(e) => setSelectedSanityRelease(e.target.value)}
-                className="bg-white border border-gray-300 text-gray-700 py-1.5 px-3 rounded-md shadow-sm text-xs font-bold tracking-wide focus:outline-none focus:ring-2 focus:ring-juniper"
-              >
-                {ds1Releases.map((rel) => (
-                  <option key={rel.release} value={rel.release}>{rel.release}</option>
-                ))}
-              </select>
+              <div className="relative inline-flex items-center gap-2 bg-gradient-to-r from-juniper-light via-white to-blue-50 border-2 border-juniper/40 rounded-xl px-3 py-1.5 shadow-lg shadow-juniper/15 hover:shadow-xl hover:shadow-juniper/25 transition-all duration-300 group">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-juniper-dark animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
+                  <span className="text-[10px] font-bold text-juniper-darker uppercase tracking-widest">Release</span>
+                </div>
+                <select
+                  value={selectedSanityRelease}
+                  onChange={(e) => setSelectedSanityRelease(e.target.value)}
+                  className="bg-transparent border-none text-slate-800 text-xs font-bold tracking-wide focus:outline-none cursor-pointer appearance-none pr-5"
+                >
+                  {ds1Releases.map((rel) => (
+                    <option key={rel.release} value={rel.release}>{rel.release}</option>
+                  ))}
+                </select>
+                <svg className="w-3.5 h-3.5 text-juniper-dark absolute right-3 pointer-events-none group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -545,7 +600,7 @@ const DailySanityDashboard = () => {
                 const testCount = section.tests.filter(t => t.srx400.throughput || t.srx440.throughput).length;
 
                 return (
-                  <div key={section.category} className="flex flex-col border-b border-juniper/30 last:border-0">
+                  <div key={section.category} className="flex flex-col border-b border-juniper/30 last:border-0 animate-section-enter" style={{ animationDelay: `${sIdx * 0.1}s` }}>
 
                     <div
                       onClick={() => toggleGroup(section.category)}
@@ -598,8 +653,8 @@ const DailySanityDashboard = () => {
                                 </div>
 
                                 <div
-                                  className="flex flex-col justify-center gap-1 px-5 border-l border-juniper/30"
-                                  onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: item.srx400.cpu, shm: item.srx400.shm })}
+                                  className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
+                                  onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: capCpu(item.srx400.cpu), shm: item.srx400.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has400 ? (
@@ -613,9 +668,23 @@ const DailySanityDashboard = () => {
                                       {norm400.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
                                       {norm400.value}
                                     </span>
-                                  ) : (
-                                    <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
-                                  )}
+                                  ) : (() => {
+                                    const pr = getPR(item.testCase);
+                                    return pr ? (
+                                      <a
+                                        href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
+                                        title={`Open PR ${pr} in GNATS`}
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                                        PR:{pr}
+                                      </a>
+                                    ) : (
+                                      <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
+                                    );
+                                  })()}
                                   <MetricsTooltip
                                     position={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
                                     isVisible={hoveredCell?.id === `400-${sIdx}-${idx}`}
@@ -624,8 +693,8 @@ const DailySanityDashboard = () => {
                                 </div>
 
                                 <div
-                                  className="flex flex-col justify-center gap-1 px-5 border-l border-juniper/30"
-                                  onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: item.srx440.cpu, shm: item.srx440.shm })}
+                                  className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}
+                                  onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: capCpu(item.srx440.cpu), shm: item.srx440.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has440 ? (

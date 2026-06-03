@@ -149,7 +149,7 @@ const SanityOverviewChart = ({ displayData }) => {
   const yCps = (val) => plotH - (val / maxCps) * plotH;
 
   return (
-    <div className="animate-fade-in-up rounded-2xl shadow-xl border border-juniper/15 overflow-hidden bg-[#f7faf4]">
+    <div className="animate-chart-enter rounded-2xl shadow-xl border border-juniper/15 overflow-hidden bg-[#f7faf4]">
       <div className="h-1 w-full bg-gradient-to-r from-juniper via-juniper-dark to-blue-500" />
 
       {/* Header */}
@@ -275,28 +275,32 @@ const SanityOverviewChart = ({ displayData }) => {
                 />
 
                 {/* SRX 400 bar (green) */}
-                <rect x={x400} y={y400} width={barW} height={h400} rx={3} fill="url(#grad400v)">
-                  <animate attributeName="height" from="0" to={h400} dur="0.5s" fill="freeze" begin={delay400} />
-                  <animate attributeName="y" from={margin.top + plotH} to={y400} dur="0.5s" fill="freeze" begin={delay400} />
+                <rect x={x400} y={y400} width={barW} height={h400} rx={3} fill="url(#grad400v)" opacity="0">
+                  <animate attributeName="height" from="0" to={h400} dur="0.7s" fill="freeze" begin={delay400} calcMode="spline" keySplines="0.16 1 0.3 1" keyTimes="0;1" />
+                  <animate attributeName="y" from={margin.top + plotH} to={y400} dur="0.7s" fill="freeze" begin={delay400} calcMode="spline" keySplines="0.16 1 0.3 1" keyTimes="0;1" />
+                  <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" begin={delay400} />
                   <title>{d.fullName} — SRX 400: {d.label400}</title>
                 </rect>
 
                 {/* SRX 440 bar (blue) */}
-                <rect x={x440} y={y440} width={barW} height={h440} rx={3} fill="url(#grad440v)">
-                  <animate attributeName="height" from="0" to={h440} dur="0.5s" fill="freeze" begin={delay440} />
-                  <animate attributeName="y" from={margin.top + plotH} to={y440} dur="0.5s" fill="freeze" begin={delay440} />
+                <rect x={x440} y={y440} width={barW} height={h440} rx={3} fill="url(#grad440v)" opacity="0">
+                  <animate attributeName="height" from="0" to={h440} dur="0.7s" fill="freeze" begin={delay440} calcMode="spline" keySplines="0.16 1 0.3 1" keyTimes="0;1" />
+                  <animate attributeName="y" from={margin.top + plotH} to={y440} dur="0.7s" fill="freeze" begin={delay440} calcMode="spline" keySplines="0.16 1 0.3 1" keyTimes="0;1" />
+                  <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" begin={delay440} />
                   <title>{d.fullName} — SRX 440: {d.label440}</title>
                 </rect>
 
                 {/* Value labels on top of bars */}
                 {d.v400 > 0 && (
-                  <text x={x400 + barW / 2} y={y400 - 5} fontSize="8" fill="#6C912A" fontWeight="700" textAnchor="middle" fontFamily="JetBrains Mono, monospace">
+                  <text x={x400 + barW / 2} y={y400 - 5} fontSize="8" fill="#6C912A" fontWeight="700" textAnchor="middle" fontFamily="JetBrains Mono, monospace" opacity="0">
                     {Number.isInteger(d.v400) ? d.v400 : d.v400.toFixed(1)}
+                    <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" begin={`${i * 0.06 + 0.5}s`} />
                   </text>
                 )}
                 {d.v440 > 0 && (
-                  <text x={x440 + barW / 2} y={y440 - 5} fontSize="8" fill="#2563eb" fontWeight="700" textAnchor="middle" fontFamily="JetBrains Mono, monospace">
+                  <text x={x440 + barW / 2} y={y440 - 5} fontSize="8" fill="#2563eb" fontWeight="700" textAnchor="middle" fontFamily="JetBrains Mono, monospace" opacity="0">
                     {Number.isInteger(d.v440) ? d.v440 : d.v440.toFixed(1)}
+                    <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" begin={`${i * 0.06 + 0.5}s`} />
                   </text>
                 )}
 

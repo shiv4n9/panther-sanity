@@ -493,6 +493,60 @@ code,
   animation: table-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
 }
 
+/* ─── Staggered Section Entrance ──────────────────────────────── */
+@keyframes section-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-section-enter {
+  animation: section-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Chart Rise Entrance ─────────────────────────────────────── */
+@keyframes chart-rise {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-chart-enter {
+  animation: chart-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+/* ─── Value Counter Fade ──────────────────────────────────────── */
+@keyframes value-pop {
+  0% { opacity: 0; transform: scale(0.5); }
+  60% { opacity: 1; transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.animate-value-pop {
+  animation: value-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ─── Header Gradient Shimmer ─────────────────────────────────── */
+@keyframes header-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-header-shimmer {
+  background-size: 200% 100%;
+  animation: header-shimmer 3s ease-in-out infinite;
+}
+
 /* ─── Footer Fade In ──────────────────────────────────────────── */
 .footer-fade {
   animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
@@ -530,4 +584,30 @@ code,
 
 .release-chip:hover::before {
   opacity: 1;
+}
+
+/* ─── Print Styles for PDF Export ─────────────────────────────── */
+@media print {
+  body { background: white !important; }
+  .print-hide, header, footer, .topbar, button, select, input,
+  nav, .animate-pulse { display: none !important; }
+  main { padding: 0 !important; max-width: 100% !important; }
+  .rounded-2xl { border-radius: 8px !important; }
+  .shadow-xl, .shadow-lg, .shadow-sm { box-shadow: none !important; }
+  .animate-section-enter, .animate-chart-enter, .animate-fade-in-up {
+    animation: none !important; opacity: 1 !important; transform: none !important;
+  }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  @page { margin: 0.5in; size: landscape; }
+}
+
+/* ─── Diff Flash Highlight ────────────────────────────────────── */
+@keyframes diff-flash {
+  0%   { background-color: rgba(250, 204, 21, 0.5); }
+  30%  { background-color: rgba(250, 204, 21, 0.3); }
+  100% { background-color: transparent; }
+}
+
+.diff-flash {
+  animation: diff-flash 1.5s ease-out both;
 }
