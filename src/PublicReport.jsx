@@ -19,6 +19,35 @@ function getPR(testCaseName) {
   return entry ? entry.pr : null;
 }
 
+// ─── Tooltip Portal — System Metrics ─────────────────────────
+const MetricsTooltip = ({ position, isVisible, data }) => {
+  if (!isVisible || !position || !data) return null;
+  return createPortal(
+    <div
+      className="fixed z-[9999] animate-fade-in-up pointer-events-none"
+      style={{ top: `${position.y + 8}px`, left: `${position.x}px`, animationDuration: '200ms' }}
+    >
+      <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[200px]">
+        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
+          <div className="w-2 h-2 bg-juniper rounded-full shadow-[0_0_8px_var(--color-juniper-glow)]"></div>
+          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">System Metrics</span>
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-400">CPU Usage:</span>
+            <span className="font-jetbrains text-sm font-semibold text-juniper">{data.cpu || 'N/A'}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-400">Global Data SHM:</span>
+            <span className="font-jetbrains text-sm font-semibold text-purple-400">{data.shm || 'N/A'}</span>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 // ─── Tooltip Portal — Performance Diff ───────────────────────
 const DiffTooltip = ({ position, isVisible, data }) => {
   if (!isVisible || !position || !data) return null;
@@ -67,6 +96,7 @@ const PublicReport = () => {
   const [activeView, setActiveView] = useState('sanity');
   const [expandedGroups, setExpandedGroups] = useState({});
   const [hoveredDiff, setHoveredDiff] = useState(null);
+  const [hoveredCell, setHoveredCell] = useState(null);
   const [showCompare, setShowCompare] = useState(false);
   const [ds1Releases, setDs1Releases] = useState([]);
   const [selectedSanityRelease, setSelectedSanityRelease] = useState('');
@@ -112,6 +142,11 @@ const PublicReport = () => {
     const rect = e.currentTarget.getBoundingClientRect();
     const diff = calculatePercentageDiff(val400, val440);
     setHoveredDiff({ id: cellId, x: rect.left, y: rect.bottom, diff, val400, val440 });
+  };
+
+  const handleCellEnter = (e, cellId, metrics) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoveredCell({ id: cellId, x: rect.left, y: rect.bottom, ...metrics });
   };
 
   // ── View filter: sanity vs. regression ──
@@ -297,7 +332,7 @@ const PublicReport = () => {
         </div>
       </header>
 
-      {/* ── Title Page (PDF only) ── */}
+      {/* ── Title Page (PDF only — page 1) ── */}
       <section className="report-title-page print-only max-w-4xl mx-auto px-8 py-16 print:py-0 print:px-0 print:max-w-full">
         <div className="bg-white rounded-3xl shadow-xl shadow-juniper/10 border border-juniper/15 overflow-hidden print:shadow-none print:border-none print:rounded-none">
           {/* Top accent bar */}
@@ -350,44 +385,47 @@ const PublicReport = () => {
                 <div className="font-jetbrains text-sm font-bold text-slate-700">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
               </div>
             </div>
-
-            {/* Abstract */}
-            <div className="text-left max-w-2xl mx-auto space-y-5">
-              <div>
-                <h2 className="text-xs font-black uppercase tracking-[0.15em] text-juniper-dark mb-2 flex items-center gap-2">
-                  <span className="w-6 h-px bg-juniper"></span>
-                  Abstract
-                </h2>
-                <p className="text-sm leading-relaxed text-slate-600">
-                  This report presents the scale and performance benchmarking results for the Juniper Networks SRX 400 and SRX 440 next-generation firewall platforms. Metrics include UDP/IPSec throughput, HTTP throughput, connections per second (CPS), and transactions per second (TPS) across a range of security profiles and traffic configurations.
-                </p>
-              </div>
-
-              <div>
-                <h2 className="text-xs font-black uppercase tracking-[0.15em] text-juniper-dark mb-2 flex items-center gap-2">
-                  <span className="w-6 h-px bg-juniper"></span>
-                  Introduction
-                </h2>
-                <p className="text-sm leading-relaxed text-slate-600">
-                  The SRX4XX series platforms are purpose-built for branch and edge deployments requiring high-throughput security inspection. This daily sanity execution validates performance baselines against established thresholds, ensuring that new builds maintain expected throughput and session capacity. Each test case is executed under controlled lab conditions using standardized traffic profiles. Results are compared across the SRX 400 and SRX 440 platforms to provide a side-by-side performance perspective.
-                </p>
-              </div>
-
-              <div>
-                <h2 className="text-xs font-black uppercase tracking-[0.15em] text-juniper-dark mb-2 flex items-center gap-2">
-                  <span className="w-6 h-px bg-juniper"></span>
-                  Methodology
-                </h2>
-                <p className="text-sm leading-relaxed text-slate-600">
-                  Tests are driven by Memory Hog and Memory Hog based traffic generators pushing through the DUT (Device Under Test) in inline mode. CPU utilization, memory (SHM), and throughput values are captured at steady state. When the Normalize CPU toggle is enabled, throughput numbers are linearly scaled to a 90% CPU baseline, removing variance caused by differing CPU utilization across test runs.
-                </p>
-              </div>
-            </div>
-
           </div>
 
           {/* Bottom accent */}
           <div className="h-1 bg-gradient-to-r from-purple-600 via-juniper-dark to-juniper"></div>
+        </div>
+      </section>
+
+      {/* ── Abstract / Intro / Methodology (PDF only — page 2) ── */}
+      <section className="report-prose-page print-only max-w-4xl mx-auto px-8 print:px-0 print:max-w-full">
+        <div className="bg-white rounded-3xl shadow-xl shadow-juniper/10 border border-juniper/15 overflow-hidden print:shadow-none print:border-none print:rounded-none">
+          <div className="px-12 py-10 space-y-6 text-left max-w-3xl mx-auto">
+            <div>
+              <h2 className="text-xs font-black uppercase tracking-[0.15em] text-juniper-dark mb-2 flex items-center gap-2">
+                <span className="w-6 h-px bg-juniper"></span>
+                Abstract
+              </h2>
+              <p className="text-sm leading-relaxed text-slate-600">
+                This report presents the scale and performance benchmarking results for the Juniper Networks SRX 400 and SRX 440 next-generation firewall platforms. Metrics include UDP/IPSec throughput, HTTP throughput, connections per second (CPS), and transactions per second (TPS) across a range of security profiles and traffic configurations.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xs font-black uppercase tracking-[0.15em] text-juniper-dark mb-2 flex items-center gap-2">
+                <span className="w-6 h-px bg-juniper"></span>
+                Introduction
+              </h2>
+              <p className="text-sm leading-relaxed text-slate-600">
+                The SRX4XX series platforms are purpose-built for branch and edge deployments requiring high-throughput security inspection. This daily sanity execution validates performance baselines against established thresholds, ensuring that new builds maintain expected throughput and session capacity. Each test case is executed under controlled lab conditions using standardized traffic profiles. Results are compared across the SRX 400 and SRX 440 platforms to provide a side-by-side performance perspective.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xs font-black uppercase tracking-[0.15em] text-juniper-dark mb-2 flex items-center gap-2">
+                <span className="w-6 h-px bg-juniper"></span>
+                Methodology
+              </h2>
+              <p className="text-sm leading-relaxed text-slate-600">
+                Tests are driven by Memory Hog and Memory Hog based traffic generators pushing through the DUT (Device Under Test) in inline mode. CPU utilization, memory (SHM), and throughput values are captured at steady state. When the Normalize CPU toggle is enabled, throughput numbers are linearly scaled to a 90% CPU baseline, removing variance caused by differing CPU utilization across test runs.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -595,7 +633,11 @@ const PublicReport = () => {
                                 </div>
 
                                 {/* SRX 400 */}
-                                <div className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}>
+                                <div
+                                  className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
+                                  onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: item.srx400.cpu, shm: item.srx400.shm })}
+                                  onMouseLeave={() => setHoveredCell(null)}
+                                >
                                   {has400 ? (
                                     <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
                                       {norm400.value}
@@ -617,10 +659,19 @@ const PublicReport = () => {
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
                                   })()}
+                                  <MetricsTooltip
+                                    position={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
+                                    isVisible={hoveredCell?.id === `400-${sIdx}-${idx}`}
+                                    data={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
+                                  />
                                 </div>
 
                                 {/* SRX 440 */}
-                                <div className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}>
+                                <div
+                                  className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}
+                                  onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: item.srx440.cpu, shm: item.srx440.shm })}
+                                  onMouseLeave={() => setHoveredCell(null)}
+                                >
                                   {has440 ? (
                                     <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
                                       {norm440.value}
@@ -642,6 +693,11 @@ const PublicReport = () => {
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
                                   })()}
+                                  <MetricsTooltip
+                                    position={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
+                                    isVisible={hoveredCell?.id === `440-${sIdx}-${idx}`}
+                                    data={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
+                                  />
                                 </div>
 
                                 {/* Branch 3XX columns */}
@@ -676,6 +732,7 @@ const PublicReport = () => {
         </div>
 
         {/* ── Performance Overview Chart (Sanity view only) ── */}
+        <div className="print-chart-page">
         {isSanity && (() => {
           const chartData = isNormalized
             ? displayData.map(section => {
@@ -698,6 +755,7 @@ const PublicReport = () => {
             : displayData;
           return <SanityOverviewChart displayData={chartData} />;
         })()}
+        </div>
       </main>
 
       {/* Footer */}

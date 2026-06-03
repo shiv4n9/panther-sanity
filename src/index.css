@@ -595,8 +595,29 @@ code,
   .print-only { display: block !important; }
   .print-hide, header, footer, .topbar, button, select, input,
   nav, .animate-pulse { display: none !important; }
-  .report-title-page { page-break-after: always; padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-  main { padding: 0 !important; max-width: 100% !important; }
+
+  /* Page 1: Title page only */
+  .report-title-page {
+    page-break-after: always;
+    padding: 0 !important; margin: 0 !important; max-width: 100% !important;
+  }
+
+  /* Page 2: Abstract / Intro / Methodology */
+  .report-prose-page {
+    page-break-after: always;
+    padding: 0 !important; margin: 0 !important; max-width: 100% !important;
+  }
+
+  /* Page 3+: Tables */
+  main {
+    padding: 0 !important; max-width: 100% !important;
+  }
+
+  /* Chart starts on its own page */
+  .print-chart-page {
+    page-break-before: always;
+  }
+
   .rounded-2xl { border-radius: 8px !important; }
   .shadow-xl, .shadow-lg, .shadow-sm { box-shadow: none !important; }
   .animate-section-enter, .animate-chart-enter, .animate-fade-in-up {
