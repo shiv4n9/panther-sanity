@@ -448,16 +448,6 @@ const PublicReport = () => {
                 Daily Sanity
               </span>
             </button>
-            <button
-              disabled
-              className="relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 text-slate-300 cursor-not-allowed opacity-50"
-              title="Coming soon"
-            >
-              <span className="flex items-center gap-2">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                Full Regression
-              </span>
-            </button>
           </div>
         </div>
 
@@ -478,8 +468,10 @@ const PublicReport = () => {
         {/* Action Buttons */}
         <div className="flex items-center justify-between gap-2">
           {/* DS-1 Release Selector — Sanity view only */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-1">
             {isSanity && ds1Releases.length > 0 && (
+              <>
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest pl-1">Select a release</span>
               <div className="relative inline-flex items-center gap-2 bg-gradient-to-r from-juniper-light via-white to-blue-50 border-2 border-juniper/40 rounded-xl px-3 py-1.5 shadow-lg shadow-juniper/15 hover:shadow-xl hover:shadow-juniper/25 transition-all duration-300 group">
                 <div className="flex items-center gap-1.5">
                   <svg className="w-4 h-4 text-juniper-dark animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
@@ -496,24 +488,12 @@ const PublicReport = () => {
                 </select>
                 <svg className="w-3.5 h-3.5 text-juniper-dark absolute right-3 pointer-events-none group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
               </div>
+              </>
             )}
           </div>
           <div className="flex items-center gap-2">
-          {isSanity && (
-            <button
-              onClick={() => setShowCompare(!showCompare)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${
-                showCompare
-                  ? 'bg-orange-50 border-orange-300 text-orange-700 shadow-orange-100/50'
-                  : 'bg-white border-juniper/30 text-slate-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50'
-              }`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-              {showCompare ? 'Hide 3XX' : 'Compare 3XX'}
-            </button>
-          )}
           {/* Normalize CPU Toggle */}
-          <label className="print-hide flex items-center gap-2 cursor-pointer select-none px-3.5 py-1.5 rounded-lg border border-juniper/30 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/50">
+          <label className="print-hide flex items-center gap-2 cursor-pointer select-none px-3.5 py-1.5 rounded-lg border border-juniper/30 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/50" title="Normalize throughput values to a 90% CPU baseline">
             <div
               onClick={() => setIsNormalized(!isNormalized)}
               className={`relative w-9 h-[18px] rounded-full transition-colors duration-300 ${isNormalized ? 'bg-amber-500' : 'bg-slate-300'}`}
