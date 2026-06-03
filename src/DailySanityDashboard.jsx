@@ -459,7 +459,7 @@ const DailySanityDashboard = () => {
           </div>
 
           {/* Right — Toggle Switches in matching pill container */}
-          <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg shadow-juniper/20 border border-juniper/30 gap-1">
+          <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg shadow-juniper/20 border border-juniper/30 gap-1 overflow-visible">
             {/* Normalize CPU Toggle */}
             <div className="relative group/norm">
             <label className="flex items-center gap-2 cursor-pointer select-none px-4 py-2 rounded-full transition-all duration-300 hover:bg-slate-50">
@@ -476,9 +476,9 @@ const DailySanityDashboard = () => {
                 Normalize CPU
               </span>
             </label>
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[11px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/norm:opacity-100 transition-opacity duration-150">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-800 text-slate-300 text-[11px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/norm:opacity-100 transition-opacity duration-150 z-[60]">
               Normalize throughput to 90% CPU baseline
-              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
             </div>
             </div>
 
