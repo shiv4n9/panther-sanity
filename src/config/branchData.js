@@ -39,6 +39,18 @@ export const BRANCH_DATA = [
     match: (tc) => /^appsec \+ ssl\(tls1\.2\)/i.test(tc.trim()),
     values: { SRX300: '30', SRX320: '30', SRX340: '60', SRX345: '75', SRX380: '180' },
   },
+  {
+    match: (tc) => /^firewall udp throughput-\s*packet size 64\s*bytes/i.test(tc),
+    values: { SRX300: '109 Mbps', SRX320: '109 Mbps', SRX340: '288 Mbps', SRX345: '287 Mbps', SRX380: '1219 Mbps' },
+  },
+  {
+    match: (tc) => /^appsec\s*-\s*http\s*cps/i.test(tc.trim()),
+    values: { SRX300: '4.33K CPS', SRX320: '4.33K CPS', SRX340: '9.5K CPS', SRX345: '11.4K CPS', SRX380: '68K CPS' },
+  },
+  {
+    match: (tc) => /^appsec\s*-\s*http\s*throughput/i.test(tc.trim()),
+    values: { SRX300: '218 Mbps', SRX320: '218 Mbps', SRX340: '414 Mbps', SRX345: '478 Mbps', SRX380: '3596 Mbps' },
+  },
 ];
 
 /**

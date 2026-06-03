@@ -635,7 +635,7 @@ const PublicReport = () => {
                                 {/* SRX 400 */}
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: item.srx400.cpu, shm: item.srx400.shm })}
+                                  onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx400.cpu && parseInt(item.srx400.cpu) > 90 ? '90%' : item.srx400.cpu, shm: item.srx400.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has400 ? (
@@ -669,7 +669,7 @@ const PublicReport = () => {
                                 {/* SRX 440 */}
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: item.srx440.cpu, shm: item.srx440.shm })}
+                                  onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx440.cpu && parseInt(item.srx440.cpu) > 90 ? '90%' : item.srx440.cpu, shm: item.srx440.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has440 ? (
