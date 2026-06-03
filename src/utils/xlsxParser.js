@@ -156,6 +156,129 @@ function parseSheet(ws) {
   return { release, sections };
 }
 
+// ─── DS-1 Sheet Parser ───────────────────────────────────────
+
+/**
+ * Parse the DS-1 sheet which stacks multiple releases vertically.
+ *
+ * Layout per release block:
+ *   Row N   — "Release: <version>" in col A, "SRX400" header in col B, "SRX440" header in col E
+ *   Row N+1 — Column labels: "Testcase Description" | "Throughput" | "CPU" | "Comments" | "Throughput" | "CPU" | "SHM"
+ *   Row N+2…— Data rows until the next Release row or end of sheet.
+ *
+ * Returns a Map-like array: [{ release, merged }] where merged is the same
+ * format as mergeSheets output.
+ *
+ * @param {Object} ws - XLSX worksheet for DS-1
+ * @returns {Array<{ release: string, merged: Array }>}
+ */
+function parseDSSheet(ws) {
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const maxCol = Math.min(range.e.c, 9);
+
+  const getCell = (r, c) => {
+    const cell = ws[XLSX.utils.encode_cell({ r, c })];
+    return cell ? String(cell.v) : '';
+  };
+
+  const releases = [];
+  let currentRelease = null;
+  let skipNextRow = false; // skip the column-label row after a Release row
+
+  for (let r = 0; r <= range.e.r; r++) {
+    const colA = getCell(r, 0).trim();
+
+    // Detect release header row
+    if (/^Release:/i.test(colA.replace(/[\r\n]/g, ' '))) {
+      const releaseMatch = colA.replace(/[\r\n]/g, ' ').match(/Release:\s*(.+?)(?:\s*$)/);
+      const releaseStr = releaseMatch ? releaseMatch[1].trim() : 'Unknown';
+      currentRelease = { release: releaseStr, tests: [] };
+      releases.push(currentRelease);
+      skipNextRow = true;
+      continue;
+    }
+
+    // Skip the column-label row ("Testcase Description", "Throughput", …)
+    if (skipNextRow) {
+      skipNextRow = false;
+      continue;
+    }
+
+    // Skip empty rows
+    if (!colA || /^\s*$/.test(colA)) continue;
+
+    if (!currentRelease) continue;
+
+    // Data row — cols B(1),C(2),D(3) = SRX400; cols E(4),F(5),G(6) = SRX440
+    const t400  = getCell(r, 1).trim();
+    const cpu400 = getCell(r, 2).trim();
+    const shm400 = getCell(r, 3).trim();
+    const t440  = getCell(r, 4).trim();
+    const cpu440 = getCell(r, 5).trim();
+    const shm440 = getCell(r, 6).trim();
+
+    currentRelease.tests.push({
+      testCase: colA,
+      srx400: {
+        throughput: t400,
+        cpu: cpu400 ? `${cpu400}%` : '',
+        shm: shm400 ? (/^\*|session|pr\s/i.test(shm400) ? '' : `${shm400}%`) : '',
+        comments: /^\*|session|pr\s/i.test(shm400) ? shm400 : '',
+      },
+      srx440: {
+        throughput: t440,
+        cpu: cpu440 ? `${cpu440}%` : '',
+        shm: shm440 ? (/^\*|session|pr\s/i.test(shm440) ? '' : `${shm440}%`) : '',
+        comments: /^\*|session|pr\s/i.test(shm440) ? shm440 : '',
+      },
+    });
+  }
+
+  // Categorize each release's tests into proper groups matching SANITY_TEST_CASES labels
+  const categorizeTests = (tests) => {
+    const groups = {
+      'HTTP Throughput via CPS Method (Payload: 64KB)': [],
+      'CPS Performance (Payload: 64B)': [],
+      'UDP/IPSec Throughput': [],
+    };
+    const uncategorized = [];
+
+    for (const test of tests) {
+      const tc = test.testCase.trim();
+      if (/^appsec\s*-\s*http\s*throughput/i.test(tc) || /^appsec\s*\+\s*ssl.*https\s*throughput/i.test(tc)) {
+        groups['HTTP Throughput via CPS Method (Payload: 64KB)'].push(test);
+      } else if (/^appsec\s*-\s*http\s*cps/i.test(tc) || /^appsec\s*\+\s*ssl/i.test(tc) || /firewall\s*tcp\s*cps/i.test(tc)) {
+        groups['CPS Performance (Payload: 64B)'].push(test);
+      } else if (/udp\s*throughput/i.test(tc) || /ipsec/i.test(tc) || /packet\s*mode.*udp/i.test(tc)) {
+        groups['UDP/IPSec Throughput'].push(test);
+      } else {
+        uncategorized.push(test);
+      }
+    }
+
+    const merged = [];
+    // Add in display order: UDP first, then HTTP, then CPS
+    if (groups['UDP/IPSec Throughput'].length > 0) {
+      merged.push({ category: 'UDP/IPSec Throughput', tests: groups['UDP/IPSec Throughput'] });
+    }
+    if (groups['HTTP Throughput via CPS Method (Payload: 64KB)'].length > 0) {
+      merged.push({ category: 'HTTP Throughput via CPS Method (Payload: 64KB)', tests: groups['HTTP Throughput via CPS Method (Payload: 64KB)'] });
+    }
+    if (groups['CPS Performance (Payload: 64B)'].length > 0) {
+      merged.push({ category: 'CPS Performance (Payload: 64B)', tests: groups['CPS Performance (Payload: 64B)'] });
+    }
+    if (uncategorized.length > 0) {
+      merged.push({ category: 'Other', tests: uncategorized });
+    }
+    return merged;
+  };
+
+  return releases.map(rel => ({
+    release: rel.release,
+    merged: categorizeTests(rel.tests),
+  }));
+}
+
 // ─── Public API ───────────────────────────────────────────────
 
 /**
@@ -185,6 +308,10 @@ export async function loadDatasheet(url) {
     }
     result[sheetName.toLowerCase()] = parseSheet(ws);
   }
+
+  // Parse DS-1 sheet for Daily Sanity release-stacked data
+  const dsWs = workbook.Sheets['DS-1'];
+  result.ds1 = dsWs ? parseDSSheet(dsWs) : [];
 
   return result;
 }
