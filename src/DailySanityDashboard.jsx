@@ -132,6 +132,7 @@ const DailySanityDashboard = () => {
   const [ds1Releases, setDs1Releases] = useState([]);       // [{ release, merged }]
   const [selectedSanityRelease, setSelectedSanityRelease] = useState('');
   const [flashedCells, setFlashedCells] = useState(new Set());
+  const [visitorCount, setVisitorCount] = useState(null);
   const prevDataRef = useRef(null);
 
   const isSanity = activeView === 'sanity';
@@ -173,6 +174,14 @@ const DailySanityDashboard = () => {
         setLoading(false);
       }
     })();
+  }, []);
+
+  // ── Fetch public-report visitor count ──
+  useEffect(() => {
+    fetch(`${API_BASE}/api/visit-count?page=public-report`)
+      .then(r => r.json())
+      .then(d => setVisitorCount(d))
+      .catch(() => {});
   }, []);
 
   // ── Ingest trigger — stores XLSX snapshot to DB for history tracking ──
@@ -403,6 +412,11 @@ const DailySanityDashboard = () => {
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                 Public
               </a>
+              {visitorCount && (
+                <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[10px] text-slate-500 font-medium border border-slate-200" title="Public report views">
+                  👁 {visitorCount.total} views{visitorCount.today > 0 ? ` (${visitorCount.today} today)` : ''}
+                </span>
+              )}
               <button onClick={triggerIngest} disabled={ingestStatus === 'loading'} className={`shine-on-hover flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${ingestStatus === 'loading' ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait' : ingestStatus === 'success' ? 'bg-juniper-light border-juniper/40 text-juniper-darker' : ingestStatus === 'error' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-juniper-light hover:border-juniper/50 hover:text-juniper-darker hover:shadow-lg hover:shadow-juniper/20'}`}>
                 {ingestStatus === 'loading' ? 'Ingesting…' : ingestStatus === 'success' ? ingestMessage : ingestStatus === 'error' ? ingestMessage : 'Ingest Latest'}
               </button>

@@ -5,6 +5,7 @@ import { SANITY_TEST_CASES } from './config/sanityTestCases';
 import { BRANCH_DEVICES, getBranchData } from './config/branchData';
 import { normalizeTo90Cpu, calculatePercentageDiff, isScalingCategory } from './utils/normalize';
 import SanityOverviewChart from './components/SanityOverviewChart';
+import { API_BASE } from './config/api';
 
 // ─── PR Links for known blocked test cases ───────────────────
 const PR_LINKS = [
@@ -133,6 +134,15 @@ const PublicReport = () => {
         setLoading(false);
       }
     })();
+  }, []);
+
+  // ── Track page visit (silent, fire-and-forget) ──
+  useEffect(() => {
+    fetch(`${API_BASE}/api/track-visit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page: 'public-report' }),
+    }).catch(() => {});
   }, []);
 
   const isEmptyValue = (val) =>

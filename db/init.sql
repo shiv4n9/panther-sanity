@@ -30,6 +30,17 @@ CREATE INDEX IF NOT EXISTS idx_sanity_runs_csv_date
 CREATE INDEX IF NOT EXISTS idx_sanity_runs_platform
   ON sanity_runs (platform, test_case, run_date DESC);
 
+-- Track page visits for the public report
+CREATE TABLE IF NOT EXISTS page_visits (
+  id          SERIAL PRIMARY KEY,
+  page        TEXT         NOT NULL,
+  visited_at  TIMESTAMPTZ  DEFAULT NOW(),
+  ip          TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_page_visits_page
+  ON page_visits (page, visited_at DESC);
+
 -- Track each ingestion event with diff info
 CREATE TABLE IF NOT EXISTS ingestion_log (
   id            SERIAL PRIMARY KEY,

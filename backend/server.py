@@ -872,6 +872,60 @@ def not_found(e):
     return jsonify({'error': 'Endpoint not found'}), 404
 
 
+# ─── Visitor Tracking ────────────────────────────────────────
+
+@app.route('/api/track-visit', methods=['POST'])
+def track_visit():
+    """Record a page visit (page name + requester IP)."""
+    if not DATABASE_URL:
+        return jsonify({'ok': True}), 200
+    body = request.get_json(silent=True) or {}
+    page = body.get('page', 'unknown')
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    try:
+        conn = get_db()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO page_visits (page, ip) VALUES (%s, %s)",
+                    (page, ip),
+                )
+            conn.commit()
+        finally:
+            put_db(conn)
+    except Exception as e:
+        logger.warning(f"track-visit error: {e}")
+    return jsonify({'ok': True}), 200
+
+
+@app.route('/api/visit-count', methods=['GET'])
+def visit_count():
+    """Return total and today's visit count for a given page."""
+    if not DATABASE_URL:
+        return jsonify({'total': 0, 'today': 0}), 200
+    page = request.args.get('page', 'public-report')
+    try:
+        conn = get_db()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM page_visits WHERE page = %s",
+                    (page,),
+                )
+                total = cur.fetchone()[0]
+                cur.execute(
+                    "SELECT COUNT(*) FROM page_visits WHERE page = %s AND visited_at >= CURRENT_DATE",
+                    (page,),
+                )
+                today = cur.fetchone()[0]
+        finally:
+            put_db(conn)
+        return jsonify({'total': total, 'today': today})
+    except Exception as e:
+        logger.error(f"visit-count error: {e}")
+        return jsonify({'total': 0, 'today': 0}), 200
+
+
 @app.errorhandler(500)
 def internal_error(e):
     return jsonify({'error': 'Internal server error'}), 500
