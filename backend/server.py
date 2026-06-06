@@ -496,6 +496,79 @@ def _get_latest_release(conn, platform):
         return row[0] if row else None
 
 
+def _release_to_date(release_str):
+    """Extract a date from a release string like '25.4X300-202605050112.0-EVO'.
+    Falls back to today if no date found."""
+    m = re.search(r'(\d{4})(\d{2})(\d{2})', release_str or '')
+    if m:
+        try:
+            return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            pass
+    return date.today()
+
+
+def _parse_ds1_sheet(ws):
+    """Parse the DS-1 sheet which stacks multiple releases vertically.
+
+    Layout per release block:
+      Row N   — "Release: <version>" in col A
+      Row N+1 — Column labels (skipped)
+      Row N+2…— Data rows: testCase | t400 | cpu400 | shm400 | t440 | cpu440 | shm440
+
+    Returns: [{ release, tests: [{ test_case, srx400: {throughput, cpu, shm}, srx440: {…} }] }]
+    """
+    releases = []
+    current_release = None
+    skip_next = False
+
+    for row in ws.iter_rows(min_row=1, max_col=10, values_only=False):
+        cells = [str(cell.value).strip() if cell.value is not None else '' for cell in row]
+        col_a = cells[0]
+
+        # Detect release header
+        if re.match(r'^Release:', col_a.replace('\r', ' ').replace('\n', ' '), re.IGNORECASE):
+            rel_match = re.search(r'Release:\s*(.+?)(?:\r?\n|$)', col_a.replace('\r', ' ').replace('\n', ' '))
+            rel_str = rel_match.group(1).strip() if rel_match else 'Unknown'
+            current_release = {'release': rel_str, 'tests': []}
+            releases.append(current_release)
+            skip_next = True
+            continue
+
+        if skip_next:
+            skip_next = False
+            continue
+
+        if not col_a or col_a.isspace():
+            continue
+
+        if not current_release:
+            continue
+
+        t400 = cells[1] if len(cells) > 1 else ''
+        cpu400 = cells[2] if len(cells) > 2 else ''
+        shm400 = cells[3] if len(cells) > 3 else ''
+        t440 = cells[4] if len(cells) > 4 else ''
+        cpu440 = cells[5] if len(cells) > 5 else ''
+        shm440 = cells[6] if len(cells) > 6 else ''
+
+        current_release['tests'].append({
+            'test_case': col_a,
+            'srx400': {
+                'throughput': t400,
+                'cpu': f"{cpu400}%" if cpu400 and not cpu400.endswith('%') else cpu400,
+                'shm': f"{shm400}%" if shm400 and not shm400.endswith('%') else shm400,
+            },
+            'srx440': {
+                'throughput': t440,
+                'cpu': f"{cpu440}%" if cpu440 and not cpu440.endswith('%') else cpu440,
+                'shm': f"{shm440}%" if shm440 and not shm440.endswith('%') else shm440,
+            },
+        })
+
+    return releases
+
+
 @app.route('/api/ingest-xlsx', methods=['POST'])
 def ingest_xlsx():
     """
@@ -632,6 +705,58 @@ def ingest_xlsx():
                             ))
                             total_inserted += 1
 
+            # ── DS-1 backfill: parse the DS-1 sheet and store each release as historical records ──
+            ds1_inserted = 0
+            ds1_releases_ingested = []
+            if 'DS-1' in wb.sheetnames:
+                ds1_ws = wb['DS-1']
+                ds1_releases = _parse_ds1_sheet(ds1_ws)
+                logger.info(f"DS-1 sheet: found {len(ds1_releases)} release(s)")
+
+                with conn.cursor() as cur:
+                    for rel in ds1_releases:
+                        rel_str = rel['release']
+                        rel_date = _release_to_date(rel_str)
+
+                        # Check if this DS-1 release was already ingested
+                        cur.execute(
+                            "SELECT COUNT(*) FROM sanity_runs WHERE release = %s AND csv_filename = %s",
+                            (rel_str, f"DS1:{filename}"),
+                        )
+                        if cur.fetchone()[0] > 0:
+                            logger.info(f"DS-1 release {rel_str} already ingested, skipping")
+                            continue
+
+                        ds1_releases_ingested.append(rel_str)
+                        for test in rel['tests']:
+                            tc = test['test_case']
+                            for platform_key in ['srx400', 'srx440']:
+                                data = test[platform_key]
+                                if not data['throughput']:
+                                    continue
+                                cur.execute("""
+                                    INSERT INTO sanity_runs
+                                      (run_date, test_case, parameter, throughput, cpu, memory, shm,
+                                       platform, image_name, csv_filename, release, category)
+                                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                """, (
+                                    rel_date,
+                                    tc,
+                                    'Daily Sanity',
+                                    data['throughput'],
+                                    data['cpu'],
+                                    None,
+                                    data['shm'],
+                                    platform_key.upper(),
+                                    rel_str,
+                                    f"DS1:{filename}",
+                                    rel_str,
+                                    'Daily Sanity',
+                                ))
+                                ds1_inserted += 1
+
+                logger.info(f"DS-1: inserted {ds1_inserted} rows from {len(ds1_releases_ingested)} release(s)")
+
             # Update the ingestion_log with actual diff counts
             with conn.cursor() as cur:
                 cur.execute("""
@@ -653,6 +778,8 @@ def ingest_xlsx():
                 'releases': releases,
                 'skipped_platforms': skipped_platforms,
                 'diff': diff_data,
+                'ds1_inserted': ds1_inserted,
+                'ds1_releases': ds1_releases_ingested if 'ds1_releases_ingested' in dir() else [],
             }), 200
 
         except Exception as e:
@@ -735,9 +862,8 @@ def get_sanity_history():
                 """
                 params = [test_case, platform, since]
 
-                if category:
-                    query += " AND category = %s"
-                    params.append(category)
+                # Don't filter by category — test names are unique and DS-1
+                # records may use different category labels than SRX400/SRX440
 
                 query += " ORDER BY release, created_at DESC"
                 cur.execute(query, params)
