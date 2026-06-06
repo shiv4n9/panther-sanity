@@ -83,7 +83,9 @@ function parseSheet(ws) {
 
   const getCell = (r, c) => {
     const cell = ws[XLSX.utils.encode_cell({ r, c })];
-    return cell ? String(cell.v) : '';
+    if (!cell) return '';
+    // Prefer formatted text (.w) for display-accurate values, fall back to raw (.v)
+    return cell.w != null ? String(cell.w) : String(cell.v);
   };
 
   // Row 0: release info
@@ -178,7 +180,8 @@ function parseDSSheet(ws) {
 
   const getCell = (r, c) => {
     const cell = ws[XLSX.utils.encode_cell({ r, c })];
-    return cell ? String(cell.v) : '';
+    if (!cell) return '';
+    return cell.w != null ? String(cell.w) : String(cell.v);
   };
 
   const releases = [];
@@ -242,9 +245,14 @@ function parseDSSheet(ws) {
       'UDP/IPSec Throughput': [],
     };
     const uncategorized = [];
+    const seen = new Set();
 
     for (const test of tests) {
       const tc = test.testCase.trim();
+      const tcKey = tc.toLowerCase();
+      // Skip duplicates (same test name from different Excel sections)
+      if (seen.has(tcKey)) continue;
+      seen.add(tcKey);
       if (/^(?:appsec|appcontrol)\s*-\s*http\s*throughput/i.test(tc) || /^(?:appsec|appcontrol)\s*\+\s*ssl.*https\s*throughput/i.test(tc)) {
         groups['HTTP Throughput via CPS Method (Payload: 64KB)'].push(test);
       } else if (/^(?:appsec|appcontrol)\s*-\s*http\s*cps/i.test(tc) || /^(?:appsec|appcontrol)\s*\+\s*ssl/i.test(tc) || /firewall\s*tcp\s*cps/i.test(tc)) {
