@@ -413,7 +413,6 @@ export function mergeSheets(srx400Data, srx440Data) {
           tests,
         });
       }
-      });
     }
   }
 
