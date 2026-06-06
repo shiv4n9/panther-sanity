@@ -338,13 +338,16 @@ export function mergeSheets(srx400Data, srx440Data) {
   const merged = [];
   const globalSeen = new Set(); // track all test case names to prevent cross-section duplicates
 
+  // Normalize test case key: lowercase, collapse whitespace, normalize dashes
+  const normalizeKey = (tc) => tc.trim().toLowerCase().replace(/[\s\-]+/g, ' ').replace(/\s+/g, ' ');
+
   // Build lookup from SRX440 sections by category name
   const srx440Map = {};
   for (const section of srx440Data.sections) {
     const key = section.category.trim().toLowerCase();
     if (!srx440Map[key]) srx440Map[key] = {};
     for (const test of section.tests) {
-      const tKey = test.testCase.trim().toLowerCase();
+      const tKey = normalizeKey(test.testCase);
       srx440Map[key][tKey] = test;
     }
   }
@@ -360,7 +363,7 @@ export function mergeSheets(srx400Data, srx440Data) {
     const seen440 = new Set();
 
     for (const test400 of section.tests) {
-      const tKey = test400.testCase.trim().toLowerCase();
+      const tKey = normalizeKey(test400.testCase);
       if (globalSeen.has(tKey)) continue; // skip duplicate across sections
       globalSeen.add(tKey);
       const test440 = srx440Map[catKey]?.[tKey] || null;
@@ -398,9 +401,9 @@ export function mergeSheets(srx400Data, srx440Data) {
     const catKey = section.category.trim().toLowerCase();
     if (!srx400CatKeys.has(catKey)) {
       const tests = section.tests
-        .filter(t => !globalSeen.has(t.testCase.trim().toLowerCase()))
+        .filter(t => !globalSeen.has(normalizeKey(t.testCase)))
         .map(t => {
-          globalSeen.add(t.testCase.trim().toLowerCase());
+          globalSeen.add(normalizeKey(t.testCase));
           return {
             testCase: t.testCase.trim(),
             srx400: { throughput: '', cpu: '', shm: '', comments: '' },
