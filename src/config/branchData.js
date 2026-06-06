@@ -28,7 +28,7 @@ export const BRANCH_DATA = [
     values: { SRX300: '250 Mbps', SRX320: '250 Mbps', SRX340: '700 Mbps', SRX345: '705 Mbps', SRX380: '3200 Mbps' },
   },
   {
-    match: (tc) => /^appsec$/i.test(tc.trim()),
+    match: (tc) => /^(?:appsec|appcontrol)$/i.test(tc.trim()),
     values: { SRX300: '210 Mbps', SRX320: '210 Mbps', SRX340: '400 Mbps', SRX345: '450 Mbps', SRX380: '3.4 Gbps' },
   },
   {
@@ -36,7 +36,7 @@ export const BRANCH_DATA = [
     values: { SRX300: '4200', SRX320: '4200', SRX340: '9250', SRX345: '10.5K', SRX380: '64K' },
   },
   {
-    match: (tc) => /^appsec \+ ssl\(tls1\.2\)/i.test(tc.trim()),
+    match: (tc) => /^(?:appsec|appcontrol) \+ ssl\(tls1\.2\)/i.test(tc.trim()),
     values: { SRX300: '30', SRX320: '30', SRX340: '60', SRX345: '75', SRX380: '180' },
   },
   {
@@ -44,11 +44,11 @@ export const BRANCH_DATA = [
     values: { SRX300: '109 Mbps', SRX320: '109 Mbps', SRX340: '288 Mbps', SRX345: '287 Mbps', SRX380: '1219 Mbps' },
   },
   {
-    match: (tc) => /^appsec\s*-\s*http\s*cps/i.test(tc.trim()),
+    match: (tc) => /^(?:appsec|appcontrol)\s*-\s*http\s*cps/i.test(tc.trim()),
     values: { SRX300: '4.33K CPS', SRX320: '4.33K CPS', SRX340: '9.5K CPS', SRX345: '11.4K CPS', SRX380: '68K CPS' },
   },
   {
-    match: (tc) => /^appsec\s*-\s*http\s*throughput/i.test(tc.trim()),
+    match: (tc) => /^(?:appsec|appcontrol)\s*-\s*http\s*throughput/i.test(tc.trim()),
     values: { SRX300: '218 Mbps', SRX320: '218 Mbps', SRX340: '414 Mbps', SRX345: '478 Mbps', SRX380: '3596 Mbps' },
   },
 ];

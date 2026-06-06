@@ -245,9 +245,9 @@ function parseDSSheet(ws) {
 
     for (const test of tests) {
       const tc = test.testCase.trim();
-      if (/^appsec\s*-\s*http\s*throughput/i.test(tc) || /^appsec\s*\+\s*ssl.*https\s*throughput/i.test(tc)) {
+      if (/^(?:appsec|appcontrol)\s*-\s*http\s*throughput/i.test(tc) || /^(?:appsec|appcontrol)\s*\+\s*ssl.*https\s*throughput/i.test(tc)) {
         groups['HTTP Throughput via CPS Method (Payload: 64KB)'].push(test);
-      } else if (/^appsec\s*-\s*http\s*cps/i.test(tc) || /^appsec\s*\+\s*ssl/i.test(tc) || /firewall\s*tcp\s*cps/i.test(tc)) {
+      } else if (/^(?:appsec|appcontrol)\s*-\s*http\s*cps/i.test(tc) || /^(?:appsec|appcontrol)\s*\+\s*ssl/i.test(tc) || /firewall\s*tcp\s*cps/i.test(tc)) {
         groups['CPS Performance (Payload: 64B)'].push(test);
       } else if (/udp\s*throughput/i.test(tc) || /ipsec/i.test(tc) || /packet\s*mode.*udp/i.test(tc)) {
         groups['UDP/IPSec Throughput'].push(test);

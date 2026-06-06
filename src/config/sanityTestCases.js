@@ -12,14 +12,14 @@ export const SANITY_TEST_CASES = [
   {
     label: 'HTTP Throughput via CPS Method (Payload: 64KB)',
     matchers: [
-      { match: (tc) => /^appsec$/i.test(tc.trim()) },
+      { match: (tc) => /^(?:appsec|appcontrol)$/i.test(tc.trim()) },
     ],
   },
   {
     label: 'CPS Performance (Payload: 64B)',
     matchers: [
       { match: (tc) => /^firewall tcp cps$/i.test(tc.trim()) },
-      { match: (tc) => /^appsec \+ ssl\(tls1\.2\)\s*$/i.test(tc.trim()), category: /cps performance/i },
+      { match: (tc) => /^(?:appsec|appcontrol) \+ ssl\(tls1\.2\)\s*$/i.test(tc.trim()), category: /cps performance/i },
     ],
   },
   {
