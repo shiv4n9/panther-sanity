@@ -304,7 +304,7 @@ export async function loadDatasheet(url) {
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellText: true });
 
   const result = {};
   for (const sheetName of ['SRX400', 'SRX440']) {
@@ -336,6 +336,7 @@ export async function loadDatasheet(url) {
  */
 export function mergeSheets(srx400Data, srx440Data) {
   const merged = [];
+  const globalSeen = new Set(); // track all test case names to prevent cross-section duplicates
 
   // Build lookup from SRX440 sections by category name
   const srx440Map = {};
@@ -360,6 +361,8 @@ export function mergeSheets(srx400Data, srx440Data) {
 
     for (const test400 of section.tests) {
       const tKey = test400.testCase.trim().toLowerCase();
+      if (globalSeen.has(tKey)) continue; // skip duplicate across sections
+      globalSeen.add(tKey);
       const test440 = srx440Map[catKey]?.[tKey] || null;
       if (test440) seen440.add(tKey);
 
@@ -373,7 +376,8 @@ export function mergeSheets(srx400Data, srx440Data) {
     // Add any SRX440-only tests not in SRX400
     if (srx440Map[catKey]) {
       for (const [tKey, test440] of Object.entries(srx440Map[catKey])) {
-        if (!seen440.has(tKey)) {
+        if (!seen440.has(tKey) && !globalSeen.has(tKey)) {
+          globalSeen.add(tKey);
           mergedSection.tests.push({
             testCase: test440.testCase.trim(),
             srx400: { throughput: '', cpu: '', shm: '', comments: '' },
@@ -383,7 +387,9 @@ export function mergeSheets(srx400Data, srx440Data) {
       }
     }
 
-    merged.push(mergedSection);
+    if (mergedSection.tests.length > 0) {
+      merged.push(mergedSection);
+    }
   }
 
   // Add any SRX440-only sections not in SRX400
@@ -391,13 +397,22 @@ export function mergeSheets(srx400Data, srx440Data) {
   for (const section of srx440Data.sections) {
     const catKey = section.category.trim().toLowerCase();
     if (!srx400CatKeys.has(catKey)) {
-      merged.push({
-        category: section.category.trim(),
-        tests: section.tests.map(t => ({
-          testCase: t.testCase.trim(),
-          srx400: { throughput: '', cpu: '', shm: '', comments: '' },
-          srx440: t,
-        })),
+      const tests = section.tests
+        .filter(t => !globalSeen.has(t.testCase.trim().toLowerCase()))
+        .map(t => {
+          globalSeen.add(t.testCase.trim().toLowerCase());
+          return {
+            testCase: t.testCase.trim(),
+            srx400: { throughput: '', cpu: '', shm: '', comments: '' },
+            srx440: t,
+          };
+        });
+      if (tests.length > 0) {
+        merged.push({
+          category: section.category.trim(),
+          tests,
+        });
+      }
       });
     }
   }
