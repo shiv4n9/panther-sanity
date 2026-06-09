@@ -629,6 +629,8 @@ const PublicReport = () => {
                             const sIdx = displayData.indexOf(section);
                             const has400 = !!item.srx400.throughput && !isEmptyValue(item.srx400.throughput);
                             const has440 = !!item.srx440.throughput && !isEmptyValue(item.srx440.throughput);
+                            // PR-blocked rows show only the PR badge — no metrics/diff tooltips.
+                            const rowPR = resolvePR(item.testCase, item.srx400.comments || item.srx440.comments);
 
                             // Normalize when toggle is on (skip scaling/capacity sections)
                             const shouldNormalize = isNormalized && !isScalingCategory(section.category);
@@ -645,7 +647,7 @@ const PublicReport = () => {
                                 {/* Test Case Name + Diff Tooltip */}
                                 <div
                                   className="flex items-center px-6 relative cursor-default"
-                                  onMouseEnter={(e) => (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
+                                  onMouseEnter={(e) => !rowPR && (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
                                   onMouseLeave={() => setHoveredDiff(null)}
                                 >
                                   <span className="text-[13px] font-medium text-slate-700 leading-snug">{item.testCase}</span>
@@ -659,7 +661,7 @@ const PublicReport = () => {
                                 {/* SRX 400 */}
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx400.cpu && parseInt(item.srx400.cpu) > 90 ? '90%' : item.srx400.cpu, shm: item.srx400.shm })}
+                                  onMouseEnter={(e) => !rowPR && has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx400.cpu && parseInt(item.srx400.cpu) > 90 ? '90%' : item.srx400.cpu, shm: item.srx400.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {(() => {
@@ -696,7 +698,7 @@ const PublicReport = () => {
                                 {/* SRX 440 */}
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx440.cpu && parseInt(item.srx440.cpu) > 90 ? '90%' : item.srx440.cpu, shm: item.srx440.shm })}
+                                  onMouseEnter={(e) => !rowPR && has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx440.cpu && parseInt(item.srx440.cpu) > 90 ? '90%' : item.srx440.cpu, shm: item.srx440.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {(() => {
