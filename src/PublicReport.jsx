@@ -662,40 +662,26 @@ const PublicReport = () => {
                                   onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx400.cpu && parseInt(item.srx400.cpu) > 90 ? '90%' : item.srx400.cpu, shm: item.srx400.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
-                                  {has400 ? (
-                                    <>
+                                  {(() => {
+                                    const pr = resolvePR(item.testCase, item.srx400.comments || item.srx440.comments);
+                                    if (pr) {
+                                      return (
+                                        <a
+                                          href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
+                                          title={`Open PR ${pr} in GNATS`}
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                                          PR:{pr}
+                                        </a>
+                                      );
+                                    }
+                                    return has400 ? (
                                       <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
                                         {norm400.value}
                                       </span>
-                                      {(() => {
-                                        const pr = resolvePR(item.testCase, item.srx400.comments || item.srx440.comments);
-                                        return pr ? (
-                                          <a
-                                            href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[10px] font-bold text-red-600 px-1.5 py-0.5 rounded-md cursor-pointer w-fit transition-all"
-                                            title={`Open PR ${pr} in GNATS`}
-                                          >
-                                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-                                            PR:{pr}
-                                          </a>
-                                        ) : null;
-                                      })()}
-                                    </>
-                                  ) : (() => {
-                                    const pr = resolvePR(item.testCase, item.srx400.comments || item.srx440.comments);
-                                    return pr ? (
-                                      <a
-                                        href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
-                                        title={`Open PR ${pr} in GNATS`}
-                                      >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-                                        PR:{pr}
-                                      </a>
                                     ) : (
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
@@ -713,40 +699,26 @@ const PublicReport = () => {
                                   onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx440.cpu && parseInt(item.srx440.cpu) > 90 ? '90%' : item.srx440.cpu, shm: item.srx440.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
-                                  {has440 ? (
-                                    <>
+                                  {(() => {
+                                    const pr = resolvePR(item.testCase, item.srx440.comments || item.srx400.comments);
+                                    if (pr) {
+                                      return (
+                                        <a
+                                          href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
+                                          title={`Open PR ${pr} in GNATS`}
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                                          PR:{pr}
+                                        </a>
+                                      );
+                                    }
+                                    return has440 ? (
                                       <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
                                         {norm440.value}
                                       </span>
-                                      {(() => {
-                                        const pr = resolvePR(item.testCase, item.srx440.comments || item.srx400.comments);
-                                        return pr ? (
-                                          <a
-                                            href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[10px] font-bold text-red-600 px-1.5 py-0.5 rounded-md cursor-pointer w-fit transition-all"
-                                            title={`Open PR ${pr} in GNATS`}
-                                          >
-                                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-                                            PR:{pr}
-                                          </a>
-                                        ) : null;
-                                      })()}
-                                    </>
-                                  ) : (() => {
-                                    const pr = resolvePR(item.testCase, item.srx440.comments || item.srx400.comments);
-                                    return pr ? (
-                                      <a
-                                        href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
-                                        title={`Open PR ${pr} in GNATS`}
-                                      >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-                                        PR:{pr}
-                                      </a>
                                     ) : (
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
