@@ -765,28 +765,7 @@ const PublicReport = () => {
 
         {/* ── Performance Overview Chart (Sanity view only) ── */}
         <div className="print-chart-page">
-        {isSanity && (() => {
-          const chartData = isNormalized
-            ? displayData.map(section => {
-                const scaling = isScalingCategory(section.category);
-                return {
-                  ...section,
-                  tests: section.tests.map(t => {
-                    const has400 = !!t.srx400.throughput && !isEmptyValue(t.srx400.throughput);
-                    const has440 = !!t.srx440.throughput && !isEmptyValue(t.srx440.throughput);
-                    const norm400 = !scaling && has400 ? normalizeTo90Cpu(t.srx400.throughput, t.srx400.cpu) : { value: t.srx400.throughput };
-                    const norm440 = !scaling && has440 ? normalizeTo90Cpu(t.srx440.throughput, t.srx440.cpu) : { value: t.srx440.throughput };
-                    return {
-                      ...t,
-                      srx400: { ...t.srx400, throughput: norm400.value },
-                      srx440: { ...t.srx440, throughput: norm440.value },
-                    };
-                  }),
-                };
-              })
-            : displayData;
-          return <SanityOverviewChart displayData={chartData} />;
-        })()}
+        {isSanity && !isNormalized && <SanityOverviewChart displayData={displayData} />}
         </div>
       </main>
 
