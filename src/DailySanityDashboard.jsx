@@ -22,6 +22,19 @@ function getPR(testCaseName) {
   return entry ? entry.pr : null;
 }
 
+// Extract a PR number from a comment string (e.g. "PR 1954277" or "PR:1954277")
+function getPRFromComment(comment) {
+  if (!comment) return null;
+  const m = String(comment).match(/PR[:\s]*(\d{6,})/i);
+  return m ? m[1] : null;
+}
+
+// Resolve which PR to display: a PR mentioned in the comment takes precedence
+// over the hardcoded PR_LINKS mapping.
+function resolvePR(testCaseName, comment) {
+  return getPRFromComment(comment) || getPR(testCaseName);
+}
+
 // ─── Tooltip Portal ──────────────────────────────────────────
 const MetricsTooltip = ({ position, isVisible, data }) => {
   if (!isVisible || !position || !data) return null;
@@ -311,7 +324,8 @@ const DailySanityDashboard = () => {
         .map(section => ({
           ...section,
           tests: section.tests.filter(t =>
-            !isEmptyValue(t.srx400.throughput) || !isEmptyValue(t.srx440.throughput) || getPR(t.testCase)
+            !isEmptyValue(t.srx400.throughput) || !isEmptyValue(t.srx440.throughput) ||
+            resolvePR(t.testCase, t.srx400.comments || t.srx440.comments)
           ),
         }))
         .filter(section => section.tests.length > 0);
@@ -687,7 +701,7 @@ const DailySanityDashboard = () => {
                                       {norm400.value}
                                     </span>
                                   ) : (() => {
-                                    const pr = getPR(item.testCase);
+                                    const pr = resolvePR(item.testCase, item.srx400.comments || comments);
                                     return pr ? (
                                       <a
                                         href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
@@ -727,7 +741,7 @@ const DailySanityDashboard = () => {
                                       {norm440.value}
                                     </span>
                                   ) : (() => {
-                                    const pr = getPR(item.testCase);
+                                    const pr = resolvePR(item.testCase, item.srx440.comments || comments);
                                     return pr ? (
                                       <a
                                         href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
