@@ -586,6 +586,151 @@ code,
   opacity: 1;
 }
 
+/* ─── Release Selector box animated background wash ───────────── */
+@keyframes release-box-wash {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes release-box-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(133, 177, 53, 0.45),
+                0 6px 22px rgba(133, 177, 53, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 9px rgba(133, 177, 53, 0),
+                0 10px 30px rgba(133, 177, 53, 0.5);
+  }
+}
+
+.release-box-glow {
+  background-size: 220% 220% !important;
+  animation: release-box-wash 2.6s ease-in-out infinite,
+             release-box-pulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .release-box-glow { animation: none; }
+}
+
+/* ─── Release Selector box subtle shine ───────────────────────── */
+@keyframes release-shine {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(320%) skewX(-20deg); }
+}
+
+.release-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.release-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  animation: release-shine 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .release-shine::after { animation: none; opacity: 0; }
+}
+
+/* ─── Release Selector First-Visit Hint (animated label) ──────── */
+@keyframes release-hint-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes release-hint-bob {
+  0%, 100% { transform: translateY(0); opacity: 0.65; }
+  50% { transform: translateY(2px); opacity: 1; }
+}
+
+/* Soft breathing halo behind the whole "select a release" area */
+@keyframes release-hint-halo {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+.release-hint-zone::before {
+  content: '';
+  position: absolute;
+  inset: -10px -16px -10px -12px;
+  border-radius: 18px;
+  background: radial-gradient(
+    120% 120% at 30% 45%,
+    rgba(147, 51, 234, 0.14) 0%,
+    rgba(192, 132, 252, 0.10) 38%,
+    transparent 72%
+  );
+  filter: blur(6px);
+  pointer-events: none;
+  z-index: 0;
+  animation: release-hint-halo 3s ease-in-out infinite;
+}
+
+.release-hint-zone > * {
+  position: relative;
+  z-index: 1;
+}
+
+.release-hint-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 12px;
+  letter-spacing: 0.11em;
+  font-weight: 800;
+  background: linear-gradient(
+    90deg,
+    #7e3bc4 0%,
+    #b478f5 25%,
+    #7e3bc4 50%,
+    #b478f5 75%,
+    #7e3bc4 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: release-hint-shimmer 3.6s linear infinite;
+}
+
+/* Animated arrow appended after the label text */
+.release-hint-label::after {
+  content: '↓';
+  -webkit-text-fill-color: #9333ea;
+  font-weight: 900;
+  animation: release-hint-bob 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .release-hint-zone::before { animation: none; opacity: 0.7; }
+  .release-hint-label {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: #9333ea;
+    color: #9333ea;
+  }
+  .release-hint-label::after { animation: none; opacity: 0.85; }
+}
+
 /* ─── Print-only elements (hidden on screen, shown in PDF) ──── */
 .print-only { display: none !important; }
 

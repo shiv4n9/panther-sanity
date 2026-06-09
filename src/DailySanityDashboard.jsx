@@ -148,10 +148,24 @@ const DailySanityDashboard = () => {
   const [selectedSanityRelease, setSelectedSanityRelease] = useState('');
   const [flashedCells, setFlashedCells] = useState(new Set());
   const [visitorCount, setVisitorCount] = useState(null);
+  const [showReleaseHint, setShowReleaseHint] = useState(false);
   const prevDataRef = useRef(null);
 
   const isSanity = activeView === 'sanity';
   const show3XX = isSanity && showCompare;
+
+  // First-visit hint: glow the release selector until the user interacts with it.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('seenReleaseHint')) setShowReleaseHint(true);
+    } catch { /* localStorage unavailable */ }
+  }, []);
+
+  const dismissReleaseHint = () => {
+    if (!showReleaseHint) return;
+    setShowReleaseHint(false);
+    try { localStorage.setItem('seenReleaseHint', '1'); } catch { /* ignore */ }
+  };
 
   // Cap CPU display to 90% when normalization is active
   const capCpu = (cpuStr) => {
@@ -542,19 +556,21 @@ const DailySanityDashboard = () => {
         {/* Action Buttons */}
         <div className="flex items-center justify-between gap-2">
           {/* DS-1 Release Selector — Sanity view only */}
-          <div className="flex flex-col gap-1">
+          <div className={`relative ${showReleaseHint ? 'release-hint-zone' : ''}`}>
             {isSanity && ds1Releases.length > 0 && (
-              <>
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest pl-1">Select a release</span>
-              <div className="relative inline-flex items-center gap-2 bg-gradient-to-r from-juniper-light via-white to-blue-50 border-2 border-juniper/40 rounded-xl px-3 py-1.5 shadow-lg shadow-juniper/15 hover:shadow-xl hover:shadow-juniper/25 transition-all duration-300 group">
+              <div className="release-box-glow flex flex-col gap-1.5 rounded-2xl border-2 border-lime-300 bg-gradient-to-br from-lime-200/80 via-lime-100/70 to-green-200/70 px-3.5 py-3 shadow-lg shadow-lime-300/50">
+                <span className={`text-xs font-extrabold uppercase tracking-widest pl-0.5 ${showReleaseHint ? 'release-hint-label' : 'text-slate-600'}`}>Select a release</span>
+              <div className="release-shine relative inline-flex items-center gap-2 min-w-[360px] bg-gradient-to-r from-juniper-light via-white to-blue-50 border-2 border-purple-500/70 rounded-xl px-3 py-1.5 shadow-lg shadow-purple-300/40 hover:shadow-xl hover:shadow-purple-400/40 hover:border-purple-600/80 transition-all duration-300 group">
                 <div className="flex items-center gap-1.5">
                   <svg className="w-4 h-4 text-juniper-dark animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
                   <span className="text-[10px] font-bold text-juniper-darker uppercase tracking-widest">Release</span>
                 </div>
                 <select
                   value={selectedSanityRelease}
-                  onChange={(e) => setSelectedSanityRelease(e.target.value)}
-                  className="bg-transparent border-none text-slate-800 text-xs font-bold tracking-wide focus:outline-none cursor-pointer appearance-none pr-5"
+                  onChange={(e) => { setSelectedSanityRelease(e.target.value); dismissReleaseHint(); }}
+                  onMouseDown={dismissReleaseHint}
+                  onFocus={dismissReleaseHint}
+                  className="flex-1 bg-transparent border-none text-slate-800 text-xs font-bold tracking-wide focus:outline-none cursor-pointer appearance-none pr-5"
                 >
                   {ds1Releases.map((rel) => (
                     <option key={rel.release} value={rel.release}>{rel.release}</option>
@@ -562,7 +578,7 @@ const DailySanityDashboard = () => {
                 </select>
                 <svg className="w-3.5 h-3.5 text-juniper-dark absolute right-3 pointer-events-none group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
               </div>
-              </>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
