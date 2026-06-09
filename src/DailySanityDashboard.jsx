@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
 import { SANITY_TEST_CASES } from './config/sanityTestCases';
 import { BRANCH_DEVICES, getBranchData } from './config/branchData';
@@ -7,6 +8,7 @@ import { API_BASE } from './config/api';
 import HistoryModal from './components/HistoryModal';
 import ChangelogBanner from './components/ChangelogBanner';
 import SanityOverviewChart from './components/SanityOverviewChart';
+import AnimatedMetric from './components/AnimatedMetric';
 import { normalizeTo90Cpu, calculatePercentageDiff, isScalingCategory } from './utils/normalize';
 
 // ─── PR Links for known blocked test cases ───────────────────
@@ -632,7 +634,14 @@ const DailySanityDashboard = () => {
                 const testCount = section.tests.filter(t => t.srx400.throughput || t.srx440.throughput).length;
 
                 return (
-                  <div key={section.category} className="flex flex-col border-b border-juniper/30 last:border-0 animate-section-enter" style={{ animationDelay: `${sIdx * 0.1}s` }}>
+                  <motion.div
+                    key={section.category}
+                    layout
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, delay: Math.min(sIdx * 0.06, 0.4), ease: [0.22, 1, 0.36, 1] }}
+                    className="flex flex-col border-b border-juniper/30 last:border-0"
+                  >
 
                     <div
                       onClick={() => toggleGroup(section.category)}
@@ -652,7 +661,16 @@ const DailySanityDashboard = () => {
                     </div>
 
                     {/* Expandable Content */}
-                    <div className="bg-white" style={{ display: isExpanded ? 'block' : 'none' }}>
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          key="content"
+                          className="bg-white overflow-hidden"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        >
                       <div>
                         <div className="flex flex-col">
                           {section.tests.map((item, idx) => {
@@ -667,7 +685,15 @@ const DailySanityDashboard = () => {
                             const norm440 = shouldNormalize && has440 ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu) : { value: item.srx440.throughput, wasNormalized: false };
 
                             return (
-                              <div key={idx} className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'} border-b border-juniper/30`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              <motion.div
+                                key={idx}
+                                layout
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.35, delay: Math.min(idx * 0.03, 0.3), ease: 'easeOut' }}
+                                className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'} border-b border-juniper/30`}
+                                style={{ fontVariantNumeric: 'tabular-nums' }}
+                              >
 
                                 {/* Test Case Name + Comparison Tooltip */}
                                 <div 
@@ -698,7 +724,7 @@ const DailySanityDashboard = () => {
                                       title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
                                     >
                                       {norm400.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
-                                      {norm400.value}
+                                      <AnimatedMetric value={norm400.value} />
                                     </span>
                                   ) : (() => {
                                     const pr = resolvePR(item.testCase, item.srx400.comments || comments);
@@ -738,7 +764,7 @@ const DailySanityDashboard = () => {
                                       title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
                                     >
                                       {norm440.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
-                                      {norm440.value}
+                                      <AnimatedMetric value={norm440.value} />
                                     </span>
                                   ) : (() => {
                                     const pr = resolvePR(item.testCase, item.srx440.comments || comments);
@@ -803,13 +829,15 @@ const DailySanityDashboard = () => {
                                     )}
                                   </div>
                                 ) : null}
-                              </div>
+                              </motion.div>
                             );
                           })}
                         </div>
                       </div>
-                    </div>
-                  </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 );
               })
             )}

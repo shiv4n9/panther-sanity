@@ -80,21 +80,12 @@
       background-size: 60px 60px;
     }
 
-    /* ── Particles ───────────────────────────────────────── */
-    .particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-
-    .particle {
-      position: absolute; width: 3px; height: 3px;
-      background: var(--green-dark); border-radius: 50%;
-      opacity: 0; animation: particleRise linear infinite;
+    /* ── Three.js 3D network canvas ──────────────────────── */
+    #bg-three {
+      position: fixed; inset: 0; z-index: 0;
+      pointer-events: none; opacity: 0.9;
     }
 
-    @keyframes particleRise {
-      0%   { opacity: 0; transform: translateY(0) scale(0); }
-      10%  { opacity: 0.5; transform: scale(1); }
-      90%  { opacity: 0.15; }
-      100% { opacity: 0; transform: translateY(-100vh) scale(0.5); }
-    }
 
     /* ── Top bar ─────────────────────────────────────────── */
     .topbar {
@@ -386,9 +377,8 @@
 
     .footer a { color: var(--green-dark); text-decoration: none; }
 
-    /* ── Intersection observer reveal ────────────────────── */
+    /* ── Intersection observer reveal (GSAP fallback — no-op when JS loads) ─ */
     .reveal {
-      opacity: 0; transform: translateY(40px);
       transition: opacity 0.7s ease-out, transform 0.7s ease-out;
     }
 
@@ -402,9 +392,9 @@
 <body>
 
   <!-- Background effects -->
+  <canvas id="bg-three"></canvas>
   <div class="bg-scene"><div class="orb"></div><div class="orb"></div><div class="orb"></div></div>
   <div class="bg-grid"></div>
-  <div class="particles" id="particles"></div>
 
   <!-- Top bar -->
   <nav class="topbar">
@@ -500,18 +490,6 @@
     document.getElementById('nav-longevity').href  = `http://${host}:3000/`;
     document.getElementById('nav-finder').href     = `http://${host}:8080/`;
 
-    // Particles
-    const particlesEl = document.getElementById('particles');
-    for (let i = 0; i < 30; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      p.style.left = Math.random() * 100 + '%';
-      p.style.animationDuration = (8 + Math.random() * 14) + 's';
-      p.style.animationDelay = (Math.random() * 12) + 's';
-      p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
-      particlesEl.appendChild(p);
-    }
-
     // Intersection Observer — cards
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -540,6 +518,178 @@
         orb.style.transform = `translate(${x * f}px, ${y * f}px)`;
       });
     });
+  </script>
+
+  <!-- ── GSAP + Three.js enhancements ────────────────────────────── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script>
+  /* ============================================================
+     THREE.JS — interactive 3D network / constellation background
+     ============================================================ */
+  (function initThreeBackground() {
+    if (typeof THREE === 'undefined') return; // CDN unreachable → graceful skip
+    const canvas = document.getElementById('bg-three');
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 2000);
+    camera.position.z = 600;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    // Node field
+    const COUNT = window.innerWidth < 768 ? 70 : 130;
+    const SPREAD = 900;
+    const positions = new Float32Array(COUNT * 3);
+    const velocities = [];
+    for (let i = 0; i < COUNT; i++) {
+      positions[i * 3]     = (Math.random() - 0.5) * SPREAD;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * SPREAD;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * SPREAD;
+      velocities.push(new THREE.Vector3(
+        (Math.random() - 0.5) * 0.4,
+        (Math.random() - 0.5) * 0.4,
+        (Math.random() - 0.5) * 0.4
+      ));
+    }
+
+    const pointsGeo = new THREE.BufferGeometry();
+    pointsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const pointsMat = new THREE.PointsMaterial({
+      color: 0x85B135, size: 5, transparent: true, opacity: 0.85,
+      sizeAttenuation: true, depthWrite: false
+    });
+    const points = new THREE.Points(pointsGeo, pointsMat);
+    group.add(points);
+
+    // Connecting lines (rebuilt each frame for nearby nodes)
+    const MAX_PAIRS = COUNT * 8;
+    const linePositions = new Float32Array(MAX_PAIRS * 6);
+    const lineGeo = new THREE.BufferGeometry();
+    lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+    const lineMat = new THREE.LineBasicMaterial({
+      color: 0x6d9a2a, transparent: true, opacity: 0.22, depthWrite: false
+    });
+    const lineSegments = new THREE.LineSegments(lineGeo, lineMat);
+    group.add(lineSegments);
+
+    const LINK_DIST = 170;
+    const LINK_DIST_SQ = LINK_DIST * LINK_DIST;
+    const pos = pointsGeo.attributes.position.array;
+
+    let mouseX = 0, mouseY = 0, targetRX = 0, targetRY = 0;
+    document.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5);
+      mouseY = (e.clientY / window.innerHeight - 0.5);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Drift nodes inside the box
+      for (let i = 0; i < COUNT; i++) {
+        const ix = i * 3;
+        pos[ix]     += velocities[i].x;
+        pos[ix + 1] += velocities[i].y;
+        pos[ix + 2] += velocities[i].z;
+        for (let a = 0; a < 3; a++) {
+          if (pos[ix + a] > SPREAD / 2 || pos[ix + a] < -SPREAD / 2) {
+            velocities[i].setComponent(a, -velocities[i].getComponent(a));
+          }
+        }
+      }
+      pointsGeo.attributes.position.needsUpdate = true;
+
+      // Rebuild nearby links
+      let p = 0;
+      for (let i = 0; i < COUNT && p < MAX_PAIRS * 6; i++) {
+        const ax = pos[i * 3], ay = pos[i * 3 + 1], az = pos[i * 3 + 2];
+        for (let j = i + 1; j < COUNT; j++) {
+          const dx = ax - pos[j * 3], dy = ay - pos[j * 3 + 1], dz = az - pos[j * 3 + 2];
+          if (dx * dx + dy * dy + dz * dz < LINK_DIST_SQ) {
+            linePositions[p++] = ax; linePositions[p++] = ay; linePositions[p++] = az;
+            linePositions[p++] = pos[j * 3]; linePositions[p++] = pos[j * 3 + 1]; linePositions[p++] = pos[j * 3 + 2];
+            if (p >= MAX_PAIRS * 6) break;
+          }
+        }
+      }
+      for (let k = p; k < linePositions.length; k++) linePositions[k] = 0;
+      lineGeo.attributes.position.needsUpdate = true;
+      lineGeo.setDrawRange(0, p / 3);
+
+      // Gentle auto-rotation + mouse parallax
+      targetRY += ((mouseX * 0.5) - targetRY) * 0.05;
+      targetRX += ((mouseY * 0.5) - targetRX) * 0.05;
+      if (!prefersReduced) group.rotation.y += 0.0006;
+      group.rotation.x = targetRX;
+      group.rotation.z = targetRY * 0.15;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  })();
+
+  /* ============================================================
+     GSAP — hero entrance timeline + interactive 3D card tilt
+     ============================================================ */
+  (function initGsap() {
+    if (typeof gsap === 'undefined') return; // CDN unreachable → CSS fallback stays
+    if (window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
+
+    // Take over hero entrance (disable conflicting CSS animations)
+    const heroEls = ['.hero-badge', '.hero h1', '.hero h2', '.hero .subtitle'];
+    gsap.set(heroEls, { clearProps: 'animation' });
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    tl.from('.hero-badge', { y: 20, opacity: 0, duration: 0.6 })
+      .from('.hero h1', { y: 40, opacity: 0, scale: 0.92, duration: 0.9 }, '-=0.3')
+      .from('.hero h2', { y: 24, opacity: 0, duration: 0.7 }, '-=0.5')
+      .from('.hero .subtitle', { y: 20, opacity: 0, duration: 0.7 }, '-=0.45')
+      .from('.cap-tag', { y: 16, opacity: 0, stagger: 0.08, duration: 0.5 }, '-=0.4');
+
+    // Reveal cards on scroll with GSAP (replaces CSS reveal stagger)
+    gsap.utils.toArray('.card').forEach((card, i) => {
+      gsap.from(card, {
+        scrollTrigger: { trigger: card, start: 'top 88%' },
+        y: 50, opacity: 0, duration: 0.8, delay: i * 0.12, ease: 'power3.out'
+      });
+    });
+
+    // Interactive 3D tilt on cards (spring-like via gsap)
+    document.querySelectorAll('.card').forEach((card) => {
+      const glow = card.querySelector('.card-glow');
+      card.style.transformStyle = 'preserve-3d';
+      // Drop transform from CSS transition so GSAP controls it without lag
+      card.style.transition = 'box-shadow 0.4s, border-color 0.4s';
+      card.addEventListener('mousemove', (e) => {
+        const r = card.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        gsap.to(card, {
+          rotationY: px * 10, rotationX: -py * 10, transformPerspective: 800,
+          duration: 0.4, ease: 'power2.out'
+        });
+        if (glow) gsap.set(glow, { opacity: 1, background:
+          `radial-gradient(circle at ${(px + 0.5) * 100}% ${(py + 0.5) * 100}%, rgba(133,177,53,0.16) 0%, transparent 60%)` });
+      });
+      card.addEventListener('mouseleave', () => {
+        gsap.to(card, { rotationY: 0, rotationX: 0, duration: 0.6, ease: 'elastic.out(1, 0.5)' });
+        if (glow) gsap.to(glow, { opacity: 0, duration: 0.4 });
+      });
+    });
+  })();
   </script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import LineChart from './LineChart';
 import { API_BASE } from '../config/api';
 
@@ -118,15 +119,28 @@ const HistoryModal = ({ isOpen, onClose, testCase, platform, category, currentVa
     );
   };
 
-  if (!isOpen) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-slate-900/40 z-[100]" onClick={onClose} />
+    <AnimatePresence>
+      {isOpen && (
+        <React.Fragment key="history-modal">
+          {/* Backdrop */}
+          <motion.div
+            className="fixed inset-0 bg-slate-900/40 z-[100]"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          />
 
-      {/* Panel */}
-      <div className="fixed top-0 right-0 h-full w-full max-w-[720px] bg-slate-50 shadow-2xl z-[101] overflow-y-auto border-l border-slate-200 flex flex-col">
+          {/* Panel */}
+          <motion.div
+            className="fixed top-0 right-0 h-full w-full max-w-[720px] bg-slate-50 shadow-2xl z-[101] overflow-y-auto border-l border-slate-200 flex flex-col"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+          >
 
         {/* ── Header ── */}
         <div className="sticky top-0 z-10 bg-white border-b border-slate-200">
@@ -359,7 +373,7 @@ const HistoryModal = ({ isOpen, onClose, testCase, platform, category, currentVa
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Enhanced Tooltip */}
       {hoveredPoint && (
@@ -421,7 +435,9 @@ const HistoryModal = ({ isOpen, onClose, testCase, platform, category, currentVa
           </div>
         </div>
       )}
-    </>
+        </React.Fragment>
+      )}
+    </AnimatePresence>
   );
 };
 
