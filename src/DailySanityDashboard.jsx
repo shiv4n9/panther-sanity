@@ -732,16 +732,33 @@ const DailySanityDashboard = () => {
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has400 ? (
-                                    <span
-                                      className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
-                                        norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-juniper-dark'
-                                      }`}
-                                      onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
-                                      title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
-                                    >
-                                      {norm400.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
-                                      <AnimatedMetric value={norm400.value} />
-                                    </span>
+                                    <>
+                                      <span
+                                        className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
+                                          norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-juniper-dark'
+                                        }`}
+                                        onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
+                                        title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
+                                      >
+                                        {norm400.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
+                                        <AnimatedMetric value={norm400.value} />
+                                      </span>
+                                      {(() => {
+                                        const pr = resolvePR(item.testCase, item.srx400.comments || comments);
+                                        return pr ? (
+                                          <a
+                                            href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[10px] font-bold text-red-600 px-1.5 py-0.5 rounded-md cursor-pointer w-fit transition-all"
+                                            title={`Open PR ${pr} in GNATS`}
+                                          >
+                                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                                            PR:{pr}
+                                          </a>
+                                        ) : null;
+                                      })()}
+                                    </>
                                   ) : (() => {
                                     const pr = resolvePR(item.testCase, item.srx400.comments || comments);
                                     return pr ? (
@@ -772,16 +789,33 @@ const DailySanityDashboard = () => {
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has440 ? (
-                                    <span
-                                      className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
-                                        norm440.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-blue-600'
-                                      }`}
-                                      onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
-                                      title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
-                                    >
-                                      {norm440.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
-                                      <AnimatedMetric value={norm440.value} />
-                                    </span>
+                                    <>
+                                      <span
+                                        className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
+                                          norm440.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-blue-600'
+                                        }`}
+                                        onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
+                                        title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
+                                      >
+                                        {norm440.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
+                                        <AnimatedMetric value={norm440.value} />
+                                      </span>
+                                      {(() => {
+                                        const pr = resolvePR(item.testCase, item.srx440.comments || comments);
+                                        return pr ? (
+                                          <a
+                                            href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[10px] font-bold text-red-600 px-1.5 py-0.5 rounded-md cursor-pointer w-fit transition-all"
+                                            title={`Open PR ${pr} in GNATS`}
+                                          >
+                                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                                            PR:{pr}
+                                          </a>
+                                        ) : null;
+                                      })()}
+                                    </>
                                   ) : (() => {
                                     const pr = resolvePR(item.testCase, item.srx440.comments || comments);
                                     return pr ? (
