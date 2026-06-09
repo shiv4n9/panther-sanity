@@ -281,10 +281,16 @@ function parseDSSheet(ws) {
     return merged;
   };
 
-  return releases.map(rel => ({
-    release: rel.release,
-    merged: categorizeTests(rel.tests),
-  }));
+  // Sort releases by embedded date (latest first)
+  // e.g. "25.4X300-D10-202606040154.0-EVO" → extract "20260604" as sort key
+  const extractDate = (rel) => {
+    const m = rel.match(/(\d{8})\d*/);
+    return m ? m[1] : '00000000';
+  };
+
+  return releases
+    .map(rel => ({ release: rel.release, merged: categorizeTests(rel.tests) }))
+    .sort((a, b) => extractDate(b.release).localeCompare(extractDate(a.release)));
 }
 
 // ─── Public API ───────────────────────────────────────────────
