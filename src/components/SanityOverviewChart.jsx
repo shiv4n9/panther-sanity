@@ -1,6 +1,30 @@
 import React, { useMemo } from 'react';
 import { extractMbpsValue } from '../utils/normalize';
 
+// ─── PR detection (mirror of dashboard/public-report logic) ───
+const PR_LINKS = [
+  {
+    match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256/i.test(tc),
+    pr: '1940446',
+  },
+];
+
+function getPRFromComment(comment) {
+  if (!comment) return null;
+  const m = String(comment).match(/PR[:\s]*(\d{6,})/i);
+  return m ? m[1] : null;
+}
+
+/**
+ * Returns a PR number for a test case if it is blocked, else null.
+ * A test with a PR should be excluded from the performance chart.
+ */
+function resolvePR(testCaseName, comment) {
+  if (getPRFromComment(comment)) return getPRFromComment(comment);
+  const entry = PR_LINKS.find(p => p.match(testCaseName));
+  return entry ? entry.pr : null;
+}
+
 /**
  * Determines if a section category is a CPS/TPS metric (vs. throughput/Mbps).
  */
@@ -94,6 +118,10 @@ const SanityOverviewChart = ({ displayData }) => {
     for (const section of displayData) {
       const isCps = isCpsCategory(section.category);
       for (const test of section.tests) {
+        // Skip tests that are blocked by a PR — they should not appear in the chart.
+        if (resolvePR(test.testCase, test.srx400.comments || test.srx440.comments)) {
+          continue;
+        }
         const v400 = isCps
           ? extractCpsValue(test.srx400.throughput)
           : extractMbpsValue(test.srx400.throughput);
