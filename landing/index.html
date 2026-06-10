@@ -527,7 +527,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script>
   /* ============================================================
-     THREE.JS — interactive 3D network / constellation background
+     THREE.JS — animated flowing wave background
      ============================================================ */
   (function initThreeBackground() {
     if (typeof THREE === 'undefined') return; // CDN unreachable → graceful skip
@@ -535,102 +535,83 @@
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 2000);
-    camera.position.z = 600;
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 4000);
+    camera.position.set(0, 220, 620);
+    camera.lookAt(0, -40, 0);
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     const group = new THREE.Group();
+    group.rotation.x = -Math.PI / 2.6; // tilt the plane so waves recede into the distance
     scene.add(group);
 
-    // Node field
-    const COUNT = window.innerWidth < 768 ? 70 : 130;
-    const SPREAD = 900;
-    const positions = new Float32Array(COUNT * 3);
-    const velocities = [];
-    for (let i = 0; i < COUNT; i++) {
-      positions[i * 3]     = (Math.random() - 0.5) * SPREAD;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * SPREAD;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * SPREAD;
-      velocities.push(new THREE.Vector3(
-        (Math.random() - 0.5) * 0.4,
-        (Math.random() - 0.5) * 0.4,
-        (Math.random() - 0.5) * 0.4
-      ));
-    }
+    // ── Wave grid geometry ──────────────────────────────────
+    const SIZE = 2400;                                  // world size of the plane
+    const SEG = window.innerWidth < 768 ? 60 : 110;     // resolution
+    const waveGeo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
 
+    // Store the flat base coordinates so we can re-displace each frame.
+    const basePos = waveGeo.attributes.position.array.slice();
+
+    // Primary surface — soft Juniper green wireframe.
+    const waveMat = new THREE.MeshBasicMaterial({
+      color: 0x85B135, wireframe: true, transparent: true, opacity: 0.32, depthWrite: false
+    });
+    const waveMesh = new THREE.Mesh(waveGeo, waveMat);
+    group.add(waveMesh);
+
+    // Glowing crest points riding on top of the surface.
     const pointsGeo = new THREE.BufferGeometry();
-    pointsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    pointsGeo.setAttribute('position', new THREE.BufferAttribute(waveGeo.attributes.position.array, 3));
     const pointsMat = new THREE.PointsMaterial({
-      color: 0x85B135, size: 5, transparent: true, opacity: 0.85,
+      color: 0x6d9a2a, size: 4, transparent: true, opacity: 0.5,
       sizeAttenuation: true, depthWrite: false
     });
     const points = new THREE.Points(pointsGeo, pointsMat);
     group.add(points);
 
-    // Connecting lines (rebuilt each frame for nearby nodes)
-    const MAX_PAIRS = COUNT * 8;
-    const linePositions = new Float32Array(MAX_PAIRS * 6);
-    const lineGeo = new THREE.BufferGeometry();
-    lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
-    const lineMat = new THREE.LineBasicMaterial({
-      color: 0x6d9a2a, transparent: true, opacity: 0.22, depthWrite: false
-    });
-    const lineSegments = new THREE.LineSegments(lineGeo, lineMat);
-    group.add(lineSegments);
+    // Wave parameters: combine a few sines for an organic, non-repeating swell.
+    const waves = [
+      { amp: 55, fx: 0.0016, fy: 0.0011, speed: 0.55 },
+      { amp: 34, fx: 0.0029, fy: 0.0021, speed: 0.85 },
+      { amp: 18, fx: 0.0052, fy: 0.0043, speed: 1.30 },
+    ];
 
-    const LINK_DIST = 170;
-    const LINK_DIST_SQ = LINK_DIST * LINK_DIST;
-    const pos = pointsGeo.attributes.position.array;
+    const posAttr = waveGeo.attributes.position;
+    const arr = posAttr.array;
 
-    let mouseX = 0, mouseY = 0, targetRX = 0, targetRY = 0;
+    let mouseX = 0, mouseY = 0, targetRY = 0;
     document.addEventListener('mousemove', (e) => {
       mouseX = (e.clientX / window.innerWidth - 0.5);
       mouseY = (e.clientY / window.innerHeight - 0.5);
     });
 
+    const clock = new THREE.Clock();
+
     function animate() {
       requestAnimationFrame(animate);
+      const t = prefersReduced ? 0 : clock.getElapsedTime();
 
-      // Drift nodes inside the box
-      for (let i = 0; i < COUNT; i++) {
-        const ix = i * 3;
-        pos[ix]     += velocities[i].x;
-        pos[ix + 1] += velocities[i].y;
-        pos[ix + 2] += velocities[i].z;
-        for (let a = 0; a < 3; a++) {
-          if (pos[ix + a] > SPREAD / 2 || pos[ix + a] < -SPREAD / 2) {
-            velocities[i].setComponent(a, -velocities[i].getComponent(a));
-          }
+      // Displace each vertex along Z (which becomes height after the group tilt).
+      for (let i = 0; i < arr.length; i += 3) {
+        const x = basePos[i];
+        const y = basePos[i + 1];
+        let z = 0;
+        for (let w = 0; w < waves.length; w++) {
+          const wv = waves[w];
+          z += Math.sin(x * wv.fx + t * wv.speed) * Math.cos(y * wv.fy + t * wv.speed * 0.8) * wv.amp;
         }
+        arr[i + 2] = z;
       }
+      posAttr.needsUpdate = true;
       pointsGeo.attributes.position.needsUpdate = true;
 
-      // Rebuild nearby links
-      let p = 0;
-      for (let i = 0; i < COUNT && p < MAX_PAIRS * 6; i++) {
-        const ax = pos[i * 3], ay = pos[i * 3 + 1], az = pos[i * 3 + 2];
-        for (let j = i + 1; j < COUNT; j++) {
-          const dx = ax - pos[j * 3], dy = ay - pos[j * 3 + 1], dz = az - pos[j * 3 + 2];
-          if (dx * dx + dy * dy + dz * dz < LINK_DIST_SQ) {
-            linePositions[p++] = ax; linePositions[p++] = ay; linePositions[p++] = az;
-            linePositions[p++] = pos[j * 3]; linePositions[p++] = pos[j * 3 + 1]; linePositions[p++] = pos[j * 3 + 2];
-            if (p >= MAX_PAIRS * 6) break;
-          }
-        }
-      }
-      for (let k = p; k < linePositions.length; k++) linePositions[k] = 0;
-      lineGeo.attributes.position.needsUpdate = true;
-      lineGeo.setDrawRange(0, p / 3);
-
-      // Gentle auto-rotation + mouse parallax
-      targetRY += ((mouseX * 0.5) - targetRY) * 0.05;
-      targetRX += ((mouseY * 0.5) - targetRX) * 0.05;
-      if (!prefersReduced) group.rotation.y += 0.0006;
-      group.rotation.x = targetRX;
-      group.rotation.z = targetRY * 0.15;
+      // Subtle drift + mouse parallax.
+      targetRY += ((mouseX * 0.25) - targetRY) * 0.04;
+      group.rotation.z = targetRY;
+      group.position.y = Math.sin(t * 0.3) * 14 - 40 - mouseY * 40;
 
       renderer.render(scene, camera);
     }
