@@ -53,12 +53,19 @@ const PRLink = ({ pr }) => (
   </a>
 );
 
-const CommentWithPR = ({ comment, testCase }) => {
+const CommentWithPR = ({ comment, testCase, prOnly = false }) => {
   const text = String(comment || '').trim();
   const m = text.match(/PR[\s:#-]*(\d{6,})/i);
 
   if (m) {
     const pr = m[1];
+    if (prOnly) {
+      return (
+        <span className="font-jetbrains text-[11px] text-slate-500 leading-snug">
+          <PRLink pr={pr} />
+        </span>
+      );
+    }
     const before = text.slice(0, m.index).replace(/[-–—\s]+$/, ' ');
     const after = text.slice(m.index + m[0].length);
     return (
@@ -72,10 +79,11 @@ const CommentWithPR = ({ comment, testCase }) => {
   if (fallbackPR) {
     return (
       <span className="font-jetbrains text-[11px] text-slate-500 leading-snug">
-        {text && <>{text} · </>}<PRLink pr={fallbackPR} />
+        {!prOnly && text && <>{text} · </>}<PRLink pr={fallbackPR} />
       </span>
     );
   }
+  if (prOnly) return null;
   if (text) {
     return <span className="font-jetbrains text-[11px] text-slate-500 leading-snug">{text}</span>;
   }
@@ -88,7 +96,7 @@ const MetricsTooltip = ({ position, isVisible, data }) => {
   return createPortal(
     <div
       className="fixed z-[9999] animate-fade-in-up pointer-events-none"
-      style={{ top: `${position.y + 8}px`, left: `${position.x}px`, animationDuration: '200ms' }}
+      style={{ top: `${position.y + 8}px`, left: `${position.x}px`, transform: 'translateX(-50%)', animationDuration: '200ms' }}
     >
       <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[200px]">
         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
@@ -118,7 +126,7 @@ const DiffTooltip = ({ position, isVisible, data }) => {
   return createPortal(
     <div
       className="fixed z-[9999] animate-fade-in-up pointer-events-none"
-      style={{ top: `${position.y + 8}px`, left: `${position.x}px`, animationDuration: '200ms' }}
+      style={{ top: `${position.y + 8}px`, left: `${position.x}px`, transform: 'translateX(-50%)', animationDuration: '200ms' }}
     >
       <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[240px]">
         {/* Header — matches System Metrics style */}
@@ -410,13 +418,13 @@ const DailySanityDashboard = () => {
 
   const handleCellEnter = (e, cellId, metrics) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredCell({ id: cellId, x: rect.left, y: rect.bottom, ...metrics });
+    setHoveredCell({ id: cellId, x: rect.left + rect.width / 2, y: rect.bottom, ...metrics });
   };
 
   const handleDiffEnter = (e, cellId, val400, val440) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const diff = calculatePercentageDiff(val400, val440);
-    setHoveredDiff({ id: cellId, x: rect.left, y: rect.bottom, diff, val400, val440 });
+    setHoveredDiff({ id: cellId, x: rect.left + rect.width / 2, y: rect.bottom, diff, val400, val440 });
   };
 
   // ── Render ──
@@ -792,7 +800,7 @@ const DailySanityDashboard = () => {
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
                                   })()}
-                                  <CommentWithPR comment={item.srx400.comments || comments} testCase={item.testCase} />
+                                  {isSanity && <CommentWithPR comment={item.srx400.comments || comments} testCase={item.testCase} prOnly />}
                                   <MetricsTooltip
                                     position={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
                                     isVisible={hoveredCell?.id === `400-${sIdx}-${idx}`}
@@ -821,7 +829,7 @@ const DailySanityDashboard = () => {
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
                                   })()}
-                                  <CommentWithPR comment={item.srx440.comments || comments} testCase={item.testCase} />
+                                  {isSanity && <CommentWithPR comment={item.srx440.comments || comments} testCase={item.testCase} prOnly />}
                                   <MetricsTooltip
                                     position={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
                                     isVisible={hoveredCell?.id === `440-${sIdx}-${idx}`}
@@ -861,7 +869,7 @@ const DailySanityDashboard = () => {
                                 ) : !isSanity ? (
                                   <div className="px-5 border-l border-juniper/30">
                                     {comments ? (
-                                      <span className="font-jetbrains text-xs text-slate-500 leading-relaxed">{comments}</span>
+                                      <CommentWithPR comment={comments} testCase={item.testCase} />
                                     ) : (
                                       <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
                                     )}
