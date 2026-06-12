@@ -37,6 +37,51 @@ function resolvePR(testCaseName, comment) {
   return getPRFromComment(comment) || getPR(testCaseName);
 }
 
+// ─── Comment cell ────────────────────────────────────────────
+// Renders a comment string with any "PR <number>" turned into a red, clickable
+// GNATS link, keeping the rest of the comment text intact. When the comment has
+// no PR of its own, a hardcoded PR (from PR_LINKS) is appended if one applies.
+const PRLink = ({ pr }) => (
+  <a
+    href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="font-bold text-red-600 hover:underline"
+    title={`Open PR ${pr} in GNATS`}
+  >
+    PR {pr}
+  </a>
+);
+
+const CommentWithPR = ({ comment, testCase }) => {
+  const text = String(comment || '').trim();
+  const m = text.match(/PR[\s:#-]*(\d{6,})/i);
+
+  if (m) {
+    const pr = m[1];
+    const before = text.slice(0, m.index).replace(/[-–—\s]+$/, ' ');
+    const after = text.slice(m.index + m[0].length);
+    return (
+      <span className="font-jetbrains text-[11px] text-slate-500 leading-snug">
+        {before}<PRLink pr={pr} />{after}
+      </span>
+    );
+  }
+
+  const fallbackPR = getPR(testCase);
+  if (fallbackPR) {
+    return (
+      <span className="font-jetbrains text-[11px] text-slate-500 leading-snug">
+        {text && <>{text} · </>}<PRLink pr={fallbackPR} />
+      </span>
+    );
+  }
+  if (text) {
+    return <span className="font-jetbrains text-[11px] text-slate-500 leading-snug">{text}</span>;
+  }
+  return null;
+};
+
 // ─── Tooltip Portal ──────────────────────────────────────────
 const MetricsTooltip = ({ position, isVisible, data }) => {
   if (!isVisible || !position || !data) return null;
@@ -694,8 +739,6 @@ const DailySanityDashboard = () => {
                             const has400 = !!item.srx400.throughput;
                             const has440 = !!item.srx440.throughput;
                             const comments = item.srx440.comments || item.srx400.comments || '';
-                            // PR-blocked rows show only the PR badge — no metrics/diff tooltips.
-                            const rowPR = resolvePR(item.testCase, item.srx400.comments || comments);
 
                             // CPU normalization — skip scaling/capacity sections
                             const shouldNormalize = isNormalized && !isScalingCategory(section.category);
@@ -716,7 +759,7 @@ const DailySanityDashboard = () => {
                                 {/* Test Case Name + Comparison Tooltip */}
                                 <div 
                                   className="flex items-center px-6 relative cursor-default"
-                                  onMouseEnter={(e) => !rowPR && (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
+                                  onMouseEnter={(e) => (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
                                   onMouseLeave={() => setHoveredDiff(null)}
                                 >
                                   <span className="text-[13px] font-medium text-slate-700 leading-snug">{item.testCase}</span>
@@ -730,25 +773,10 @@ const DailySanityDashboard = () => {
 
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => !rowPR && has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: capCpu(item.srx400.cpu), shm: item.srx400.shm })}
+                                  onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: capCpu(item.srx400.cpu), shm: item.srx400.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {(() => {
-                                    const pr = resolvePR(item.testCase, item.srx400.comments || comments);
-                                    if (pr) {
-                                      return (
-                                        <a
-                                          href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
-                                          title={`Open PR ${pr} in GNATS`}
-                                        >
-                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-                                          PR:{pr}
-                                        </a>
-                                      );
-                                    }
                                     return has400 ? (
                                       <span
                                         className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
@@ -764,6 +792,7 @@ const DailySanityDashboard = () => {
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
                                   })()}
+                                  <CommentWithPR comment={item.srx400.comments || comments} testCase={item.testCase} />
                                   <MetricsTooltip
                                     position={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
                                     isVisible={hoveredCell?.id === `400-${sIdx}-${idx}`}
@@ -773,25 +802,10 @@ const DailySanityDashboard = () => {
 
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => !rowPR && has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: capCpu(item.srx440.cpu), shm: item.srx440.shm })}
+                                  onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: capCpu(item.srx440.cpu), shm: item.srx440.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {(() => {
-                                    const pr = resolvePR(item.testCase, item.srx440.comments || comments);
-                                    if (pr) {
-                                      return (
-                                        <a
-                                          href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="pr-badge inline-flex items-center gap-1 font-jetbrains text-[11px] font-bold text-red-600 px-2 py-0.5 rounded-md cursor-pointer w-fit transition-all"
-                                          title={`Open PR ${pr} in GNATS`}
-                                        >
-                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-                                          PR:{pr}
-                                        </a>
-                                      );
-                                    }
                                     return has440 ? (
                                       <span
                                         className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
@@ -807,6 +821,7 @@ const DailySanityDashboard = () => {
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
                                   })()}
+                                  <CommentWithPR comment={item.srx440.comments || comments} testCase={item.testCase} />
                                   <MetricsTooltip
                                     position={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
                                     isVisible={hoveredCell?.id === `440-${sIdx}-${idx}`}
