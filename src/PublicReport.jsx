@@ -15,6 +15,8 @@ const PR_LINKS = [
   },
 ];
 
+const PRIORITY_SANITY_RELEASE = '25.4X300-D10.2-EVO';
+
 function getPR(testCaseName) {
   const entry = PR_LINKS.find(p => p.match(testCaseName));
   return entry ? entry.pr : null;
@@ -187,8 +189,13 @@ const PublicReport = () => {
 
         // DS-1 release data for Daily Sanity view
         if (data.ds1 && data.ds1.length > 0) {
-          setDs1Releases(data.ds1);
-          setSelectedSanityRelease(data.ds1[0].release);
+          const orderedDs1 = [...data.ds1].sort((a, b) => {
+            if (a.release === PRIORITY_SANITY_RELEASE) return -1;
+            if (b.release === PRIORITY_SANITY_RELEASE) return 1;
+            return 0;
+          });
+          setDs1Releases(orderedDs1);
+          setSelectedSanityRelease(orderedDs1[0].release);
         }
 
         // Expand all sections by default
