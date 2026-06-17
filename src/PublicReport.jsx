@@ -710,6 +710,20 @@ const PublicReport = () => {
             )}
           </div>
           <div className="flex items-center gap-2">
+          {/* Compare 3XX Toggle */}
+          {isSanity && (
+            <button
+              onClick={() => setShowCompare(!showCompare)}
+              className={`print-hide flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:-translate-y-0.5 ${
+                showCompare
+                  ? 'bg-orange-50 border-orange-300 text-orange-700 shadow-orange-100/50'
+                  : 'bg-white border-juniper/30 text-slate-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              {showCompare ? 'Hide 3XX' : 'Compare 3XX'}
+            </button>
+          )}
           {/* Normalize CPU Toggle */}
           <div className="relative group/norm">
           <label className="print-hide flex items-center gap-2 cursor-pointer select-none px-3.5 py-1.5 rounded-lg border border-juniper/30 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/50">
