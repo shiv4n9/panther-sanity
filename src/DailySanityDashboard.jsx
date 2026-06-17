@@ -39,27 +39,92 @@ function resolvePR(testCaseName, comment) {
   return getPRFromComment(comment) || getPR(testCaseName);
 }
 
-function parseBranchValue(rawValue, sourceMetric = '') {
+function normalizeUnitLabel(label) {
+  if (!label) return null;
+  const upper = label.toUpperCase();
+  if (upper === 'MBPS') return 'Mbps';
+  return upper;
+}
+
+function parseCompareMetric(rawValue, sourceMetric = '') {
   const value = String(rawValue || '').trim();
   if (!value) return null;
 
-  if (/kpps\s*\/\s*mbps/i.test(sourceMetric) && value.includes('/')) {
-    const [kpps, mbps] = value.split('/').map(part => part.trim()).filter(Boolean);
-    if (kpps && mbps) {
+  const buildRow = (rawPart, fallbackLabel = null) => {
+    const part = String(rawPart || '').trim();
+    if (!part) return null;
+    const valueMatch = part.match(/[\d.]+/);
+    const unitMatch = part.match(/\b(KPPS|KCPS|CPS|TPS|MBPS|GBPS)\b/i);
+    const rawLabel = normalizeUnitLabel(unitMatch?.[1] || fallbackLabel);
+    let displayValue = valueMatch ? valueMatch[0] : part;
+    let displayLabel = rawLabel;
+
+    if (rawLabel === 'KCPS' && valueMatch) {
+      const numericValue = parseFloat(valueMatch[0]);
+      if (!Number.isNaN(numericValue)) {
+        const scaledValue = numericValue * 1000;
+        displayValue = Number.isInteger(scaledValue)
+          ? String(scaledValue)
+          : String(Number(scaledValue.toFixed(2)));
+        displayLabel = 'CPS';
+      }
+    }
+
+    return {
+      label: displayLabel,
+      value: displayValue,
+    };
+  };
+
+  let splitFallbackLabels = null;
+  if (/kpps\s*\/\s*mbps/i.test(sourceMetric)) splitFallbackLabels = ['KPPS', 'Mbps'];
+  else if (/cps\s*\/\s*mbps/i.test(sourceMetric)) splitFallbackLabels = ['CPS', 'Mbps'];
+  else if (/tps\s*\/\s*mbps/i.test(sourceMetric)) splitFallbackLabels = ['TPS', 'Mbps'];
+
+  if ((splitFallbackLabels || value.includes('/')) && value.includes('/')) {
+    const rows = value
+      .split('/')
+      .map((part, idx) => buildRow(part, splitFallbackLabels?.[idx]))
+      .filter(Boolean);
+
+    if (rows.length) {
       return {
-        layout: 'split',
-        rows: [
-          { label: 'KPPS', value: kpps },
-          { label: 'Mbps', value: mbps },
-        ],
+        layout: rows.length > 1 ? 'split' : 'single',
+        rows,
       };
     }
   }
 
+  let singleFallback = null;
+  if (/kcps/i.test(sourceMetric)) singleFallback = 'KCPS';
+  else if (/\bcps\b/i.test(sourceMetric)) singleFallback = 'CPS';
+  else if (/\btps\b/i.test(sourceMetric)) singleFallback = 'TPS';
+  else if (/\bmbps\b/i.test(sourceMetric)) singleFallback = 'Mbps';
+
+  const singleRow = buildRow(value, singleFallback);
+
   return {
     layout: 'single',
-    rows: [{ label: sourceMetric.includes('KCPS') ? 'KCPS' : null, value }],
+    rows: singleRow ? [singleRow] : [],
   };
+}
+
+function renderCompareMetricRows(parsedMetric, renderLabel) {
+  if (!parsedMetric?.rows?.length) return null;
+
+  return (
+    <div className="flex flex-col divide-y divide-juniper/15 leading-tight">
+      {parsedMetric.rows.map((row) => (
+        <div key={`${row.label || 'value'}-${row.value}`} className="min-h-[24px] flex items-center py-0.5">
+          {renderLabel ? (
+            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">{row.label || 'Value'}</span>
+          ) : (
+            <span className="whitespace-nowrap">{row.value}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ─── Comment cell ────────────────────────────────────────────
@@ -119,7 +184,7 @@ const CommentWithPR = ({ comment, testCase, prOnly = false }) => {
 const MetricsTooltip = ({ position, isVisible, data }) => {
   if (!isVisible || !position || !data) return null;
   if (data.kind === 'branch') {
-    const parsedValue = parseBranchValue(data.value, data.sourceMetric);
+    const parsedValue = parseCompareMetric(data.value, data.sourceMetric);
     return createPortal(
       <div
         className="fixed z-[9999] animate-fade-in-up pointer-events-none"
@@ -729,8 +794,9 @@ const DailySanityDashboard = () => {
         <div className="rounded-2xl shadow-xl shadow-juniper/5 border border-juniper/15 overflow-hidden bg-white">
 
           {/* Table Header */}
-          <div className={`grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'}`}>
+          <div className={`grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center ${show3XX ? 'grid-cols-[2.3fr_.75fr_1.4fr_1.4fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'}`}>
             <div className="text-xs font-bold text-black uppercase tracking-[0.1em] px-6">Test Case</div>
+            {show3XX && <div className="text-xs font-bold text-black uppercase tracking-[0.1em] px-3 border-l border-juniper-dark/40">Units</div>}
             <div className="flex flex-col gap-0.5 px-5 border-l border-juniper-dark/40">
               <span className="text-xs font-semibold text-black uppercase tracking-[0.1em]">SRX 400</span>
               <span className="font-jetbrains text-[11px] font-semibold text-black/60">{isSanity && selectedSanityRelease ? selectedSanityRelease : releases.srx400}</span>
@@ -820,8 +886,9 @@ const DailySanityDashboard = () => {
                             const shouldNormalize = isNormalized && !isScalingCategory(section.category);
                             const norm400 = shouldNormalize && has400 ? normalizeTo90Cpu(item.srx400.throughput, item.srx400.cpu) : { value: item.srx400.throughput, wasNormalized: false };
                             const norm440 = shouldNormalize && has440 ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu) : { value: item.srx440.throughput, wasNormalized: false };
-                            const parsed400 = show3XX ? parseBranchValue(norm400.value, branch?.sourceMetric) : null;
-                            const parsed440 = show3XX ? parseBranchValue(norm440.value, branch?.sourceMetric) : null;
+                            const parsed400 = show3XX ? parseCompareMetric(norm400.value, branch?.sourceMetric) : null;
+                            const parsed440 = show3XX ? parseCompareMetric(norm440.value, branch?.sourceMetric) : null;
+                            const compareMetric = show3XX ? (parsed400?.rows?.length ? parsed400 : parsed440) : null;
 
                             return (
                               <motion.div
@@ -830,7 +897,7 @@ const DailySanityDashboard = () => {
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.35, delay: Math.min(idx * 0.03, 0.3), ease: 'easeOut' }}
-                                className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'} border-b border-juniper/30`}
+                                className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[2.3fr_.75fr_1.4fr_1.4fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'} border-b border-juniper/30`}
                                 style={{ fontVariantNumeric: 'tabular-nums' }}
                               >
 
@@ -849,6 +916,14 @@ const DailySanityDashboard = () => {
                                   />
                                 </div>
 
+                                {show3XX && (
+                                  <div className="px-3 border-l border-juniper/30 flex items-stretch">
+                                    <div className="w-full">
+                                      {compareMetric ? renderCompareMetricRows(compareMetric, true) : <span className="text-[10px] text-slate-300 select-none">—</span>}
+                                    </div>
+                                  </div>
+                                )}
+
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
                                   onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: capCpu(item.srx400.cpu), shm: item.srx400.shm })}
@@ -856,7 +931,7 @@ const DailySanityDashboard = () => {
                                 >
                                   {(() => {
                                     return has400 ? (
-                                      show3XX && parsed400?.layout === 'split' ? (
+                                      show3XX && parsed400?.rows?.length ? (
                                         <div
                                           className={`font-jetbrains text-[13px] font-semibold cursor-pointer transition-colors leading-tight py-0.5 ${
                                             norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-juniper-dark'
@@ -864,12 +939,7 @@ const DailySanityDashboard = () => {
                                           onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
                                           title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
                                         >
-                                          {parsed400.rows.map((row) => (
-                                            <div key={`400-${item.testCase}-${row.label}`} className="flex items-center justify-between gap-2 whitespace-nowrap">
-                                              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">{row.label}</span>
-                                              <span>{row.value}</span>
-                                            </div>
-                                          ))}
+                                          {renderCompareMetricRows(parsed400, false)}
                                         </div>
                                       ) : (
                                         <span
@@ -902,7 +972,7 @@ const DailySanityDashboard = () => {
                                 >
                                   {(() => {
                                     return has440 ? (
-                                      show3XX && parsed440?.layout === 'split' ? (
+                                      show3XX && parsed440?.rows?.length ? (
                                         <div
                                           className={`font-jetbrains text-[13px] font-semibold cursor-pointer transition-colors leading-tight py-0.5 ${
                                             norm440.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-blue-600'
@@ -910,12 +980,7 @@ const DailySanityDashboard = () => {
                                           onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
                                           title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
                                         >
-                                          {parsed440.rows.map((row) => (
-                                            <div key={`440-${item.testCase}-${row.label}`} className="flex items-center justify-between gap-2 whitespace-nowrap">
-                                              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">{row.label}</span>
-                                              <span>{row.value}</span>
-                                            </div>
-                                          ))}
+                                          {renderCompareMetricRows(parsed440, false)}
                                         </div>
                                       ) : (
                                         <span
@@ -946,7 +1011,7 @@ const DailySanityDashboard = () => {
                                   <>
                                     {BRANCH_DEVICES.map(dev => {
                                       const val = branch?.values?.[dev] || null;
-                                      const parsedValue = parseBranchValue(val, branch?.sourceMetric);
+                                      const parsedValue = parseCompareMetric(val, branch?.sourceMetric);
                                       return (
                                         <div 
                                           key={dev} 
@@ -962,15 +1027,8 @@ const DailySanityDashboard = () => {
                                         >
                                           {val ? (
                                             <div className="font-jetbrains text-[13px] font-semibold text-slate-700 cursor-pointer hover:text-orange-600 transition-colors leading-tight py-0.5">
-                                              {parsedValue?.layout === 'split' ? (
-                                                <>
-                                                  {parsedValue.rows.map((row) => (
-                                                    <div key={`${dev}-${row.label}`} className="flex items-center justify-between gap-2 whitespace-nowrap">
-                                                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">{row.label}</span>
-                                                      <span>{row.value}</span>
-                                                    </div>
-                                                  ))}
-                                                </>
+                                              {parsedValue?.rows?.length ? (
+                                                renderCompareMetricRows(parsedValue, false)
                                               ) : (
                                                 <span className="whitespace-nowrap">{val}</span>
                                               )}
