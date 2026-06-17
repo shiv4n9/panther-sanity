@@ -1,57 +1,65 @@
 /**
- * SRX Branch (3XX) comparison data — static datasheet values.
+ * SRX Branch (3XX) comparison data.
  *
- * Each entry uses a regex matcher (same pattern as sanityTestCases.js)
- * to link a test case row to its branch device throughput values.
+ * Values are sourced from Compare3XX.xlsx. Columns B and C are intentionally
+ * ignored; only the displayed SRX300/SRX320/SRX340/SRX345/SRX380 values are used.
  */
 export const BRANCH_DEVICES = ['SRX300', 'SRX320', 'SRX340', 'SRX345', 'SRX380'];
 
 export const BRANCH_DATA = [
   {
-    match: (tc) => /^packet mode udp throughput-\s*packet size imix/i.test(tc),
-    values: { SRX300: '650 Mbps', SRX320: '650 Mbps', SRX340: '1600 Mbps', SRX345: '1700 Mbps', SRX380: '5700 Mbps' },
-  },
-  {
-    match: (tc) => /^firewall udp throughput-\s*packet size imix/i.test(tc),
-    values: { SRX300: '450 Mbps', SRX320: '450 Mbps', SRX340: '1100 Mbps', SRX345: '1150 Mbps', SRX380: '5200 Mbps' },
-  },
-  {
-    match: (tc) => /^firewall udp throughput-\s*packet size 1518/i.test(tc),
-    values: { SRX300: '1600 Mbps', SRX320: '1600 Mbps', SRX340: '4200 Mbps', SRX345: '4350 Mbps', SRX380: '20000 Mbps' },
-  },
-  {
-    match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256-\s*packet size imix/i.test(tc),
-    values: { SRX300: '80 Mbps', SRX320: '80 Mbps', SRX340: '210 Mbps', SRX345: '215 Mbps', SRX380: '960 Mbps' },
-  },
-  {
-    match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256-\s*packet size 1400/i.test(tc),
-    values: { SRX300: '250 Mbps', SRX320: '250 Mbps', SRX340: '700 Mbps', SRX345: '705 Mbps', SRX380: '3200 Mbps' },
-  },
-  {
-    match: (tc) => /^(?:appsec|appcontrol)$/i.test(tc.trim()),
-    values: { SRX300: '210 Mbps', SRX320: '210 Mbps', SRX340: '400 Mbps', SRX345: '450 Mbps', SRX380: '3.4 Gbps' },
-  },
-  {
-    match: (tc) => /^firewall tcp cps$/i.test(tc.trim()),
-    values: { SRX300: '4200', SRX320: '4200', SRX340: '9250', SRX345: '10.5K', SRX380: '64K' },
-  },
-  {
-    match: (tc) => /^(?:appsec|appcontrol) \+ ssl\(tls1\.2\)/i.test(tc.trim()),
-    values: { SRX300: '30', SRX320: '30', SRX340: '60', SRX345: '75', SRX380: '180' },
-  },
-  {
-    match: (tc) => /^firewall udp throughput-\s*packet size 64\s*bytes/i.test(tc),
-    values: { SRX300: '109 Mbps', SRX320: '109 Mbps', SRX340: '288 Mbps', SRX345: '287 Mbps', SRX380: '1219 Mbps' },
+    match: (tc) => /^(?:appsec|appcontrol)\s*-\s*http\s*throughput/i.test(tc.trim()),
+    sourceTest: 'AppControl',
+    sourceMetric: 'HTTP Throughput via CPS Method with UDP Stream Logging (64KB Payload) [in KPPS / Mbps]',
+    values: { SRX300: '29 / 218', SRX320: '29 / 218', SRX340: '57 / 414', SRX345: '64 / 478', SRX380: '477 / 3596' },
   },
   {
     match: (tc) => /^(?:appsec|appcontrol)\s*-\s*http\s*cps/i.test(tc.trim()),
-    values: { SRX300: '4.33K CPS', SRX320: '4.33K CPS', SRX340: '9.5K CPS', SRX345: '11.4K CPS', SRX380: '68K CPS' },
+    sourceTest: 'AppControl CPS',
+    sourceMetric: 'New Connections/Second (64B Payload) [in KCPS]',
+    values: { SRX300: '0.6', SRX320: '0.6', SRX340: '1', SRX345: '1.2', SRX380: '10.8' },
   },
   {
-    match: (tc) => /^(?:appsec|appcontrol)\s*-\s*http\s*throughput/i.test(tc.trim()),
-    values: { SRX300: '218 Mbps', SRX320: '218 Mbps', SRX340: '414 Mbps', SRX345: '478 Mbps', SRX380: '3596 Mbps' },
+    match: (tc) => /^(?:appsec|appcontrol)\s*\+\s*ssl\(tls1\.2\)\s*-\s*https\s*throughput/i.test(tc.trim()),
+    sourceTest: 'SSL + AppControl',
+    sourceMetric: 'HTTPS Throughput via CPS Method with UDP Stream Logging (64KB Payload) [in KPPS / Mbps]',
+    values: { SRX300: '10', SRX320: '10', SRX340: '18', SRX345: '23', SRX380: '106' },
+  },
+  {
+    match: (tc) => /^(?:appsec|appcontrol)\s*\+\s*ssl\(tls1\.2\)\s*-\s*https\s*cps/i.test(tc.trim()),
+    sourceTest: 'SSL + AppControl',
+    sourceMetric: 'New Connections/Second (64B Payload) [in KCPS]',
+    values: { SRX300: '0.03', SRX320: '0.03', SRX340: '0.06', SRX345: '0.08', SRX380: '0.19' },
+  },
+  {
+    match: (tc) => /^firewall udp throughput-\s*packet size 64\s*bytes/i.test(tc),
+    sourceTest: 'Firewall Throughput - 64B',
+    sourceMetric: 'UDP Throughput [in KPPS / Mbps]',
+    values: { SRX300: '161 / 109', SRX320: '161 / 109', SRX340: '428.5 / 288', SRX345: '427 / 287', SRX380: '1813 / 1219' },
+  },
+  {
+    match: (tc) => /^firewall udp throughput-\s*packet size imix/i.test(tc),
+    sourceTest: 'Firewall Throughput - IMIX',
+    sourceMetric: 'UDP Throughput [in KPPS / Mbps]',
+    values: { SRX300: '160 / 478', SRX320: '160 / 478', SRX340: '408 / 1221', SRX345: '412 / 1233', SRX380: '1749 / 5229' },
+  },
+  {
+    match: (tc) => /^firewall udp throughput-\s*packet size 1518/i.test(tc),
+    sourceTest: 'Firewall Throughput - 1518B',
+    sourceMetric: 'UDP Throughput [in KPPS / Mbps]',
+    values: { SRX300: '135 / 1654', SRX320: '135 / 1654', SRX340: '362 / 4437', SRX345: '364 / 4464', SRX380: '1608 / 19728' },
+  },
+  {
+    match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256-\s*packet size imix/i.test(tc),
+    sourceTest: 'IPSec Throughput (S2S, IKEv2, PSK, AES-256-GCM) - IMIX',
+    sourceMetric: 'UDP Throughput [in KPPS / Mbps]',
+    values: { SRX300: '28 / 84', SRX320: '28 / 84', SRX340: '75 / 225', SRX345: '75 / 225', SRX380: '331 / 991' },
   },
 ];
+
+export function getBranchComparison(testCaseName) {
+  return BRANCH_DATA.find(entry => entry.match(testCaseName)) || null;
+}
 
 /**
  * Look up branch data for a given test case name.
@@ -59,6 +67,6 @@ export const BRANCH_DATA = [
  * @returns {Object|null} e.g. { SRX300: '450 Mbps', SRX320: '450 Mbps', ... } or null
  */
 export function getBranchData(testCaseName) {
-  const entry = BRANCH_DATA.find(d => d.match(testCaseName));
+  const entry = getBranchComparison(testCaseName);
   return entry ? entry.values : null;
 }

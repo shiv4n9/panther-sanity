@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
 import { SANITY_TEST_CASES } from './config/sanityTestCases';
-import { BRANCH_DEVICES, getBranchData } from './config/branchData';
+import { BRANCH_DEVICES, getBranchComparison } from './config/branchData';
 import { API_BASE } from './config/api';
 import HistoryModal from './components/HistoryModal';
 import ChangelogBanner from './components/ChangelogBanner';
@@ -37,6 +37,29 @@ function getPRFromComment(comment) {
 // over the hardcoded PR_LINKS mapping.
 function resolvePR(testCaseName, comment) {
   return getPRFromComment(comment) || getPR(testCaseName);
+}
+
+function parseBranchValue(rawValue, sourceMetric = '') {
+  const value = String(rawValue || '').trim();
+  if (!value) return null;
+
+  if (/kpps\s*\/\s*mbps/i.test(sourceMetric) && value.includes('/')) {
+    const [kpps, mbps] = value.split('/').map(part => part.trim()).filter(Boolean);
+    if (kpps && mbps) {
+      return {
+        layout: 'split',
+        rows: [
+          { label: 'KPPS', value: kpps },
+          { label: 'Mbps', value: mbps },
+        ],
+      };
+    }
+  }
+
+  return {
+    layout: 'single',
+    rows: [{ label: sourceMetric.includes('KCPS') ? 'KCPS' : null, value }],
+  };
 }
 
 // ─── Comment cell ────────────────────────────────────────────
@@ -95,6 +118,43 @@ const CommentWithPR = ({ comment, testCase, prOnly = false }) => {
 // ─── Tooltip Portal ──────────────────────────────────────────
 const MetricsTooltip = ({ position, isVisible, data }) => {
   if (!isVisible || !position || !data) return null;
+  if (data.kind === 'branch') {
+    const parsedValue = parseBranchValue(data.value, data.sourceMetric);
+    return createPortal(
+      <div
+        className="fixed z-[9999] animate-fade-in-up pointer-events-none"
+        style={{ top: `${position.y + 8}px`, left: `${position.x}px`, transform: 'translateX(-50%)', animationDuration: '200ms' }}
+      >
+        <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[280px] max-w-[360px]">
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
+            <div className="w-2 h-2 bg-orange-400 rounded-full shadow-[0_0_8px_rgba(251,146,60,0.6)]"></div>
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Branch Compare</span>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center gap-4">
+              <span className="text-xs text-slate-400">Device:</span>
+              <span className="font-jetbrains text-sm font-semibold text-orange-300">{data.device}</span>
+            </div>
+            {parsedValue?.rows?.map((row) => (
+              <div key={`${data.device}-${row.label || row.value}`} className="flex justify-between items-center gap-4">
+                <span className="text-xs text-slate-400">{row.label || 'Value'}:</span>
+                <span className="font-jetbrains text-sm font-semibold text-white">{row.value}</span>
+              </div>
+            ))}
+            <div className="pt-2 border-t border-slate-700/70 space-y-1">
+              <div className="text-xs text-slate-400">Workbook Test</div>
+              <div className="text-sm text-slate-200 leading-snug">{data.sourceTest}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs text-slate-400">Metric</div>
+              <div className="text-sm text-slate-200 leading-snug">{data.sourceMetric}</div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  }
   return createPortal(
     <div
       className="fixed z-[9999] animate-fade-in-up pointer-events-none"
@@ -754,11 +814,14 @@ const DailySanityDashboard = () => {
                             const has400 = !!item.srx400.throughput;
                             const has440 = !!item.srx440.throughput;
                             const comments = item.srx440.comments || item.srx400.comments || '';
+                            const branch = getBranchComparison(item.testCase);
 
                             // CPU normalization — skip scaling/capacity sections
                             const shouldNormalize = isNormalized && !isScalingCategory(section.category);
                             const norm400 = shouldNormalize && has400 ? normalizeTo90Cpu(item.srx400.throughput, item.srx400.cpu) : { value: item.srx400.throughput, wasNormalized: false };
                             const norm440 = shouldNormalize && has440 ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu) : { value: item.srx440.throughput, wasNormalized: false };
+                            const parsed400 = show3XX ? parseBranchValue(norm400.value, branch?.sourceMetric) : null;
+                            const parsed440 = show3XX ? parseBranchValue(norm440.value, branch?.sourceMetric) : null;
 
                             return (
                               <motion.div
@@ -793,16 +856,33 @@ const DailySanityDashboard = () => {
                                 >
                                   {(() => {
                                     return has400 ? (
-                                      <span
-                                        className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
-                                          norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-juniper-dark'
-                                        }`}
-                                        onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
-                                        title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
-                                      >
-                                        {norm400.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
-                                        <AnimatedMetric value={norm400.value} />
-                                      </span>
+                                      show3XX && parsed400?.layout === 'split' ? (
+                                        <div
+                                          className={`font-jetbrains text-[13px] font-semibold cursor-pointer transition-colors leading-tight py-0.5 ${
+                                            norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-juniper-dark'
+                                          }`}
+                                          onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
+                                          title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
+                                        >
+                                          {parsed400.rows.map((row) => (
+                                            <div key={`400-${item.testCase}-${row.label}`} className="flex items-center justify-between gap-2 whitespace-nowrap">
+                                              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">{row.label}</span>
+                                              <span>{row.value}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <span
+                                          className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
+                                            norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-juniper-dark'
+                                          }`}
+                                          onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
+                                          title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
+                                        >
+                                          {norm400.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
+                                          <AnimatedMetric value={norm400.value} />
+                                        </span>
+                                      )
                                     ) : (
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
@@ -822,16 +902,33 @@ const DailySanityDashboard = () => {
                                 >
                                   {(() => {
                                     return has440 ? (
-                                      <span
-                                        className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
-                                          norm440.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-blue-600'
-                                        }`}
-                                        onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
-                                        title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
-                                      >
-                                        {norm440.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
-                                        <AnimatedMetric value={norm440.value} />
-                                      </span>
+                                      show3XX && parsed440?.layout === 'split' ? (
+                                        <div
+                                          className={`font-jetbrains text-[13px] font-semibold cursor-pointer transition-colors leading-tight py-0.5 ${
+                                            norm440.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-blue-600'
+                                          }`}
+                                          onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
+                                          title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
+                                        >
+                                          {parsed440.rows.map((row) => (
+                                            <div key={`440-${item.testCase}-${row.label}`} className="flex items-center justify-between gap-2 whitespace-nowrap">
+                                              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">{row.label}</span>
+                                              <span>{row.value}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <span
+                                          className={`font-jetbrains text-[13px] font-semibold cursor-pointer hover:underline underline-offset-2 transition-colors ${
+                                            norm440.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-blue-600'
+                                          }`}
+                                          onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
+                                          title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
+                                        >
+                                          {norm440.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
+                                          <AnimatedMetric value={norm440.value} />
+                                        </span>
+                                      )
                                     ) : (
                                       <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                     );
@@ -848,19 +945,36 @@ const DailySanityDashboard = () => {
                                 {show3XX ? (
                                   <>
                                     {BRANCH_DEVICES.map(dev => {
-                                      const bd = getBranchData(item.testCase);
-                                      const val = bd ? bd[dev] : null;
+                                      const val = branch?.values?.[dev] || null;
+                                      const parsedValue = parseBranchValue(val, branch?.sourceMetric);
                                       return (
                                         <div 
                                           key={dev} 
                                           className="px-4 border-l border-juniper/30 flex items-center"
-                                          onMouseEnter={(e) => val && handleCellEnter(e, `${dev}-${sIdx}-${idx}`, { device: dev, value: val })}
+                                          onMouseEnter={(e) => val && handleCellEnter(e, `${dev}-${sIdx}-${idx}`, {
+                                            kind: 'branch',
+                                            device: dev,
+                                            value: val,
+                                            sourceTest: branch.sourceTest,
+                                            sourceMetric: branch.sourceMetric,
+                                          })}
                                           onMouseLeave={() => setHoveredCell(null)}
                                         >
                                           {val ? (
-                                            <span className="font-jetbrains text-[13px] font-semibold text-slate-700 whitespace-nowrap cursor-pointer hover:text-orange-600 transition-colors">
-                                              {val}
-                                            </span>
+                                            <div className="font-jetbrains text-[13px] font-semibold text-slate-700 cursor-pointer hover:text-orange-600 transition-colors leading-tight py-0.5">
+                                              {parsedValue?.layout === 'split' ? (
+                                                <>
+                                                  {parsedValue.rows.map((row) => (
+                                                    <div key={`${dev}-${row.label}`} className="flex items-center justify-between gap-2 whitespace-nowrap">
+                                                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">{row.label}</span>
+                                                      <span>{row.value}</span>
+                                                    </div>
+                                                  ))}
+                                                </>
+                                              ) : (
+                                                <span className="whitespace-nowrap">{val}</span>
+                                              )}
+                                            </div>
                                           ) : (
                                             <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
                                           )}
