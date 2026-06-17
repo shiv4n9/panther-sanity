@@ -197,9 +197,9 @@ const MetricsTooltip = ({ position, isVisible, data }) => {
   return createPortal(
     <div
       className="fixed z-[9999] animate-fade-in-up pointer-events-none"
-      style={{ top: `${position.y + 8}px`, left: `${position.x}px`, transform: 'translateX(-50%)', animationDuration: '200ms' }}
+      style={{ top: `${position.y + 8}px`, left: `${position.x}px`, animationDuration: '200ms' }}
     >
-      <div className="bg-slate-900 text-white rounded-lg shadow-2xl border border-slate-700 p-3 min-w-[200px]">
+      <div className="bg-slate-900/80 backdrop-blur-md text-white rounded-lg shadow-2xl border border-slate-700/60 p-3 min-w-[200px]">
         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
           <div className="w-2 h-2 bg-juniper rounded-full shadow-[0_0_8px_var(--color-juniper-glow)]"></div>
           <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">System Metrics</span>
@@ -345,7 +345,7 @@ const PublicReport = () => {
 
   const handleCellEnter = (e, cellId, metrics) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredCell({ id: cellId, x: rect.left + rect.width / 2, y: rect.bottom, ...metrics });
+    setHoveredCell({ id: cellId, x: rect.left, y: rect.bottom, ...metrics });
   };
 
   // ── View filter: sanity vs. regression ──
