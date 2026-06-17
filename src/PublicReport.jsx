@@ -345,7 +345,7 @@ const PublicReport = () => {
 
   const handleCellEnter = (e, cellId, metrics) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredCell({ id: cellId, x: rect.left, y: rect.bottom, ...metrics });
+    setHoveredCell({ id: cellId, x: rect.left + 20, y: rect.bottom, ...metrics });
   };
 
   // ── View filter: sanity vs. regression ──
