@@ -582,7 +582,7 @@ const DailySanityDashboard = () => {
 
   const handleCellEnter = (e, cellId, metrics) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredCell({ id: cellId, x: rect.left + 20, y: rect.bottom, ...metrics });
+    setHoveredCell({ id: cellId, x: e.clientX, y: rect.bottom, ...metrics });
   };
 
   const handleDiffEnter = (e, cellId, val400, val440) => {
