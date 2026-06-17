@@ -937,16 +937,18 @@ const DailySanityDashboard = () => {
                                 {/* Test Case Name + Comparison Tooltip */}
                                 <div 
                                   className="flex items-center px-6 relative cursor-default"
-                                  onMouseEnter={(e) => (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
+                                  onMouseEnter={(e) => !show3XX && (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
                                   onMouseLeave={() => setHoveredDiff(null)}
                                 >
                                   <span className="text-[13px] font-medium text-slate-700 leading-snug">{item.testCase}</span>
                                   
-                                  <DiffTooltip 
-                                    position={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
-                                    isVisible={hoveredDiff?.id === `tc-${sIdx}-${idx}`}
-                                    data={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
-                                  />
+                                  {!show3XX && (
+                                    <DiffTooltip 
+                                      position={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
+                                      isVisible={hoveredDiff?.id === `tc-${sIdx}-${idx}`}
+                                      data={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
+                                    />
+                                  )}
                                 </div>
 
                                 {show3XX && (
@@ -959,7 +961,7 @@ const DailySanityDashboard = () => {
 
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: capCpu(item.srx400.cpu), shm: item.srx400.shm })}
+                                  onMouseEnter={(e) => !show3XX && has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: capCpu(item.srx400.cpu), shm: item.srx400.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {(() => {
@@ -991,16 +993,18 @@ const DailySanityDashboard = () => {
                                     );
                                   })()}
                                   {isSanity && <CommentWithPR comment={item.srx400.comments || comments} testCase={item.testCase} prOnly />}
-                                  <MetricsTooltip
-                                    position={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
-                                    isVisible={hoveredCell?.id === `400-${sIdx}-${idx}`}
-                                    data={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
-                                  />
+                                  {!show3XX && (
+                                    <MetricsTooltip
+                                      position={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
+                                      isVisible={hoveredCell?.id === `400-${sIdx}-${idx}`}
+                                      data={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
+                                    />
+                                  )}
                                 </div>
 
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: capCpu(item.srx440.cpu), shm: item.srx440.shm })}
+                                  onMouseEnter={(e) => !show3XX && has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: capCpu(item.srx440.cpu), shm: item.srx440.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {(() => {
@@ -1032,11 +1036,13 @@ const DailySanityDashboard = () => {
                                     );
                                   })()}
                                   {isSanity && <CommentWithPR comment={item.srx440.comments || comments} testCase={item.testCase} prOnly />}
-                                  <MetricsTooltip
-                                    position={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
-                                    isVisible={hoveredCell?.id === `440-${sIdx}-${idx}`}
-                                    data={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
-                                  />
+                                  {!show3XX && (
+                                    <MetricsTooltip
+                                      position={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
+                                      isVisible={hoveredCell?.id === `440-${sIdx}-${idx}`}
+                                      data={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
+                                    />
+                                  )}
                                 </div>
 
                                 {/* Last columns: Branch 3XX data OR Compare button OR Comments */}
@@ -1049,17 +1055,9 @@ const DailySanityDashboard = () => {
                                         <div 
                                           key={dev} 
                                           className="px-4 border-l border-juniper/30 flex items-center"
-                                          onMouseEnter={(e) => val && handleCellEnter(e, `${dev}-${sIdx}-${idx}`, {
-                                            kind: 'branch',
-                                            device: dev,
-                                            value: val,
-                                            sourceTest: branch.sourceTest,
-                                            sourceMetric: branch.sourceMetric,
-                                          })}
-                                          onMouseLeave={() => setHoveredCell(null)}
                                         >
                                           {val ? (
-                                            <div className="font-jetbrains text-[13px] font-semibold text-slate-700 cursor-pointer hover:text-orange-600 transition-colors leading-tight py-0.5">
+                                            <div className="font-jetbrains text-[13px] font-semibold text-slate-700 leading-tight py-0.5">
                                               {parsedValue?.rows?.length ? (
                                                 renderCompareMetricRows(parsedValue, false)
                                               ) : (
@@ -1069,11 +1067,6 @@ const DailySanityDashboard = () => {
                                           ) : (
                                             <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
                                           )}
-                                          <MetricsTooltip
-                                            position={hoveredCell?.id === `${dev}-${sIdx}-${idx}` ? hoveredCell : null}
-                                            isVisible={hoveredCell?.id === `${dev}-${sIdx}-${idx}`}
-                                            data={hoveredCell?.id === `${dev}-${sIdx}-${idx}` ? hoveredCell : null}
-                                          />
                                         </div>
                                       );
                                     })}
