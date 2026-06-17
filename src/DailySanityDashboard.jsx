@@ -46,7 +46,7 @@ function normalizeUnitLabel(label) {
   return upper;
 }
 
-function parseCompareMetric(rawValue, sourceMetric = '') {
+function parseCompareMetric(rawValue, sourceMetric = '', scaleKcps = false) {
   const value = String(rawValue || '').trim();
   if (!value) return null;
 
@@ -60,12 +60,18 @@ function parseCompareMetric(rawValue, sourceMetric = '') {
     let displayLabel = rawLabel;
 
     if (rawLabel === 'KCPS' && valueMatch) {
-      const numericValue = parseFloat(valueMatch[0]);
-      if (!Number.isNaN(numericValue)) {
-        const scaledValue = numericValue * 1000;
-        displayValue = Number.isInteger(scaledValue)
-          ? String(scaledValue)
-          : String(Number(scaledValue.toFixed(2)));
+      // Branch 3XX values are stored in KCPS and shown as CPS (x1000).
+      // Datasheet SRX400/440 values are already in CPS, so only relabel.
+      if (scaleKcps) {
+        const numericValue = parseFloat(valueMatch[0]);
+        if (!Number.isNaN(numericValue)) {
+          const scaledValue = numericValue * 1000;
+          displayValue = Number.isInteger(scaledValue)
+            ? String(scaledValue)
+            : String(Number(scaledValue.toFixed(2)));
+          displayLabel = 'CPS';
+        }
+      } else {
         displayLabel = 'CPS';
       }
     }
@@ -107,6 +113,15 @@ function parseCompareMetric(rawValue, sourceMetric = '') {
     layout: 'single',
     rows: singleRow ? [singleRow] : [],
   };
+}
+
+// Restrict a parsed metric to its Mbps row only (used for throughput test
+// cases that should be compared in Mbps regardless of the KPPS source value).
+function filterToMbps(parsedMetric) {
+  if (!parsedMetric?.rows?.length) return parsedMetric;
+  const rows = parsedMetric.rows.filter((row) => row.label === 'Mbps');
+  if (!rows.length) return parsedMetric;
+  return { layout: 'single', rows };
 }
 
 function renderCompareMetricRows(parsedMetric, renderLabel) {
@@ -184,7 +199,7 @@ const CommentWithPR = ({ comment, testCase, prOnly = false }) => {
 const MetricsTooltip = ({ position, isVisible, data }) => {
   if (!isVisible || !position || !data) return null;
   if (data.kind === 'branch') {
-    const parsedValue = parseCompareMetric(data.value, data.sourceMetric);
+    const parsedValue = parseCompareMetric(data.value, data.sourceMetric, true);
     return createPortal(
       <div
         className="fixed z-[9999] animate-fade-in-up pointer-events-none"
@@ -886,8 +901,9 @@ const DailySanityDashboard = () => {
                             const shouldNormalize = isNormalized && !isScalingCategory(section.category);
                             const norm400 = shouldNormalize && has400 ? normalizeTo90Cpu(item.srx400.throughput, item.srx400.cpu) : { value: item.srx400.throughput, wasNormalized: false };
                             const norm440 = shouldNormalize && has440 ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu) : { value: item.srx440.throughput, wasNormalized: false };
-                            const parsed400 = show3XX ? parseCompareMetric(norm400.value, branch?.sourceMetric) : null;
-                            const parsed440 = show3XX ? parseCompareMetric(norm440.value, branch?.sourceMetric) : null;
+                            const mbpsOnly = !!branch?.mbpsOnly;
+                            const parsed400 = show3XX ? (mbpsOnly ? filterToMbps(parseCompareMetric(norm400.value, branch?.sourceMetric)) : parseCompareMetric(norm400.value, branch?.sourceMetric)) : null;
+                            const parsed440 = show3XX ? (mbpsOnly ? filterToMbps(parseCompareMetric(norm440.value, branch?.sourceMetric)) : parseCompareMetric(norm440.value, branch?.sourceMetric)) : null;
                             const compareMetric = show3XX ? (parsed400?.rows?.length ? parsed400 : parsed440) : null;
 
                             return (
@@ -1011,7 +1027,7 @@ const DailySanityDashboard = () => {
                                   <>
                                     {BRANCH_DEVICES.map(dev => {
                                       const val = branch?.values?.[dev] || null;
-                                      const parsedValue = parseCompareMetric(val, branch?.sourceMetric);
+                                      const parsedValue = mbpsOnly ? filterToMbps(parseCompareMetric(val, branch?.sourceMetric, true)) : parseCompareMetric(val, branch?.sourceMetric, true);
                                       return (
                                         <div 
                                           key={dev} 

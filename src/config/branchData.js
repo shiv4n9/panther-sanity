@@ -11,6 +11,7 @@ export const BRANCH_DATA = [
     match: (tc) => /^(?:appsec|appcontrol)\s*-\s*http\s*throughput/i.test(tc.trim()),
     sourceTest: 'AppControl',
     sourceMetric: 'HTTP Throughput via CPS Method with UDP Stream Logging (64KB Payload) [in KPPS / Mbps]',
+    mbpsOnly: true,
     values: { SRX300: '29 / 218', SRX320: '29 / 218', SRX340: '57 / 414', SRX345: '64 / 478', SRX380: '477 / 3596' },
   },
   {
@@ -23,7 +24,8 @@ export const BRANCH_DATA = [
     match: (tc) => /^(?:appsec|appcontrol)\s*\+\s*ssl\(tls1\.2\)\s*-\s*https\s*throughput/i.test(tc.trim()),
     sourceTest: 'SSL + AppControl',
     sourceMetric: 'HTTPS Throughput via CPS Method with UDP Stream Logging (64KB Payload) [in KPPS / Mbps]',
-    values: { SRX300: '10', SRX320: '10', SRX340: '18', SRX345: '23', SRX380: '106' },
+    mbpsOnly: true,
+    values: { SRX300: '2 / 10', SRX320: '2 / 10', SRX340: '3 / 18', SRX345: '4 / 23', SRX380: '17 / 106' },
   },
   {
     match: (tc) => /^(?:appsec|appcontrol)\s*\+\s*ssl\(tls1\.2\)\s*-\s*https\s*cps/i.test(tc.trim()),
