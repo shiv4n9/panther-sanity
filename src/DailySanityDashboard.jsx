@@ -556,8 +556,25 @@ const DailySanityDashboard = () => {
       return 0;
     });
 
+    // Full Regression view: sort test cases within each section in
+    // descending order of value (prefer Mbps, fall back to first numeric).
+    if (activeView === 'regression') {
+      const sortVal = (raw) => {
+        const str = String(raw || '');
+        const mbps = str.match(/([\d.]+)\s*mbps/i);
+        if (mbps) return parseFloat(mbps[1]);
+        const first = str.match(/[\d.]+/);
+        return first ? parseFloat(first[0]) : -Infinity;
+      };
+      const rowVal = (t) => Math.max(sortVal(t.srx440?.throughput), sortVal(t.srx400?.throughput));
+      data = data.map(section => ({
+        ...section,
+        tests: [...section.tests].sort((a, b) => rowVal(b) - rowVal(a)),
+      }));
+    }
+
     return data;
-  }, [viewFilteredData, searchTerm, isOptimized]);
+  }, [viewFilteredData, searchTerm, isOptimized, activeView]);
 
   const toggleGroup = (cat) => {
     setExpandedGroups(prev => ({ ...prev, [cat]: !prev[cat] }));
