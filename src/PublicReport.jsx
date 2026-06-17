@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
 import { SANITY_TEST_CASES } from './config/sanityTestCases';
-import { BRANCH_DEVICES, getBranchData } from './config/branchData';
+import { BRANCH_DEVICES, getBranchComparison } from './config/branchData';
 import { normalizeTo90Cpu, calculatePercentageDiff, isScalingCategory } from './utils/normalize';
 import SanityOverviewChart from './components/SanityOverviewChart';
 import { API_BASE } from './config/api';
@@ -33,6 +33,109 @@ function getPRFromComment(comment) {
 // over the hardcoded PR_LINKS mapping.
 function resolvePR(testCaseName, comment) {
   return getPRFromComment(comment) || getPR(testCaseName);
+}
+
+function normalizeUnitLabel(label) {
+  if (!label) return null;
+  const upper = label.toUpperCase();
+  if (upper === 'MBPS') return 'Mbps';
+  return upper;
+}
+
+function parseCompareMetric(rawValue, sourceMetric = '', scaleKcps = false) {
+  const value = String(rawValue || '').trim();
+  if (!value) return null;
+
+  const buildRow = (rawPart, fallbackLabel = null) => {
+    const part = String(rawPart || '').trim();
+    if (!part) return null;
+    const valueMatch = part.match(/[\d.]+/);
+    const unitMatch = part.match(/\b(KPPS|KCPS|CPS|TPS|MBPS|GBPS)\b/i);
+    const rawLabel = normalizeUnitLabel(unitMatch?.[1] || fallbackLabel);
+    let displayValue = valueMatch ? valueMatch[0] : part;
+    let displayLabel = rawLabel;
+
+    if (rawLabel === 'KCPS' && valueMatch) {
+      // Branch 3XX values are stored in KCPS and shown as CPS (x1000).
+      // Datasheet SRX400/440 values are already in CPS, so only relabel.
+      if (scaleKcps) {
+        const numericValue = parseFloat(valueMatch[0]);
+        if (!Number.isNaN(numericValue)) {
+          const scaledValue = numericValue * 1000;
+          displayValue = Number.isInteger(scaledValue)
+            ? String(scaledValue)
+            : String(Number(scaledValue.toFixed(2)));
+          displayLabel = 'CPS';
+        }
+      } else {
+        displayLabel = 'CPS';
+      }
+    }
+
+    return {
+      label: displayLabel,
+      value: displayValue,
+    };
+  };
+
+  let splitFallbackLabels = null;
+  if (/kpps\s*\/\s*mbps/i.test(sourceMetric)) splitFallbackLabels = ['KPPS', 'Mbps'];
+  else if (/cps\s*\/\s*mbps/i.test(sourceMetric)) splitFallbackLabels = ['CPS', 'Mbps'];
+  else if (/tps\s*\/\s*mbps/i.test(sourceMetric)) splitFallbackLabels = ['TPS', 'Mbps'];
+
+  if ((splitFallbackLabels || value.includes('/')) && value.includes('/')) {
+    const rows = value
+      .split('/')
+      .map((part, idx) => buildRow(part, splitFallbackLabels?.[idx]))
+      .filter(Boolean);
+
+    if (rows.length) {
+      return {
+        layout: rows.length > 1 ? 'split' : 'single',
+        rows,
+      };
+    }
+  }
+
+  let singleFallback = null;
+  if (/kcps/i.test(sourceMetric)) singleFallback = 'KCPS';
+  else if (/\bcps\b/i.test(sourceMetric)) singleFallback = 'CPS';
+  else if (/\btps\b/i.test(sourceMetric)) singleFallback = 'TPS';
+  else if (/\bmbps\b/i.test(sourceMetric)) singleFallback = 'Mbps';
+
+  const singleRow = buildRow(value, singleFallback);
+
+  return {
+    layout: 'single',
+    rows: singleRow ? [singleRow] : [],
+  };
+}
+
+// Restrict a parsed metric to its Mbps row only (used for throughput test
+// cases that should be compared in Mbps regardless of the KPPS source value).
+function filterToMbps(parsedMetric) {
+  if (!parsedMetric?.rows?.length) return parsedMetric;
+  const rows = parsedMetric.rows.filter((row) => row.label === 'Mbps');
+  if (!rows.length) return parsedMetric;
+  return { layout: 'single', rows };
+}
+
+function renderCompareMetricRows(parsedMetric, renderLabel) {
+  if (!parsedMetric?.rows?.length) return null;
+
+  return (
+    <div className="flex flex-col divide-y divide-juniper/15 leading-tight">
+      {parsedMetric.rows.map((row) => (
+        <div key={`${row.label || 'value'}-${row.value}`} className="min-h-[24px] flex items-center py-0.5">
+          {renderLabel ? (
+            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">{row.label || 'Value'}</span>
+          ) : (
+            <span className="whitespace-nowrap">{row.value}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ─── Comment cell ────────────────────────────────────────────
@@ -349,8 +452,25 @@ const PublicReport = () => {
         .filter(s => s.tests.length > 0);
     }
 
+    // Full Regression view: sort test cases within each section in
+    // descending order of value (prefer Mbps, fall back to first numeric).
+    if (activeView === 'regression') {
+      const sortVal = (raw) => {
+        const str = String(raw || '');
+        const mbps = str.match(/([\d.]+)\s*mbps/i);
+        if (mbps) return parseFloat(mbps[1]);
+        const first = str.match(/[\d.]+/);
+        return first ? parseFloat(first[0]) : -Infinity;
+      };
+      const rowVal = (t) => Math.max(sortVal(t.srx440?.throughput), sortVal(t.srx400?.throughput));
+      data = data.map(section => ({
+        ...section,
+        tests: [...section.tests].sort((a, b) => rowVal(b) - rowVal(a)),
+      }));
+    }
+
     return data;
-  }, [viewFilteredData, searchTerm]);
+  }, [viewFilteredData, searchTerm, activeView]);
 
   const toggleGroup = (cat) => {
     setExpandedGroups(prev => ({ ...prev, [cat]: !prev[cat] }));
@@ -626,8 +746,9 @@ const PublicReport = () => {
         <div className="rounded-2xl shadow-xl shadow-juniper/5 border border-juniper/15 overflow-hidden bg-white">
 
           {/* Table Header */}
-          <div className={`grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : 'grid-cols-[4fr_3fr_3fr]'}`}>
+          <div className={`grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center ${show3XX ? 'grid-cols-[2.3fr_.75fr_1.4fr_1.4fr_repeat(5,1fr)]' : 'grid-cols-[4fr_3fr_3fr]'}`}>
             <div className="text-xs font-bold text-black uppercase tracking-[0.1em] px-6">Test Case</div>
+            {show3XX && <div className="text-xs font-bold text-black uppercase tracking-[0.1em] px-3 border-l border-juniper-dark/40">Units</div>}
             <div className="flex flex-col gap-0.5 px-5 border-l border-juniper-dark/40">
               <span className="text-xs font-semibold text-black uppercase tracking-[0.1em]">SRX 400</span>
               <span className="font-jetbrains text-[11px] font-semibold text-black/60">{isSanity && selectedSanityRelease ? selectedSanityRelease : releases.srx400}</span>
@@ -698,76 +819,113 @@ const PublicReport = () => {
                             const norm440 = shouldNormalize && has440
                               ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu)
                               : { value: item.srx440.throughput, wasNormalized: false };
+                            const branch = getBranchComparison(item.testCase);
+                            const mbpsOnly = !!branch?.mbpsOnly;
+                            const parsed400 = show3XX ? (mbpsOnly ? filterToMbps(parseCompareMetric(norm400.value, branch?.sourceMetric)) : parseCompareMetric(norm400.value, branch?.sourceMetric)) : null;
+                            const parsed440 = show3XX ? (mbpsOnly ? filterToMbps(parseCompareMetric(norm440.value, branch?.sourceMetric)) : parseCompareMetric(norm440.value, branch?.sourceMetric)) : null;
+                            const compareMetric = show3XX ? (parsed400?.rows?.length ? parsed400 : parsed440) : null;
 
                             return (
-                              <div key={idx} className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative border-b border-juniper/30 ${show3XX ? 'grid-cols-[2.5fr_1.5fr_1.5fr_repeat(5,1fr)]' : 'grid-cols-[4fr_3fr_3fr]'}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              <div key={idx} className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative border-b border-juniper/30 ${show3XX ? 'grid-cols-[2.3fr_.75fr_1.4fr_1.4fr_repeat(5,1fr)]' : 'grid-cols-[4fr_3fr_3fr]'}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
 
                                 {/* Test Case Name + Diff Tooltip */}
                                 <div
                                   className="flex items-center px-6 relative cursor-default"
-                                  onMouseEnter={(e) => (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
+                                  onMouseEnter={(e) => !show3XX && (has400 || has440) && handleDiffEnter(e, `tc-${sIdx}-${idx}`, norm400.value, norm440.value)}
                                   onMouseLeave={() => setHoveredDiff(null)}
                                 >
                                   <span className="text-[13px] font-medium text-slate-700 leading-snug">{item.testCase}</span>
-                                  <DiffTooltip
-                                    position={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
-                                    isVisible={hoveredDiff?.id === `tc-${sIdx}-${idx}`}
-                                    data={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
-                                  />
+                                  {!show3XX && (
+                                    <DiffTooltip
+                                      position={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
+                                      isVisible={hoveredDiff?.id === `tc-${sIdx}-${idx}`}
+                                      data={hoveredDiff?.id === `tc-${sIdx}-${idx}` ? hoveredDiff : null}
+                                    />
+                                  )}
                                 </div>
+
+                                {show3XX && (
+                                  <div className="px-3 border-l border-juniper/30 flex items-stretch">
+                                    <div className="w-full">
+                                      {compareMetric ? renderCompareMetricRows(compareMetric, true) : <span className="text-[10px] text-slate-300 select-none">—</span>}
+                                    </div>
+                                  </div>
+                                )}
 
                                 {/* SRX 400 */}
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx400.cpu && parseInt(item.srx400.cpu) > 90 ? '90%' : item.srx400.cpu, shm: item.srx400.shm })}
+                                  onMouseEnter={(e) => !show3XX && has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx400.cpu && parseInt(item.srx400.cpu) > 90 ? '90%' : item.srx400.cpu, shm: item.srx400.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has400 ? (
-                                    <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
-                                      {norm400.value}
-                                    </span>
+                                    show3XX && parsed400?.rows?.length ? (
+                                      <div className="font-jetbrains text-[13px] font-semibold text-slate-800 leading-tight py-0.5">
+                                        {renderCompareMetricRows(parsed400, false)}
+                                      </div>
+                                    ) : (
+                                      <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
+                                        {norm400.value}
+                                      </span>
+                                    )
                                   ) : (
                                     <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                   )}
                                   {isSanity ? <CommentWithPR comment={item.srx400.comments || item.srx440.comments} testCase={item.testCase} prOnly /> : <CommentWithPR comment={item.srx400.comments || item.srx440.comments} testCase={item.testCase} />}
-                                  <MetricsTooltip
-                                    position={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
-                                    isVisible={hoveredCell?.id === `400-${sIdx}-${idx}`}
-                                    data={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
-                                  />
+                                  {!show3XX && (
+                                    <MetricsTooltip
+                                      position={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
+                                      isVisible={hoveredCell?.id === `400-${sIdx}-${idx}`}
+                                      data={hoveredCell?.id === `400-${sIdx}-${idx}` ? hoveredCell : null}
+                                    />
+                                  )}
                                 </div>
 
                                 {/* SRX 440 */}
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx440.cpu && parseInt(item.srx440.cpu) > 90 ? '90%' : item.srx440.cpu, shm: item.srx440.shm })}
+                                  onMouseEnter={(e) => !show3XX && has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: shouldNormalize && item.srx440.cpu && parseInt(item.srx440.cpu) > 90 ? '90%' : item.srx440.cpu, shm: item.srx440.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {has440 ? (
-                                    <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
-                                      {norm440.value}
-                                    </span>
+                                    show3XX && parsed440?.rows?.length ? (
+                                      <div className="font-jetbrains text-[13px] font-semibold text-slate-800 leading-tight py-0.5">
+                                        {renderCompareMetricRows(parsed440, false)}
+                                      </div>
+                                    ) : (
+                                      <span className="font-jetbrains text-[13px] font-semibold text-slate-800">
+                                        {norm440.value}
+                                      </span>
+                                    )
                                   ) : (
                                     <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
                                   )}
                                   {isSanity ? <CommentWithPR comment={item.srx440.comments || item.srx400.comments} testCase={item.testCase} prOnly /> : <CommentWithPR comment={item.srx440.comments || item.srx400.comments} testCase={item.testCase} />}
-                                  <MetricsTooltip
-                                    position={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
-                                    isVisible={hoveredCell?.id === `440-${sIdx}-${idx}`}
-                                    data={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
-                                  />
+                                  {!show3XX && (
+                                    <MetricsTooltip
+                                      position={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
+                                      isVisible={hoveredCell?.id === `440-${sIdx}-${idx}`}
+                                      data={hoveredCell?.id === `440-${sIdx}-${idx}` ? hoveredCell : null}
+                                    />
+                                  )}
                                 </div>
 
                                 {/* Branch 3XX columns */}
                                 {show3XX && (
                                   <>
                                     {BRANCH_DEVICES.map(dev => {
-                                      const bd = getBranchData(item.testCase);
-                                      const val = bd ? bd[dev] : null;
+                                      const val = branch?.values?.[dev] || null;
+                                      const parsedValue = mbpsOnly ? filterToMbps(parseCompareMetric(val, branch?.sourceMetric, true)) : parseCompareMetric(val, branch?.sourceMetric, true);
                                       return (
                                         <div key={dev} className="px-4 border-l border-juniper/30 flex items-center">
                                           {val ? (
-                                            <span className="font-jetbrains text-[13px] font-semibold text-slate-700 whitespace-nowrap">{val}</span>
+                                            <div className="font-jetbrains text-[13px] font-semibold text-slate-700 leading-tight py-0.5">
+                                              {parsedValue?.rows?.length ? (
+                                                renderCompareMetricRows(parsedValue, false)
+                                              ) : (
+                                                <span className="whitespace-nowrap">{val}</span>
+                                              )}
+                                            </div>
                                           ) : (
                                             <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
                                           )}
