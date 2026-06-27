@@ -184,6 +184,13 @@ function parseDSSheet(ws) {
     return cell.w != null ? String(cell.w) : String(cell.v);
   };
 
+  // Detect a device key ("srx400" / "srx440") from a header label like
+  // "SRX440  Tested Numbers". Returns null when no device label is present.
+  const parseDevice = (s) => {
+    const m = (s || '').replace(/[\r\n]/g, ' ').match(/SRX\s*4(\d0)/i);
+    return m ? `srx4${m[1]}` : null;
+  };
+
   const releases = [];
   let currentRelease = null;
   let skipNextRow = false; // skip the column-label row after a Release row
@@ -195,7 +202,25 @@ function parseDSSheet(ws) {
     if (/^Release:/i.test(colA.replace(/[\r\n]/g, ' '))) {
       const releaseMatch = colA.replace(/[\r\n]/g, ' ').match(/Release:\s*(.+?)(?:\s*$)/);
       const releaseStr = releaseMatch ? releaseMatch[1].trim() : 'Unknown';
-      currentRelease = { release: releaseStr, tests: [] };
+
+      // The Release row carries the device labels: col B holds the first
+      // device, col E the second. A release may report only ONE device
+      // (e.g. only SRX440 tested), in which case its data sits in cols B/C/D
+      // and the col E block is empty. Map each present device to its base col.
+      const devB = parseDevice(getCell(r, 1));
+      const devE = parseDevice(getCell(r, 4));
+      const colMap = {};
+      const devices = [];
+      if (devB) { colMap[devB] = 1; devices.push(devB); }
+      if (devE) { colMap[devE] = 4; devices.push(devE); }
+      // Fallback to the legacy fixed layout when labels are missing.
+      if (devices.length === 0) {
+        colMap.srx400 = 1;
+        colMap.srx440 = 4;
+        devices.push('srx400', 'srx440');
+      }
+
+      currentRelease = { release: releaseStr, tests: [], colMap, devices };
       releases.push(currentRelease);
       skipNextRow = true;
       continue;
@@ -212,28 +237,25 @@ function parseDSSheet(ws) {
 
     if (!currentRelease) continue;
 
-    // Data row — cols B(1),C(2),D(3) = SRX400; cols E(4),F(5),G(6) = SRX440
-    const t400  = getCell(r, 1).trim();
-    const cpu400 = getCell(r, 2).trim();
-    const shm400 = getCell(r, 3).trim();
-    const t440  = getCell(r, 4).trim();
-    const cpu440 = getCell(r, 5).trim();
-    const shm440 = getCell(r, 6).trim();
+    // Data row — read each present device from its mapped base column.
+    // base+0 = throughput, base+1 = CPU, base+2 = SHM/Comments.
+    const readDevice = (base) => {
+      if (base == null) return { throughput: '', cpu: '', shm: '', comments: '' };
+      const t = getCell(r, base).trim();
+      const cpu = getCell(r, base + 1).trim();
+      const shm = getCell(r, base + 2).trim();
+      return {
+        throughput: t,
+        cpu: cpu ? `${cpu}%` : '',
+        shm: shm ? (/^\*|session|pr\s/i.test(shm) ? '' : `${shm}%`) : '',
+        comments: /^\*|session|pr\s/i.test(shm) ? shm : '',
+      };
+    };
 
     currentRelease.tests.push({
       testCase: colA,
-      srx400: {
-        throughput: t400,
-        cpu: cpu400 ? `${cpu400}%` : '',
-        shm: shm400 ? (/^\*|session|pr\s/i.test(shm400) ? '' : `${shm400}%`) : '',
-        comments: /^\*|session|pr\s/i.test(shm400) ? shm400 : '',
-      },
-      srx440: {
-        throughput: t440,
-        cpu: cpu440 ? `${cpu440}%` : '',
-        shm: shm440 ? (/^\*|session|pr\s/i.test(shm440) ? '' : `${shm440}%`) : '',
-        comments: /^\*|session|pr\s/i.test(shm440) ? shm440 : '',
-      },
+      srx400: readDevice(currentRelease.colMap.srx400 ?? null),
+      srx440: readDevice(currentRelease.colMap.srx440 ?? null),
     });
   }
 
@@ -289,7 +311,7 @@ function parseDSSheet(ws) {
   };
 
   return releases
-    .map(rel => ({ release: rel.release, merged: categorizeTests(rel.tests) }))
+    .map(rel => ({ release: rel.release, merged: categorizeTests(rel.tests), devices: rel.devices }))
     .sort((a, b) => extractDate(b.release).localeCompare(extractDate(a.release)));
 }
 

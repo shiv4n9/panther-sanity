@@ -349,6 +349,26 @@ const DailySanityDashboard = () => {
   const isSanity = activeView === 'sanity';
   const show3XX = isSanity && showCompare;
 
+  // Which devices the selected DS-1 release actually reports. A release may
+  // carry data for only one device — in that case we render just that column
+  // instead of showing the other device blank.
+  const sanityDeviceKeys = useMemo(() => {
+    if (isSanity && ds1Releases.length > 0 && selectedSanityRelease) {
+      const block = ds1Releases.find(r => r.release === selectedSanityRelease);
+      if (block?.devices?.length) return block.devices;
+    }
+    return ['srx400', 'srx440'];
+  }, [isSanity, ds1Releases, selectedSanityRelease]);
+  const show400 = sanityDeviceKeys.includes('srx400');
+  const show440 = sanityDeviceKeys.includes('srx440');
+  // Compare (3XX) and regression views always render both base columns.
+  const render400 = !isSanity || show3XX || show400;
+  const render440 = !isSanity || show3XX || show440;
+  const sanityGrid = (show400 && show440) ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[5fr_3fr]';
+  const gridClass = show3XX
+    ? 'grid-cols-[2.3fr_.75fr_1.4fr_1.4fr_repeat(5,1fr)]'
+    : isSanity ? sanityGrid : 'grid-cols-[4fr_3fr_3fr_2fr]';
+
   // First-visit hint: glow the release selector until the user interacts with it.
   useEffect(() => {
     try {
@@ -826,17 +846,21 @@ const DailySanityDashboard = () => {
         <div className="rounded-2xl shadow-xl shadow-juniper/5 border border-juniper/15 overflow-hidden bg-white">
 
           {/* Table Header */}
-          <div className={`grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center ${show3XX ? 'grid-cols-[2.3fr_.75fr_1.4fr_1.4fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'}`}>
+          <div className={`grid gap-0 px-0 py-2.5 bg-juniper border-b-2 border-juniper-dark items-center ${gridClass}`}>
             <div className="text-xs font-bold text-black uppercase tracking-[0.1em] px-6">Test Case</div>
             {show3XX && <div className="text-xs font-bold text-black uppercase tracking-[0.1em] px-3 border-l border-juniper-dark/40">Units</div>}
-            <div className="flex flex-col gap-0.5 px-5 border-l border-juniper-dark/40">
-              <span className="text-xs font-semibold text-black uppercase tracking-[0.1em]">SRX 400</span>
-              <span className="font-jetbrains text-[11px] font-semibold text-black/60">{isSanity && selectedSanityRelease ? selectedSanityRelease : releases.srx400}</span>
-            </div>
-            <div className="flex flex-col gap-0.5 px-5 border-l border-juniper-dark/40">
-              <span className="text-xs font-semibold text-black uppercase tracking-[0.1em]">SRX 440</span>
-              <span className="font-jetbrains text-[11px] font-semibold text-black/60">{isSanity && selectedSanityRelease ? selectedSanityRelease : releases.srx440}</span>
-            </div>
+            {render400 && (
+              <div className="flex flex-col gap-0.5 px-5 border-l border-juniper-dark/40">
+                <span className="text-xs font-semibold text-black uppercase tracking-[0.1em]">SRX 400</span>
+                <span className="font-jetbrains text-[11px] font-semibold text-black/60">{isSanity && selectedSanityRelease ? selectedSanityRelease : releases.srx400}</span>
+              </div>
+            )}
+            {render440 && (
+              <div className="flex flex-col gap-0.5 px-5 border-l border-juniper-dark/40">
+                <span className="text-xs font-semibold text-black uppercase tracking-[0.1em]">SRX 440</span>
+                <span className="font-jetbrains text-[11px] font-semibold text-black/60">{isSanity && selectedSanityRelease ? selectedSanityRelease : releases.srx440}</span>
+              </div>
+            )}
             {show3XX ? (
               <>
                 {BRANCH_DEVICES.map((dev, i) => (
@@ -930,7 +954,7 @@ const DailySanityDashboard = () => {
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.35, delay: Math.min(idx * 0.03, 0.3), ease: 'easeOut' }}
-                                className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative ${show3XX ? 'grid-cols-[2.3fr_.75fr_1.4fr_1.4fr_repeat(5,1fr)]' : isSanity ? 'grid-cols-[5fr_3fr_3fr]' : 'grid-cols-[4fr_3fr_3fr_2fr]'} border-b border-juniper/30`}
+                                className={`grid gap-0 px-0 py-3 items-center group/row row-hover relative ${gridClass} border-b border-juniper/30`}
                                 style={{ fontVariantNumeric: 'tabular-nums' }}
                               >
 
@@ -959,6 +983,7 @@ const DailySanityDashboard = () => {
                                   </div>
                                 )}
 
+                                {render400 && (
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
                                   onMouseEnter={(e) => !show3XX && has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: capCpu(item.srx400.cpu), shm: item.srx400.shm })}
@@ -1001,7 +1026,9 @@ const DailySanityDashboard = () => {
                                     />
                                   )}
                                 </div>
+                                )}
 
+                                {render440 && (
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}
                                   onMouseEnter={(e) => !show3XX && has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: capCpu(item.srx440.cpu), shm: item.srx440.shm })}
@@ -1044,6 +1071,7 @@ const DailySanityDashboard = () => {
                                     />
                                   )}
                                 </div>
+                                )}
 
                                 {/* Last columns: Branch 3XX data OR Compare button OR Comments */}
                                 {show3XX ? (
