@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
@@ -8,6 +8,7 @@ import { API_BASE } from './config/api';
 import HistoryModal from './components/HistoryModal';
 import ChangelogBanner from './components/ChangelogBanner';
 import SanityOverviewChart from './components/SanityOverviewChart';
+import ReleaseTrendChart from './components/ReleaseTrendChart';
 import AnimatedMetric from './components/AnimatedMetric';
 import { normalizeTo90Cpu, calculatePercentageDiff, isScalingCategory } from './utils/normalize';
 
@@ -281,13 +282,13 @@ const DiffTooltip = ({ position, isVisible, data }) => {
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-400">SRX 400:</span>
             <span className="font-jetbrains text-sm font-semibold text-juniper">
-              {diff ? diff.val400 : val400 || '—'}
+              {diff ? diff.val400 : val400 || '-'}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-400">SRX 440:</span>
             <span className="font-jetbrains text-sm font-semibold text-blue-400">
-              {diff ? diff.val440 : val440 || '—'}
+              {diff ? diff.val440 : val440 || '-'}
             </span>
           </div>
           {diff && (
@@ -319,6 +320,151 @@ const getCategoryStyles = (category) => {
   if (lc.includes('scaling'))
     return { bg: 'bg-gradient-to-r from-juniper-light to-juniper-light', hover: 'hover:from-juniper-light hover:to-juniper/20', text: 'text-juniper-dark', border: 'border-juniper/30', accent: 'border-l-juniper', dot: 'bg-juniper', dotGlow: 'shadow-[0_0_10px_var(--color-juniper-glow)]', badge: 'bg-juniper-light text-juniper-dark border-juniper/30' };
   return { bg: 'bg-gradient-to-r from-violet-50 to-purple-50/80', hover: 'hover:from-violet-100 hover:to-purple-100/80', text: 'text-violet-700', border: 'border-violet-200', accent: 'border-l-violet-500', dot: 'bg-violet-500', dotGlow: 'shadow-[0_0_10px_rgba(139,92,246,0.6)]', badge: 'bg-violet-100 text-violet-700 border-violet-200' };
+};
+
+// ─── All-Releases Matrix Table ───────────────────────────────
+// Shows every daily-sanity test case (rows) against all releases (columns)
+// for a single device. The priority release (25.4X300-D10.2-EVO) is the
+// first data column; remaining releases follow in descending date order.
+const ReleaseMatrixTable = ({ device, label, releases }) => {
+  const matrix = useMemo(() => {
+    // Keep only releases that actually report data for this device.
+    const cols = releases.filter(r => !r.devices?.length || r.devices.includes(device));
+
+    // Build an ordered list of categories -> test cases from the union of all
+    // releases, preserving first-seen order (priority release first).
+    const categoryOrder = [];
+    const catMap = new Map(); // category -> { tests: string[], seen: Set }
+    for (const rel of cols) {
+      for (const section of rel.merged) {
+        if (!catMap.has(section.category)) {
+          catMap.set(section.category, { tests: [], seen: new Set() });
+          categoryOrder.push(section.category);
+        }
+        const entry = catMap.get(section.category);
+        for (const t of section.tests) {
+          if (!entry.seen.has(t.testCase)) {
+            entry.seen.add(t.testCase);
+            entry.tests.push(t.testCase);
+          }
+        }
+      }
+    }
+
+    // Per-release lookup: testCase -> device data ({ throughput, comments, ... }).
+    const lookups = cols.map(rel => {
+      const map = new Map();
+      for (const section of rel.merged) {
+        for (const t of section.tests) {
+          map.set(t.testCase, t[device] || null);
+        }
+      }
+      return map;
+    });
+
+    return { cols, categoryOrder, catMap, lookups };
+  }, [releases, device]);
+
+  if (matrix.cols.length === 0) return null;
+
+  return (
+    <div className="mt-6 rounded-2xl border border-juniper/30 bg-white shadow-sm overflow-hidden">
+      <div className="px-5 py-3 bg-gradient-to-r from-juniper to-juniper-dark">
+        <h3 className="text-sm font-bold text-white tracking-wide">{label} - All Releases</h3>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className="bg-juniper-light/60">
+              <th rowSpan={2} className="sticky left-0 z-20 bg-juniper-light/60 text-left px-6 py-2.5 font-semibold text-juniper-dark border-b border-juniper/30 w-64 min-w-[16rem]">
+                Test Case
+              </th>
+              <th rowSpan={2} className="sticky left-64 z-20 bg-juniper-light/60 text-left px-3 py-2.5 font-semibold text-juniper-dark border-b border-l border-juniper/30 w-20 min-w-[5rem]">
+                Units
+              </th>
+              {matrix.cols.map(rel => (
+                <th key={rel.release} colSpan={2} className="text-center px-5 py-2 font-jetbrains font-semibold text-juniper-dark border-b border-l border-juniper/30 whitespace-nowrap">
+                  {rel.release}
+                </th>
+              ))}
+            </tr>
+            <tr className="bg-juniper-light/40">
+              {matrix.cols.map(rel => (
+                <Fragment key={rel.release}>
+                  <th className="text-left px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-juniper-dark/80 border-b border-l border-juniper/30">
+                    Value
+                  </th>
+                  <th className="text-center px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-juniper-dark/80 border-b border-l border-juniper/30 min-w-[9rem]">
+                    PR
+                  </th>
+                </Fragment>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {matrix.categoryOrder.map(category => (
+              <Fragment key={category}>
+                <tr>
+                  <td colSpan={matrix.cols.length * 2 + 2} className="px-6 py-3 bg-slate-50/80 border-l-[3px] border-l-slate-300 text-sm font-bold tracking-tight text-slate-800 border-b border-juniper/30">
+                    {category}
+                  </td>
+                </tr>
+                {matrix.catMap.get(category).tests.map((testCase) => {
+                  const parsedByCol = matrix.lookups.map(lookup => {
+                    const data = lookup.get(testCase);
+                    return data?.throughput ? parseCompareMetric(data.throughput) : null;
+                  });
+                  const unitRef = parsedByCol.find(p => p?.rows?.length) || null;
+                  const unitRows = unitRef?.rows || [];
+                  return (
+                    <tr key={testCase} className="border-b border-juniper/30 row-hover">
+                      <td className="sticky left-0 z-10 bg-white px-6 py-3 border-b border-juniper/30 align-top">
+                        <span className="text-[13px] font-medium text-slate-700 leading-snug">{testCase}</span>
+                      </td>
+                      <td className="sticky left-64 z-10 bg-white px-3 py-3 border-b border-l border-juniper/30 align-top">
+                        {unitRef ? renderCompareMetricRows(unitRef, true) : <span className="text-[10px] text-slate-300 select-none">-</span>}
+                      </td>
+                      {matrix.lookups.map((lookup, cIdx) => {
+                        const data = lookup.get(testCase);
+                        const parsed = parsedByCol[cIdx];
+                        // Align each release's values to the shared unit rows so
+                        // missing values render a dash per row (double dash when
+                        // both KPPS and Mbps are absent).
+                        const valueRows = unitRows.length
+                          ? unitRows.map(u => {
+                              const match = parsed?.rows?.find(r => (r.label || '') === (u.label || ''));
+                              return match ? match.value : '-';
+                            })
+                          : [parsed?.rows?.[0]?.value || '-'];
+                        return (
+                          <Fragment key={matrix.cols[cIdx].release}>
+                            <td className="px-5 py-3 border-b border-l border-juniper/30 align-top" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              <div className="flex flex-col divide-y divide-juniper/15 leading-tight font-jetbrains text-[13px] font-semibold text-slate-800">
+                                {valueRows.map((v, i) => (
+                                  <div key={i} className="min-h-[24px] flex items-center py-0.5">
+                                    <span className={`whitespace-nowrap ${v === '-' ? 'text-slate-300 select-none' : ''}`}>{v}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 border-b border-l border-juniper/30 align-top text-center min-w-[9rem]">
+                              {(/PR[\s:#-]*\d{6,}/i.test(String(data?.comments || '')) || getPR(testCase))
+                                ? <CommentWithPR comment={data?.comments || ''} testCase={testCase} prOnly />
+                                : <span className="text-[11px] text-slate-300 select-none">-</span>}
+                            </td>
+                          </Fragment>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
 // ─── Main Component ──────────────────────────────────────────
@@ -978,7 +1124,7 @@ const DailySanityDashboard = () => {
                                 {show3XX && (
                                   <div className="px-3 border-l border-juniper/30 flex items-stretch">
                                     <div className="w-full">
-                                      {compareMetric ? renderCompareMetricRows(compareMetric, true) : <span className="text-[10px] text-slate-300 select-none">—</span>}
+                                      {compareMetric ? renderCompareMetricRows(compareMetric, true) : <span className="text-[10px] text-slate-300 select-none">-</span>}
                                     </div>
                                   </div>
                                 )}
@@ -1014,7 +1160,7 @@ const DailySanityDashboard = () => {
                                         </span>
                                       )
                                     ) : (
-                                      <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
+                                      <span className="font-jetbrains text-[13px] text-slate-300 select-none">-</span>
                                     );
                                   })()}
                                   {isSanity && <CommentWithPR comment={item.srx400.comments || comments} testCase={item.testCase} prOnly />}
@@ -1059,7 +1205,7 @@ const DailySanityDashboard = () => {
                                         </span>
                                       )
                                     ) : (
-                                      <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
+                                      <span className="font-jetbrains text-[13px] text-slate-300 select-none">-</span>
                                     );
                                   })()}
                                   {isSanity && <CommentWithPR comment={item.srx440.comments || comments} testCase={item.testCase} prOnly />}
@@ -1093,7 +1239,7 @@ const DailySanityDashboard = () => {
                                               )}
                                             </div>
                                           ) : (
-                                            <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                            <span className="font-jetbrains text-xs text-slate-300 select-none">-</span>
                                           )}
                                         </div>
                                       );
@@ -1104,7 +1250,7 @@ const DailySanityDashboard = () => {
                                     {comments ? (
                                       <CommentWithPR comment={comments} testCase={item.testCase} />
                                     ) : (
-                                      <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                      <span className="font-jetbrains text-xs text-slate-300 select-none">-</span>
                                     )}
                                   </div>
                                 ) : null}
@@ -1125,6 +1271,16 @@ const DailySanityDashboard = () => {
 
         {/* ── Performance Overview Chart (Daily Sanity only, hidden when normalized) ── */}
         {isSanity && !isNormalized && <SanityOverviewChart displayData={displayData} />}
+
+        {/* ── All-Releases Matrix Tables + Trend Charts (Daily Sanity only) ── */}
+        {isSanity && ds1Releases.length > 0 && (
+          <div className="mt-2 space-y-3">
+            <ReleaseMatrixTable device="srx400" label="SRX 400" releases={ds1Releases} />
+            <ReleaseTrendChart device="srx400" label="SRX 400" releases={ds1Releases} />
+            <ReleaseMatrixTable device="srx440" label="SRX 440" releases={ds1Releases} />
+            <ReleaseTrendChart device="srx440" label="SRX 440" releases={ds1Releases} />
+          </div>
+        )}
       </main>
 
       {/* Footer */}

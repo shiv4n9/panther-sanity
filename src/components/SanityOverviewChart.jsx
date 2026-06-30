@@ -109,8 +109,8 @@ const SanityOverviewChart = ({ displayData }) => {
             isCps,
             v400: v400 || 0,
             v440: v440 || 0,
-            label400: test.srx400.throughput || '—',
-            label440: test.srx440.throughput || '—',
+            label400: test.srx400.throughput || '-',
+            label440: test.srx440.throughput || '-',
           });
         }
       }
@@ -161,7 +161,7 @@ const SanityOverviewChart = ({ displayData }) => {
             </svg>
             Performance Overview
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">Daily Sanity — SRX 400 vs SRX 440 · Dual-Axis Scale</p>
+          <p className="text-xs text-slate-400 mt-0.5">Daily Sanity - SRX 400 vs SRX 440 · Dual-Axis Scale</p>
         </div>
         <div className="flex items-center gap-4 text-xs font-bold flex-wrap">
           <span className="flex items-center gap-1.5">
@@ -279,7 +279,7 @@ const SanityOverviewChart = ({ displayData }) => {
                   <animate attributeName="height" from="0" to={h400} dur="1.2s" fill="freeze" begin={delay400} calcMode="spline" keySplines="0.22 1 0.36 1" keyTimes="0;1" />
                   <animate attributeName="y" from={margin.top + plotH} to={y400} dur="1.2s" fill="freeze" begin={delay400} calcMode="spline" keySplines="0.22 1 0.36 1" keyTimes="0;1" />
                   <animate attributeName="opacity" from="0" to="1" dur="0.4s" fill="freeze" begin={delay400} />
-                  <title>{d.fullName} — SRX 400: {d.label400}</title>
+                  <title>{d.fullName} - SRX 400: {d.label400}</title>
                 </rect>
 
                 {/* SRX 440 bar (blue) */}
@@ -287,7 +287,7 @@ const SanityOverviewChart = ({ displayData }) => {
                   <animate attributeName="height" from="0" to={h440} dur="1.2s" fill="freeze" begin={delay440} calcMode="spline" keySplines="0.22 1 0.36 1" keyTimes="0;1" />
                   <animate attributeName="y" from={margin.top + plotH} to={y440} dur="1.2s" fill="freeze" begin={delay440} calcMode="spline" keySplines="0.22 1 0.36 1" keyTimes="0;1" />
                   <animate attributeName="opacity" from="0" to="1" dur="0.4s" fill="freeze" begin={delay440} />
-                  <title>{d.fullName} — SRX 440: {d.label440}</title>
+                  <title>{d.fullName} - SRX 440: {d.label440}</title>
                 </rect>
 
                 {/* Value labels on top of bars */}

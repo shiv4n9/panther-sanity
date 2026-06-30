@@ -96,7 +96,7 @@ const HistoryPanel = ({ isOpen, onClose, testCase, platform, category, currentVa
   };
 
   const TrendBadge = ({ trend, change }) => {
-    if (trend === 'stable') return <span className="text-xs text-slate-400 font-medium">—</span>;
+    if (trend === 'stable') return <span className="text-xs text-slate-400 font-medium">-</span>;
     const isUp = trend === 'up';
     return (
       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
@@ -290,14 +290,14 @@ const HistoryPanel = ({ isOpen, onClose, testCase, platform, category, currentVa
                           {row.cpu ? (
                             <span className="font-jetbrains text-xs text-orange-600 font-semibold">{row.cpu}</span>
                           ) : (
-                            <span className="text-xs text-slate-300">—</span>
+                            <span className="text-xs text-slate-300">-</span>
                           )}
                         </td>
                         <td className="px-5 py-3">
                           {row.shm ? (
                             <span className="font-jetbrains text-xs text-purple-600 font-semibold">{row.shm}</span>
                           ) : (
-                            <span className="text-xs text-slate-300">—</span>
+                            <span className="text-xs text-slate-300">-</span>
                           )}
                         </td>
                         <td className="px-5 py-3 text-right">
@@ -308,7 +308,7 @@ const HistoryPanel = ({ isOpen, onClose, testCase, platform, category, currentVa
                               {parseFloat(changePercent) >= 0 ? '▲' : '▼'} {Math.abs(changePercent)}%
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-300">—</span>
+                            <span className="text-xs text-slate-300">-</span>
                           )}
                         </td>
                       </tr>

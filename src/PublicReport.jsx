@@ -237,11 +237,11 @@ const DiffTooltip = ({ position, isVisible, data }) => {
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-400">SRX 400:</span>
-            <span className="font-jetbrains text-sm font-semibold text-juniper">{diff ? diff.val400 : val400 || '—'}</span>
+            <span className="font-jetbrains text-sm font-semibold text-juniper">{diff ? diff.val400 : val400 || '-'}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-400">SRX 440:</span>
-            <span className="font-jetbrains text-sm font-semibold text-blue-400">{diff ? diff.val440 : val440 || '—'}</span>
+            <span className="font-jetbrains text-sm font-semibold text-blue-400">{diff ? diff.val440 : val440 || '-'}</span>
           </div>
           {diff && (
             <div className="flex justify-between items-center pt-1.5 mt-0.5 border-t border-slate-700">
@@ -586,7 +586,7 @@ const PublicReport = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
               <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Release</div>
-                <div className="font-jetbrains text-sm font-bold text-slate-700">{selectedSanityRelease || releases.srx400 || '—'}</div>
+                <div className="font-jetbrains text-sm font-bold text-slate-700">{selectedSanityRelease || releases.srx400 || '-'}</div>
               </div>
               <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Platforms</div>
@@ -861,7 +861,7 @@ const PublicReport = () => {
                                 {show3XX && (
                                   <div className="px-3 border-l border-juniper/30 flex items-stretch">
                                     <div className="w-full">
-                                      {compareMetric ? renderCompareMetricRows(compareMetric, true) : <span className="text-[10px] text-slate-300 select-none">—</span>}
+                                      {compareMetric ? renderCompareMetricRows(compareMetric, true) : <span className="text-[10px] text-slate-300 select-none">-</span>}
                                     </div>
                                   </div>
                                 )}
@@ -883,7 +883,7 @@ const PublicReport = () => {
                                       </span>
                                     )
                                   ) : (
-                                    <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
+                                    <span className="font-jetbrains text-[13px] text-slate-300 select-none">-</span>
                                   )}
                                   {isSanity ? <CommentWithPR comment={item.srx400.comments || item.srx440.comments} testCase={item.testCase} prOnly /> : <CommentWithPR comment={item.srx400.comments || item.srx440.comments} testCase={item.testCase} />}
                                   {!show3XX && (
@@ -912,7 +912,7 @@ const PublicReport = () => {
                                       </span>
                                     )
                                   ) : (
-                                    <span className="font-jetbrains text-[13px] text-slate-300 select-none">—</span>
+                                    <span className="font-jetbrains text-[13px] text-slate-300 select-none">-</span>
                                   )}
                                   {isSanity ? <CommentWithPR comment={item.srx440.comments || item.srx400.comments} testCase={item.testCase} prOnly /> : <CommentWithPR comment={item.srx440.comments || item.srx400.comments} testCase={item.testCase} />}
                                   {!show3XX && (
@@ -941,7 +941,7 @@ const PublicReport = () => {
                                               )}
                                             </div>
                                           ) : (
-                                            <span className="font-jetbrains text-xs text-slate-300 select-none">—</span>
+                                            <span className="font-jetbrains text-xs text-slate-300 select-none">-</span>
                                           )}
                                         </div>
                                       );

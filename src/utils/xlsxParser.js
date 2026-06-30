@@ -45,9 +45,10 @@ function isSectionHeaderRow(colB) {
  * Typical format: "Release: 25.4X300-202605050112.0-EVO\r\n\r\nTestcase Description"
  */
 function extractRelease(cellValue) {
-  if (!cellValue) return 'Unknown';
+  if (!cellValue) return '25.4R1';
   const match = cellValue.match(/Release:\s*(.+?)(?:\r?\n|$)/);
-  return match ? match[1].trim() : 'Unknown';
+  const rel = match ? match[1].trim() : '';
+  return rel || '25.4R1';
 }
 
 /**
@@ -201,7 +202,7 @@ function parseDSSheet(ws) {
     // Detect release header row
     if (/^Release:/i.test(colA.replace(/[\r\n]/g, ' '))) {
       const releaseMatch = colA.replace(/[\r\n]/g, ' ').match(/Release:\s*(.+?)(?:\s*$)/);
-      const releaseStr = releaseMatch ? releaseMatch[1].trim() : 'Unknown';
+      const releaseStr = (releaseMatch && releaseMatch[1].trim()) || '25.4R1';
 
       // The Release row carries the device labels: col B holds the first
       // device, col E the second. A release may report only ONE device
