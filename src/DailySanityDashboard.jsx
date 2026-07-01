@@ -473,7 +473,7 @@ const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
     const baselineCellStyle = `${border}text-align:center;background:#eef3e0;color:#3f5417;font-weight:bold;white-space:nowrap;`;
     let html = `<table style="border-collapse:collapse;table-layout:fixed;font-family:Calibri,Arial,sans-serif;font-size:10pt;">`;
     html += `<colgroup><col style="width:280px;"><col style="width:90px;">${matrix.cols.map(() => '<col style="width:150px;">').join('')}</colgroup>`;
-    html += `<caption style="caption-side:top;text-align:left;font-weight:bold;padding:4px 0;">${escapeHtml(label)} — All Releases (all values in Mbps)</caption>`;
+    html += `<caption style="caption-side:top;text-align:left;font-weight:bold;padding:4px 0;">${escapeHtml(label)} — All Releases (Mbps for throughput; CPS/TPS for connection/transaction tests)</caption>`;
     html += `<thead><tr style="background:#84a63a;color:#000;">${headerCells
       .map((h, i) => `<th style="${border}text-align:left;${i === 1 ? baselineHeadBg : ''}">${escapeHtml(h)}</th>`)
       .join('')}</tr></thead><tbody>`;
@@ -487,7 +487,7 @@ const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
           const data = lookup.get(testCase);
           const val = data?.throughput ? mbpsDisplay(data.throughput) : null;
           const pr = resolvePR(testCase, data?.comments);
-          const style = pr ? `${border}text-align:center;color:#c00000;font-weight:bold;` : `${border}text-align:center;`;
+          const style = pr ? `${border}text-align:center;color:#DC2626;font-weight:bold;` : `${border}text-align:center;`;
           const cell = val ?? '-';
           html += `<td style="${style}">${escapeHtml(cell)}</td>`;
         }
@@ -517,7 +517,7 @@ const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
       <div className="px-5 py-3 bg-gradient-to-r from-juniper to-juniper-dark flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <h3 className="text-sm font-bold text-white tracking-wide">{label} - All Releases</h3>
-          <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest">Mbps</span>
+          <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest">Mbps · CPS · TPS</span>
         </div>
         <button
           onClick={copyToOutlook}
@@ -538,7 +538,7 @@ const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
         </button>
       </div>
       <div className="px-5 py-1.5 bg-juniper-light/40 border-b border-juniper/20 text-[11px] text-slate-500">
-        All values shown in <span className="font-semibold text-juniper-dark">Mbps</span>. Values in <span className="font-bold text-red-600">red</span> have a PR associated with them (click to open in GNATS).
+        Throughput values in <span className="font-semibold text-juniper-dark">Mbps</span>; connection/transaction tests in <span className="font-semibold text-juniper-dark">CPS/TPS</span>. Values in <span className="font-bold text-red-600">red</span> have a PR associated with them (click to open in GNATS).
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-xs">
@@ -694,8 +694,9 @@ const PRStatusTable = forwardRef(({ releases }, ref) => {
     html += `</tr></thead><tbody>`;
     for (const { pr } of prList) {
       const info = details[pr] || {};
+      const prUrl = `https://gnats.juniper.net/web/default/${encodeURIComponent(pr)}#description_tab`;
       html += `<tr>`;
-      html += `<td style="${border}font-weight:bold;color:#c00000;">PR ${escapeHtml(pr)}</td>`;
+      html += `<td style="${border}font-weight:bold;"><a href="${prUrl}" style="color:#0000FF;text-decoration:underline;font-weight:bold;">PR ${escapeHtml(pr)}</a></td>`;
       html += `<td style="${border}">${escapeHtml(info.description || '—')}</td>`;
       html += `<td style="${border}${nowrap}">${escapeHtml(info.status || 'Unknown')}</td>`;
       html += `<td style="${border}${nowrap}">${escapeHtml(info.responsible || '—')}</td>`;
