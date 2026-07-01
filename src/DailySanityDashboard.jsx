@@ -350,6 +350,45 @@ function mbpsDisplay(raw) {
   return Number.isInteger(v) ? String(v) : String(v);
 }
 
+// Produce a shorter, display-friendly test-case label without altering the
+// underlying data key (used for lookups/PR mapping). Only trims the verbose
+// UDP/IPSec throughput descriptions; other cases are returned unchanged.
+//   "IPSec(site-2-site) UDP throughput with IKEv2,PSK,AES-GCM256- Packet size IMIX(ratio ...)"
+//     -> "IPSec(site-2-site) - IKEv2,PSK,AES-GCM256 - IMIX"
+//   "Firewall UDP throughput- Packet size 64bytes" -> "Firewall UDP - 64bytes"
+function shortenTestCase(name) {
+  if (!name) return name;
+  const s = String(name).trim();
+
+  // Packet-size descriptor (word after "Packet size"), dropping "(ratio ...)".
+  const sizeMatch = s.match(/packet size\s*([^(]+?)(?:\s*\(|$)/i);
+  const size = sizeMatch ? sizeMatch[1].trim() : '';
+
+  const ipsec = s.match(/^(ipsec\(site-2-site\))\s+udp throughput with\s+(.*?)-\s*packet size/i);
+  if (ipsec) {
+    return `${ipsec[1]} - ${ipsec[2].trim()} - ${size || 'IMIX'}`;
+  }
+
+  const udp = s.match(/^(firewall udp|packet mode udp)\s+throughput-\s*packet size/i);
+  if (udp) {
+    const prefix = /packet mode/i.test(udp[1]) ? 'Packet mode UDP' : 'Firewall UDP';
+    return `${prefix} - ${size}`;
+  }
+
+  return s;
+}
+
+// Split a release name into wrapped display lines: the base image on the first
+// line and the build timestamp on the second (dropping the trailing "-EVO").
+//   "25.4X300-D10-202606040154.0-EVO" -> ["25.4X300-D10", "202606040154.0"]
+//   "25.4X300-D10.2-EVO"              -> ["25.4X300-D10.2"]
+function releaseLines(release) {
+  const s = String(release || '').replace(/-EVO$/i, '');
+  const m = s.match(/^(.*?)-(\d{12}[\d.]*)$/);
+  if (m) return [m[1], m[2]];
+  return [s];
+}
+
 // Escape a string for safe inclusion in generated clipboard HTML.
 function escapeHtml(str) {
   return String(str ?? '')
@@ -467,20 +506,27 @@ const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
 
   const buildOutlookHtml = () => {
     if (matrix.cols.length === 0) return '';
-    const headerCells = ['Test Case', 'Baseline', ...matrix.cols.map(c => c.release)];
+    const colCount = matrix.cols.length + 2;
     const border = 'border:1px solid #4a5f1e;padding:5px 9px;';
     const baselineHeadBg = 'background:#c5db8f;white-space:nowrap;';
     const baselineCellStyle = `${border}text-align:center;background:#eef3e0;color:#3f5417;font-weight:bold;white-space:nowrap;`;
     let html = `<table style="border-collapse:collapse;table-layout:fixed;font-family:Calibri,Arial,sans-serif;font-size:10pt;">`;
     html += `<colgroup><col style="width:280px;"><col style="width:90px;">${matrix.cols.map(() => '<col style="width:150px;">').join('')}</colgroup>`;
-    html += `<caption style="caption-side:top;text-align:left;font-weight:bold;padding:4px 0;">${escapeHtml(label)} — All Releases (Mbps for throughput; CPS/TPS for connection/transaction tests)</caption>`;
-    html += `<thead><tr style="background:#84a63a;color:#000;">${headerCells
-      .map((h, i) => `<th style="${border}text-align:left;${i === 1 ? baselineHeadBg : ''}">${escapeHtml(h)}</th>`)
-      .join('')}</tr></thead><tbody>`;
+    html += `<caption style="caption-side:top;text-align:left;padding:4px 0;">`;
+    html += `<div style="font-weight:bold;text-decoration:underline;">${escapeHtml(label)}</div>`;
+    html += `<div style="font-style:italic;font-size:9pt;">All values in Mbps , except CPS cases</div>`;
+    html += `<div style="font-style:italic;font-size:9pt;">Values in <span style="color:#DC2626;font-weight:bold;">red</span> have a <span style="color:#DC2626;font-weight:bold;">PR</span> associated with them</div>`;
+    html += `</caption>`;
+    let headHtml = `<th style="${border}text-align:left;">Test Case</th>`;
+    headHtml += `<th style="${border}text-align:left;${baselineHeadBg}">Baseline</th>`;
+    for (const c of matrix.cols) {
+      headHtml += `<th style="${border}text-align:left;">${releaseLines(c.release).map(escapeHtml).join('<br>')}</th>`;
+    }
+    html += `<thead><tr style="background:#84a63a;color:#000;">${headHtml}</tr></thead><tbody>`;
     for (const category of matrix.categoryOrder) {
-      html += `<tr style="background:#eef3e0;font-weight:bold;"><td colspan="${headerCells.length}" style="${border}">${escapeHtml(category)}</td></tr>`;
+      html += `<tr style="background:#eef3e0;font-weight:bold;"><td colspan="${colCount}" style="${border}">${escapeHtml(category)}</td></tr>`;
       for (const testCase of matrix.catMap.get(category).tests) {
-        html += `<tr><td style="${border}">${escapeHtml(testCase)}</td>`;
+        html += `<tr><td style="${border}">${escapeHtml(shortenTestCase(testCase))}</td>`;
         const base = baselineFor(testCase, category);
         html += `<td style="${baselineCellStyle}">${escapeHtml(base ?? '-')}</td>`;
         for (const lookup of matrix.lookups) {
@@ -538,7 +584,7 @@ const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
         </button>
       </div>
       <div className="px-5 py-1.5 bg-juniper-light/40 border-b border-juniper/20 text-[11px] text-slate-500">
-        Throughput values in <span className="font-semibold text-juniper-dark">Mbps</span>; connection/transaction tests in <span className="font-semibold text-juniper-dark">CPS/TPS</span>. Values in <span className="font-bold text-red-600">red</span> have a PR associated with them (click to open in GNATS).
+        All values in <span className="font-semibold text-juniper-dark">Mbps</span>, except <span className="font-semibold text-juniper-dark">CPS</span> cases. Values in <span className="font-bold text-red-600">red</span> have a PR associated with them (click to open in GNATS).
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-xs">
@@ -551,8 +597,10 @@ const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
                 Baseline
               </th>
               {matrix.cols.map(rel => (
-                <th key={rel.release} className="text-center px-5 py-2.5 font-jetbrains font-semibold text-juniper-dark border-b border-l border-juniper/30 whitespace-nowrap min-w-[9rem]">
-                  {rel.release}
+                <th key={rel.release} className="text-center px-5 py-2.5 font-jetbrains font-semibold text-juniper-dark border-b border-l border-juniper/30 min-w-[9rem] leading-tight">
+                  {releaseLines(rel.release).map((line, i) => (
+                    <div key={i} className={i === 0 ? '' : 'text-[11px] font-normal text-slate-500'}>{line}</div>
+                  ))}
                 </th>
               ))}
             </tr>
@@ -577,7 +625,7 @@ const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
                   return (
                     <tr key={testCase} className="border-b border-juniper/30 row-hover">
                       <td className="sticky left-0 z-10 bg-white px-6 py-3 border-b border-juniper/30 align-top">
-                        <span className="text-[13px] font-medium text-slate-700 leading-snug">{testCase}</span>
+                        <span className="text-[13px] font-medium text-slate-700 leading-snug" title={testCase}>{shortenTestCase(testCase)}</span>
                       </td>
                       <td className="sticky left-64 z-10 bg-lime-50/70 px-4 py-3 border-b border-l border-juniper/30 align-top text-center font-jetbrains text-[13px] font-semibold text-juniper-darker" style={{ fontVariantNumeric: 'tabular-nums' }}>
                         {baseline ?? <span className="text-slate-300 select-none">-</span>}
