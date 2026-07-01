@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, Fragment } from 'react';
+import { useState, useMemo, useEffect, useRef, useImperativeHandle, forwardRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loadDatasheet, mergeSheets } from './utils/xlsxParser';
@@ -359,7 +359,19 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-const ReleaseMatrixTable = ({ device, label, releases }) => {
+// Write rich HTML (with a plain-text fallback) to the clipboard so it can be
+// pasted as a formatted table into Outlook/Word.
+async function writeHtmlToClipboard(html) {
+  if (navigator.clipboard && window.ClipboardItem) {
+    const blob = new Blob([html], { type: 'text/html' });
+    const text = new Blob([html.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
+    await navigator.clipboard.write([new window.ClipboardItem({ 'text/html': blob, 'text/plain': text })]);
+  } else {
+    await navigator.clipboard.writeText(html);
+  }
+}
+
+const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
   const [copied, setCopied] = useState(false);
   const [collapsed, setCollapsed] = useState({});
   const toggleCategory = (cat) => setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
@@ -417,9 +429,8 @@ const ReleaseMatrixTable = ({ device, label, releases }) => {
     return mbpsDisplay(norm.value);
   };
 
-  if (matrix.cols.length === 0) return null;
-
-  const copyToOutlook = async () => {
+  const buildOutlookHtml = () => {
+    if (matrix.cols.length === 0) return '';
     const headerCells = ['Test Case', 'Baseline', ...matrix.cols.map(c => c.release)];
     const border = 'border:1px solid #4a5f1e;padding:5px 9px;';
     const baselineHeadBg = 'background:#c5db8f;white-space:nowrap;';
@@ -448,15 +459,16 @@ const ReleaseMatrixTable = ({ device, label, releases }) => {
       }
     }
     html += `</tbody></table>`;
+    return html;
+  };
 
+  useImperativeHandle(ref, () => ({ getOutlookHtml: buildOutlookHtml }));
+
+  if (matrix.cols.length === 0) return null;
+
+  const copyToOutlook = async () => {
     try {
-      if (navigator.clipboard && window.ClipboardItem) {
-        const blob = new Blob([html], { type: 'text/html' });
-        const text = new Blob([html.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
-        await navigator.clipboard.write([new window.ClipboardItem({ 'text/html': blob, 'text/plain': text })]);
-      } else {
-        await navigator.clipboard.writeText(html);
-      }
+      await writeHtmlToClipboard(buildOutlookHtml());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -569,7 +581,8 @@ const ReleaseMatrixTable = ({ device, label, releases }) => {
       </div>
     </div>
   );
-};
+});
+ReleaseMatrixTable.displayName = 'ReleaseMatrixTable';
 
 // ─── PR Status Table ─────────────────────────────────────────
 // Lists every PR referenced across all releases/devices, with description and
@@ -589,7 +602,7 @@ function statusStyle(status) {
   return STATUS_STYLES[key] || 'bg-slate-100 text-slate-500 border-slate-200';
 }
 
-const PRStatusTable = ({ releases }) => {
+const PRStatusTable = forwardRef(({ releases }, ref) => {
   const [details, setDetails] = useState(PR_DETAILS_FALLBACK); // pr -> { description, status }
   const [copied, setCopied] = useState(false);
 
@@ -625,11 +638,8 @@ const PRStatusTable = ({ releases }) => {
       .catch(() => setDetails(PR_DETAILS_FALLBACK));
   }, [prList]);
 
-  if (prList.length === 0) return null;
-
-  const gnatsUrl = (pr) => `https://gnats.juniper.net/web/default/${pr}#description_tab`;
-
-  const copyToOutlook = async () => {
+  const buildOutlookHtml = () => {
+    if (prList.length === 0) return '';
     const border = 'border:1px solid #b45309;padding:5px 9px;';
     const nowrap = 'white-space:nowrap;';
     const cols = [
@@ -656,14 +666,18 @@ const PRStatusTable = ({ releases }) => {
       html += `</tr>`;
     }
     html += `</tbody></table>`;
+    return html;
+  };
+
+  useImperativeHandle(ref, () => ({ getOutlookHtml: buildOutlookHtml }));
+
+  if (prList.length === 0) return null;
+
+  const gnatsUrl = (pr) => `https://gnats.juniper.net/web/default/${pr}#description_tab`;
+
+  const copyToOutlook = async () => {
     try {
-      if (navigator.clipboard && window.ClipboardItem) {
-        const blob = new Blob([html], { type: 'text/html' });
-        const text = new Blob([html.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
-        await navigator.clipboard.write([new window.ClipboardItem({ 'text/html': blob, 'text/plain': text })]);
-      } else {
-        await navigator.clipboard.writeText(html);
-      }
+      await writeHtmlToClipboard(buildOutlookHtml());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -735,7 +749,8 @@ const PRStatusTable = ({ releases }) => {
       </div>
     </div>
   );
-};
+});
+PRStatusTable.displayName = 'PRStatusTable';
 
 // ─── Main Component ──────────────────────────────────────────
 const DailySanityDashboard = () => {
@@ -760,6 +775,24 @@ const DailySanityDashboard = () => {
   const [flashedCells, setFlashedCells] = useState(new Set());
   const [visitorCount, setVisitorCount] = useState(null);
   const [showReleaseHint, setShowReleaseHint] = useState(false);
+  const srx400Ref = useRef(null);
+  const srx440Ref = useRef(null);
+  const prTableRef = useRef(null);
+  const [allCopied, setAllCopied] = useState(false);
+
+  const copyAllToOutlook = async () => {
+    const parts = [srx400Ref, srx440Ref, prTableRef]
+      .map(r => r.current?.getOutlookHtml?.())
+      .filter(Boolean);
+    if (parts.length === 0) return;
+    try {
+      await writeHtmlToClipboard(parts.join('<br/><br/>'));
+      setAllCopied(true);
+      setTimeout(() => setAllCopied(false), 2000);
+    } catch {
+      setAllCopied(false);
+    }
+  };
   const prevDataRef = useRef(null);
 
   const isSanity = activeView === 'sanity';
@@ -1553,9 +1586,28 @@ const DailySanityDashboard = () => {
         {/* ── All-Releases Matrix Tables (Daily Sanity only) ── */}
         {isSanity && ds1Releases.length > 0 && (
           <div className="mt-2 space-y-3">
-            <ReleaseMatrixTable device="srx400" label="SRX 400" releases={ds1Releases} />
-            <ReleaseMatrixTable device="srx440" label="SRX 440" releases={ds1Releases} />
-            <PRStatusTable releases={ds1Releases} />
+            <div className="flex justify-end">
+              <button
+                onClick={copyAllToOutlook}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#02838F] to-[#03a0ad] text-white text-[11px] font-bold uppercase tracking-wider shadow-sm hover:brightness-110 transition"
+                title="Copy the full report (SRX 400, SRX 440 and Open PRs) for pasting into Outlook"
+              >
+                {allCopied ? (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>
+                    Report Copied
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" /><path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.44A1.5 1.5 0 008.378 6H4.5z" /></svg>
+                    Copy Full Report
+                  </>
+                )}
+              </button>
+            </div>
+            <ReleaseMatrixTable ref={srx400Ref} device="srx400" label="SRX 400" releases={ds1Releases} />
+            <ReleaseMatrixTable ref={srx440Ref} device="srx440" label="SRX 440" releases={ds1Releases} />
+            <PRStatusTable ref={prTableRef} releases={ds1Releases} />
           </div>
         )}
       </main>
