@@ -38,6 +38,25 @@ PORT         = int(os.environ.get('PORT', 3001))
 HOST         = os.environ.get('HOST', '0.0.0.0')
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
+# ─── GNATS (PR tracker) config ────────────────────────────────
+# The PR-status endpoint proxies to the GNATS REST API
+# (https://gnats.juniper.net:9443). Auth uses a JWT bearer token. Provide EITHER
+# a ready-made token OR a username/password the backend can use to mint one:
+#   - GNATS_BEARER_TOKEN : a pre-generated bearer token (skips token minting).
+#   - GNATS_USERNAME + GNATS_PASSWORD : credentials used against
+#     /api/generate-bearer-token to obtain (and auto-refresh) a token.
+# Everything is optional so the endpoint degrades gracefully (returns empty
+# details) when nothing is configured.
+GNATS_BASE_URL     = os.environ.get('GNATS_BASE_URL', 'https://gnats.juniper.net:9443').rstrip('/')
+GNATS_BEARER_TOKEN = os.environ.get('GNATS_BEARER_TOKEN', '')
+GNATS_USERNAME     = os.environ.get('GNATS_USERNAME', '')
+GNATS_PASSWORD     = os.environ.get('GNATS_PASSWORD', '')
+GNATS_TIMEOUT      = int(os.environ.get('GNATS_TIMEOUT', 12))
+GNATS_VERIFY_SSL   = os.environ.get('GNATS_VERIFY_SSL', 'true').lower() != 'false'
+GNATS_CACHE_TTL    = int(os.environ.get('GNATS_CACHE_TTL', 900))  # seconds
+_gnats_cache = {}          # pr -> {"data": {...}, "ts": epoch}
+_gnats_token = {'value': GNATS_BEARER_TOKEN or None}
+
 os.makedirs(CSV_DIR, exist_ok=True)
 
 # ─── Database Helpers ─────────────────────────────────────────
@@ -1052,6 +1071,168 @@ def visit_count():
     except Exception as e:
         logger.error(f"visit-count error: {e}")
         return jsonify({'total': 0, 'today': 0, 'unique': 0, 'unique_today': 0}), 200
+
+
+def _gnats_get_token(force=False):
+    """Return a GNATS bearer token, minting one from username/password if needed.
+
+    Caches the token in-process. Set force=True to re-mint (e.g. after a 401).
+    Returns None if no credentials are configured or minting fails.
+    """
+    if not force and _gnats_token['value']:
+        return _gnats_token['value']
+    # A pre-supplied token can't be re-minted; nothing more to do.
+    if GNATS_BEARER_TOKEN and not force:
+        return GNATS_BEARER_TOKEN
+    if not (GNATS_USERNAME and GNATS_PASSWORD):
+        return _gnats_token['value']  # may be a pre-supplied token or None
+    try:
+        import requests
+        resp = requests.get(
+            f'{GNATS_BASE_URL}/api/generate-bearer-token',
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
+            auth=(GNATS_USERNAME, GNATS_PASSWORD),
+            timeout=GNATS_TIMEOUT,
+            verify=GNATS_VERIFY_SSL,
+        )
+        token = None
+        # The token may arrive as a cookie or in the JSON body — handle both.
+        for c in resp.cookies:
+            if c.value and c.value.count('.') >= 2:  # looks like a JWT
+                token = c.value
+                break
+        if not token and resp.cookies:
+            token = list(resp.cookies)[0].value
+        if not token:
+            try:
+                body = resp.json()
+                token = body.get('token') or body.get('bearer') or body.get('access_token')
+            except Exception:
+                pass
+        if token:
+            _gnats_token['value'] = token
+            return token
+        logger.warning(f"GNATS token generation returned no token (HTTP {resp.status_code})")
+    except Exception as e:
+        logger.warning(f"GNATS token generation failed: {e}")
+    return _gnats_token['value']
+
+
+def _extract_pr_records(data):
+    """Normalize the /api/view-prs response into a list of PR field dicts."""
+    if isinstance(data, list):
+        records = data
+    elif isinstance(data, dict):
+        if isinstance(data.get('prs'), list):
+            records = data['prs']
+        elif isinstance(data.get('PRs'), list):
+            records = data['PRs']
+        elif all(isinstance(v, dict) for v in data.values()) and data:
+            records = list(data.values())
+        else:
+            records = [data]
+    else:
+        return []
+    out = []
+    for rec in records:
+        if isinstance(rec, dict):
+            # Some responses nest the PR fields under a "PR" key.
+            pr = rec.get('PR') if isinstance(rec.get('PR'), dict) else rec
+            out.append({str(k).lower(): v for k, v in pr.items()})
+    return out
+
+
+def _fetch_prs_from_gnats(prs):
+    """Batch-look up PRs via GNATS /api/view-prs.
+
+    Returns { pr_number: {"description", "status"} } for whatever resolves.
+    Degrades to {} when GNATS is unconfigured or unreachable.
+    """
+    if not prs:
+        return {}
+    token = _gnats_get_token()
+    if not token:
+        return {}
+
+    import requests
+    payload = {'fields': 'Number State Synopsis Responsible', 'pr-list': ' '.join(str(p) for p in prs)}
+
+    def _call(tok):
+        return requests.post(
+            f'{GNATS_BASE_URL}/api/view-prs',
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {tok}',
+            },
+            json=payload,
+            timeout=GNATS_TIMEOUT,
+            verify=GNATS_VERIFY_SSL,
+        )
+
+    try:
+        resp = _call(token)
+        if resp.status_code in (401, 403):
+            token = _gnats_get_token(force=True)  # token likely expired — refresh once
+            if token:
+                resp = _call(token)
+        if not resp.ok:
+            logger.warning(f"GNATS view-prs HTTP {resp.status_code}: {resp.text[:200]}")
+            return {}
+        records = _extract_pr_records(resp.json())
+    except Exception as e:
+        logger.warning(f"GNATS view-prs failed: {e}")
+        return {}
+
+    result = {}
+    for rec in records:
+        number = str(rec.get('number') or rec.get('pr') or '').strip()
+        if not number:
+            continue
+        result[number] = {
+            'description': str(rec.get('synopsis') or '').strip(),
+            'status':      str(rec.get('state') or '').strip(),
+            'responsible': str(rec.get('responsible') or '').strip(),
+        }
+    return result
+
+
+@app.route('/api/pr-status', methods=['GET'])
+def pr_status():
+    """Return description + status for a comma-separated list of PR numbers.
+
+    Query param:  ?prs=1940446,1954277
+    Response:     { "1940446": {"description": "...", "status": "open"}, ... }
+
+    PRs that cannot be resolved (or when GNATS is not configured) are simply
+    omitted from the map, letting the frontend fall back to just the PR number.
+    """
+    raw = request.args.get('prs', '')
+    prs = [p.strip() for p in raw.split(',') if p.strip()]
+    # De-duplicate while preserving order.
+    seen, unique = set(), []
+    for p in prs:
+        if p not in seen:
+            seen.add(p)
+            unique.append(p)
+
+    now = time.time()
+    result = {}
+    missing = []
+    for pr in unique:
+        cached = _gnats_cache.get(pr)
+        if cached and (now - cached['ts'] < GNATS_CACHE_TTL):
+            result[pr] = cached['data']
+        else:
+            missing.append(pr)
+
+    if missing:
+        fetched = _fetch_prs_from_gnats(missing)
+        for pr, info in fetched.items():
+            _gnats_cache[pr] = {'data': info, 'ts': now}
+            result[pr] = info
+
+    return jsonify(result), 200
 
 
 @app.errorhandler(500)

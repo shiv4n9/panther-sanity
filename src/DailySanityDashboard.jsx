@@ -8,9 +8,8 @@ import { API_BASE } from './config/api';
 import HistoryModal from './components/HistoryModal';
 import ChangelogBanner from './components/ChangelogBanner';
 import SanityOverviewChart from './components/SanityOverviewChart';
-import ReleaseTrendChart from './components/ReleaseTrendChart';
 import AnimatedMetric from './components/AnimatedMetric';
-import { normalizeTo90Cpu, calculatePercentageDiff, isScalingCategory } from './utils/normalize';
+import { normalizeTo90Cpu, calculatePercentageDiff, isScalingCategory, extractMbpsValue } from './utils/normalize';
 
 // ─── PR Links for known blocked test cases ───────────────────
 const PR_LINKS = [
@@ -19,6 +18,19 @@ const PR_LINKS = [
     pr: '1940446',
   },
 ];
+
+// ─── Local PR details fallback ────────────────────────────────
+// Used until the GNATS REST API access is granted. Sourced from the GNATS
+// PR export XML (synopsis + state). Once the live API returns data, it
+// overrides these entries automatically.
+const PR_DETAILS_FALLBACK = {
+  '1954277': {
+    description:
+      '25.4X300-202604190112.0-EVO: Packet drops are seen during rekey while doing ipsec performance test, observing NIC drops at high CPU (~90%)',
+    status: 'Open',
+    responsible: 'mingl',
+  },
+};
 
 const PRIORITY_SANITY_RELEASE = '25.4X300-D10.2-EVO';
 
@@ -324,9 +336,34 @@ const getCategoryStyles = (category) => {
 
 // ─── All-Releases Matrix Table ───────────────────────────────
 // Shows every daily-sanity test case (rows) against all releases (columns)
-// for a single device. The priority release (25.4X300-D10.2-EVO) is the
-// first data column; remaining releases follow in descending date order.
+// for a single device, in Mbps only. The first data column is a Baseline
+// (D10.2 image normalized to 90% CPU). Values with an associated PR are shown
+// in red and link to GNATS. The priority release (25.4X300-D10.2-EVO) is the
+// first release column; remaining releases follow in descending date order.
+
+// Extract the Mbps display value from a raw throughput string, formatted for
+// display. Falls back to the sole numeric value for non-throughput metrics
+// (e.g. pure CPS test cases) so their numbers are not dropped.
+function mbpsDisplay(raw) {
+  const v = extractMbpsValue(raw);
+  if (v === null) return null;
+  return Number.isInteger(v) ? String(v) : String(v);
+}
+
+// Escape a string for safe inclusion in generated clipboard HTML.
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 const ReleaseMatrixTable = ({ device, label, releases }) => {
+  const [copied, setCopied] = useState(false);
+  const [collapsed, setCollapsed] = useState({});
+  const toggleCategory = (cat) => setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
+
   const matrix = useMemo(() => {
     // Keep only releases that actually report data for this device.
     const cols = releases.filter(r => !r.devices?.length || r.devices.includes(device));
@@ -362,104 +399,337 @@ const ReleaseMatrixTable = ({ device, label, releases }) => {
       return map;
     });
 
-    return { cols, categoryOrder, catMap, lookups };
+    // Baseline lookup: the D10.2 priority release for this device.
+    const priorityIndex = cols.findIndex(c => c.release === PRIORITY_SANITY_RELEASE);
+    const baselineLookup = priorityIndex >= 0 ? lookups[priorityIndex] : null;
+
+    return { cols, categoryOrder, catMap, lookups, baselineLookup };
   }, [releases, device]);
+
+  // Baseline = D10.2 throughput normalized to 90% CPU, in Mbps. Scaling
+  // categories are never CPU-normalized.
+  const baselineFor = (testCase, category) => {
+    const data = matrix.baselineLookup?.get(testCase);
+    if (!data?.throughput) return null;
+    const norm = isScalingCategory(category)
+      ? { value: data.throughput }
+      : normalizeTo90Cpu(data.throughput, data.cpu);
+    return mbpsDisplay(norm.value);
+  };
 
   if (matrix.cols.length === 0) return null;
 
+  const copyToOutlook = async () => {
+    const headerCells = ['Test Case', 'Baseline', ...matrix.cols.map(c => c.release)];
+    const border = 'border:1px solid #4a5f1e;padding:5px 9px;';
+    const baselineHeadBg = 'background:#c5db8f;white-space:nowrap;';
+    const baselineCellStyle = `${border}text-align:center;background:#eef3e0;color:#3f5417;font-weight:bold;white-space:nowrap;`;
+    let html = `<table style="border-collapse:collapse;table-layout:fixed;font-family:Calibri,Arial,sans-serif;font-size:10pt;">`;
+    html += `<colgroup><col style="width:280px;"><col style="width:90px;">${matrix.cols.map(() => '<col style="width:150px;">').join('')}</colgroup>`;
+    html += `<caption style="caption-side:top;text-align:left;font-weight:bold;padding:4px 0;">${escapeHtml(label)} — All Releases (all values in Mbps)</caption>`;
+    html += `<thead><tr style="background:#84a63a;color:#000;">${headerCells
+      .map((h, i) => `<th style="${border}text-align:left;${i === 1 ? baselineHeadBg : ''}">${escapeHtml(h)}</th>`)
+      .join('')}</tr></thead><tbody>`;
+    for (const category of matrix.categoryOrder) {
+      html += `<tr style="background:#eef3e0;font-weight:bold;"><td colspan="${headerCells.length}" style="${border}">${escapeHtml(category)}</td></tr>`;
+      for (const testCase of matrix.catMap.get(category).tests) {
+        html += `<tr><td style="${border}">${escapeHtml(testCase)}</td>`;
+        const base = baselineFor(testCase, category);
+        html += `<td style="${baselineCellStyle}">${escapeHtml(base ?? '-')}</td>`;
+        for (const lookup of matrix.lookups) {
+          const data = lookup.get(testCase);
+          const val = data?.throughput ? mbpsDisplay(data.throughput) : null;
+          const pr = resolvePR(testCase, data?.comments);
+          const style = pr ? `${border}text-align:center;color:#c00000;font-weight:bold;` : `${border}text-align:center;`;
+          const cell = val ?? '-';
+          html += `<td style="${style}">${escapeHtml(cell)}</td>`;
+        }
+        html += `</tr>`;
+      }
+    }
+    html += `</tbody></table>`;
+
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const blob = new Blob([html], { type: 'text/html' });
+        const text = new Blob([html.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
+        await navigator.clipboard.write([new window.ClipboardItem({ 'text/html': blob, 'text/plain': text })]);
+      } else {
+        await navigator.clipboard.writeText(html);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   return (
     <div className="mt-6 rounded-2xl border border-juniper/30 bg-white shadow-sm overflow-hidden">
-      <div className="px-5 py-3 bg-gradient-to-r from-juniper to-juniper-dark">
-        <h3 className="text-sm font-bold text-white tracking-wide">{label} - All Releases</h3>
+      <div className="px-5 py-3 bg-gradient-to-r from-juniper to-juniper-dark flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <h3 className="text-sm font-bold text-white tracking-wide">{label} - All Releases</h3>
+          <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest">Mbps</span>
+        </div>
+        <button
+          onClick={copyToOutlook}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 text-juniper-darker text-[11px] font-bold uppercase tracking-wider shadow-sm hover:bg-white transition-colors"
+          title="Copy this table as a formatted table you can paste into Outlook"
+        >
+          {copied ? (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+              Copied
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+              Copy to Outlook
+            </>
+          )}
+        </button>
+      </div>
+      <div className="px-5 py-1.5 bg-juniper-light/40 border-b border-juniper/20 text-[11px] text-slate-500">
+        All values shown in <span className="font-semibold text-juniper-dark">Mbps</span>. Values in <span className="font-bold text-red-600">red</span> have a PR associated with them (click to open in GNATS).
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-juniper-light/60">
-              <th rowSpan={2} className="sticky left-0 z-20 bg-juniper-light/60 text-left px-6 py-2.5 font-semibold text-juniper-dark border-b border-juniper/30 w-64 min-w-[16rem]">
+              <th className="sticky left-0 z-20 bg-juniper-light/60 text-left px-6 py-2.5 font-semibold text-juniper-dark border-b border-juniper/30 w-64 min-w-[16rem]">
                 Test Case
               </th>
-              <th rowSpan={2} className="sticky left-64 z-20 bg-juniper-light/60 text-left px-3 py-2.5 font-semibold text-juniper-dark border-b border-l border-juniper/30 w-20 min-w-[5rem]">
-                Units
+              <th className="sticky left-64 z-20 bg-lime-100/80 text-center px-4 py-2.5 font-semibold text-juniper-darker border-b border-l border-juniper/30 min-w-[8rem]">
+                Baseline
               </th>
               {matrix.cols.map(rel => (
-                <th key={rel.release} colSpan={2} className="text-center px-5 py-2 font-jetbrains font-semibold text-juniper-dark border-b border-l border-juniper/30 whitespace-nowrap">
+                <th key={rel.release} className="text-center px-5 py-2.5 font-jetbrains font-semibold text-juniper-dark border-b border-l border-juniper/30 whitespace-nowrap min-w-[9rem]">
                   {rel.release}
                 </th>
               ))}
             </tr>
-            <tr className="bg-juniper-light/40">
-              {matrix.cols.map(rel => (
-                <Fragment key={rel.release}>
-                  <th className="text-left px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-juniper-dark/80 border-b border-l border-juniper/30">
-                    Value
-                  </th>
-                  <th className="text-center px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-juniper-dark/80 border-b border-l border-juniper/30 min-w-[9rem]">
-                    PR
-                  </th>
-                </Fragment>
-              ))}
-            </tr>
           </thead>
           <tbody>
-            {matrix.categoryOrder.map(category => (
+            {matrix.categoryOrder.map(category => {
+              const isExpanded = !collapsed[category];
+              return (
               <Fragment key={category}>
-                <tr>
-                  <td colSpan={matrix.cols.length * 2 + 2} className="px-6 py-3 bg-slate-50/80 border-l-[3px] border-l-slate-300 text-sm font-bold tracking-tight text-slate-800 border-b border-juniper/30">
-                    {category}
+                <tr onClick={() => toggleCategory(category)} className="cursor-pointer select-none hover:bg-slate-100/80">
+                  <td colSpan={matrix.cols.length + 2} className="px-6 py-3 bg-slate-50/80 border-l-[3px] border-l-slate-300 text-sm font-bold tracking-tight text-slate-800 border-b border-juniper/30">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-5 h-5 rounded flex items-center justify-center bg-white border border-juniper/40 shadow-sm transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}>
+                        <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                      </span>
+                      <span>{category}</span>
+                    </div>
                   </td>
                 </tr>
-                {matrix.catMap.get(category).tests.map((testCase) => {
-                  const parsedByCol = matrix.lookups.map(lookup => {
-                    const data = lookup.get(testCase);
-                    return data?.throughput ? parseCompareMetric(data.throughput) : null;
-                  });
-                  const unitRef = parsedByCol.find(p => p?.rows?.length) || null;
-                  const unitRows = unitRef?.rows || [];
+                {isExpanded && matrix.catMap.get(category).tests.map((testCase) => {
+                  const baseline = baselineFor(testCase, category);
                   return (
                     <tr key={testCase} className="border-b border-juniper/30 row-hover">
                       <td className="sticky left-0 z-10 bg-white px-6 py-3 border-b border-juniper/30 align-top">
                         <span className="text-[13px] font-medium text-slate-700 leading-snug">{testCase}</span>
                       </td>
-                      <td className="sticky left-64 z-10 bg-white px-3 py-3 border-b border-l border-juniper/30 align-top">
-                        {unitRef ? renderCompareMetricRows(unitRef, true) : <span className="text-[10px] text-slate-300 select-none">-</span>}
+                      <td className="sticky left-64 z-10 bg-lime-50/70 px-4 py-3 border-b border-l border-juniper/30 align-top text-center font-jetbrains text-[13px] font-semibold text-juniper-darker" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {baseline ?? <span className="text-slate-300 select-none">-</span>}
                       </td>
                       {matrix.lookups.map((lookup, cIdx) => {
                         const data = lookup.get(testCase);
-                        const parsed = parsedByCol[cIdx];
-                        // Align each release's values to the shared unit rows so
-                        // missing values render a dash per row (double dash when
-                        // both KPPS and Mbps are absent).
-                        const valueRows = unitRows.length
-                          ? unitRows.map(u => {
-                              const match = parsed?.rows?.find(r => (r.label || '') === (u.label || ''));
-                              return match ? match.value : '-';
-                            })
-                          : [parsed?.rows?.[0]?.value || '-'];
+                        const val = data?.throughput ? mbpsDisplay(data.throughput) : null;
+                        const pr = resolvePR(testCase, data?.comments);
                         return (
-                          <Fragment key={matrix.cols[cIdx].release}>
-                            <td className="px-5 py-3 border-b border-l border-juniper/30 align-top" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                              <div className="flex flex-col divide-y divide-juniper/15 leading-tight font-jetbrains text-[13px] font-semibold text-slate-800">
-                                {valueRows.map((v, i) => (
-                                  <div key={i} className="min-h-[24px] flex items-center py-0.5">
-                                    <span className={`whitespace-nowrap ${v === '-' ? 'text-slate-300 select-none' : ''}`}>{v}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 border-b border-l border-juniper/30 align-top text-center min-w-[9rem]">
-                              {(/PR[\s:#-]*\d{6,}/i.test(String(data?.comments || '')) || getPR(testCase))
-                                ? <CommentWithPR comment={data?.comments || ''} testCase={testCase} prOnly />
-                                : <span className="text-[11px] text-slate-300 select-none">-</span>}
-                            </td>
-                          </Fragment>
+                          <td key={matrix.cols[cIdx].release} className="px-5 py-3 border-b border-l border-juniper/30 align-top text-center font-jetbrains text-[13px] font-semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {val === null ? (
+                              <span className="text-slate-300 select-none">-</span>
+                            ) : pr ? (
+                              <a
+                                href={`https://gnats.juniper.net/web/default/${pr}#description_tab`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-bold text-red-600 hover:underline"
+                                title={`Blocked by PR ${pr} — open in GNATS`}
+                              >
+                                {val}
+                              </a>
+                            ) : (
+                              <span className="text-slate-800">{val}</span>
+                            )}
+                          </td>
                         );
                       })}
                     </tr>
                   );
                 })}
               </Fragment>
-            ))}
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ─── PR Status Table ─────────────────────────────────────────
+// Lists every PR referenced across all releases/devices, with description and
+// current status pulled from GNATS (via the backend proxy). Degrades
+// gracefully to just the PR number + affected test cases if GNATS is
+// unreachable or not yet configured.
+const STATUS_STYLES = {
+  open: 'bg-red-50 text-red-700 border-red-200',
+  analyzed: 'bg-amber-50 text-amber-700 border-amber-200',
+  'in-progress': 'bg-blue-50 text-blue-700 border-blue-200',
+  resolved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  closed: 'bg-slate-100 text-slate-600 border-slate-200',
+};
+
+function statusStyle(status) {
+  const key = String(status || '').toLowerCase().replace(/\s+/g, '-');
+  return STATUS_STYLES[key] || 'bg-slate-100 text-slate-500 border-slate-200';
+}
+
+const PRStatusTable = ({ releases }) => {
+  const [details, setDetails] = useState(PR_DETAILS_FALLBACK); // pr -> { description, status }
+  const [copied, setCopied] = useState(false);
+
+  // Collect unique PRs referenced anywhere, with the test cases they block.
+  const prList = useMemo(() => {
+    const map = new Map(); // pr -> Set(testCase)
+    for (const rel of releases) {
+      for (const section of rel.merged || []) {
+        for (const t of section.tests || []) {
+          // One PR per test case: a PR mentioned in either device's comment
+          // takes precedence; only fall back to the hardcoded mapping if none.
+          const commentPR = getPRFromComment(t.srx400?.comments) || getPRFromComment(t.srx440?.comments);
+          const pr = commentPR || getPR(t.testCase);
+          if (pr) {
+            if (!map.has(pr)) map.set(pr, new Set());
+            map.get(pr).add(t.testCase);
+          }
+        }
+      }
+    }
+    return [...map.entries()]
+      .map(([pr, tcs]) => ({ pr, testCases: [...tcs] }))
+      .sort((a, b) => a.pr.localeCompare(b.pr));
+  }, [releases]);
+
+  // Fetch descriptions/statuses from the GNATS proxy.
+  useEffect(() => {
+    if (prList.length === 0) return;
+    const prs = prList.map(p => p.pr).join(',');
+    fetch(`${API_BASE}/api/pr-status?prs=${encodeURIComponent(prs)}`)
+      .then(r => (r.ok ? r.json() : {}))
+      .then(d => setDetails({ ...PR_DETAILS_FALLBACK, ...(d && typeof d === 'object' ? d : {}) }))
+      .catch(() => setDetails(PR_DETAILS_FALLBACK));
+  }, [prList]);
+
+  if (prList.length === 0) return null;
+
+  const gnatsUrl = (pr) => `https://gnats.juniper.net/web/default/${pr}#description_tab`;
+
+  const copyToOutlook = async () => {
+    const border = 'border:1px solid #b45309;padding:5px 9px;';
+    const nowrap = 'white-space:nowrap;';
+    const cols = [
+      { h: 'PR', w: '90px', nowrap: false },
+      { h: 'Description', w: '520px', nowrap: false },
+      { h: 'Status', w: '90px', nowrap: true },
+      { h: 'Responsible', w: '130px', nowrap: true },
+    ];
+    let html = `<table style="border-collapse:collapse;table-layout:fixed;font-family:Calibri,Arial,sans-serif;font-size:10pt;">`;
+    html += `<colgroup>${cols.map(c => `<col style="width:${c.w};">`).join('')}</colgroup>`;
+    html += `<caption style="caption-side:top;text-align:left;font-weight:bold;padding:4px 0;">Open PRs</caption>`;
+    html += `<thead><tr style="background:#c00000;color:#fff;">`;
+    for (const c of cols) {
+      html += `<th style="${border}text-align:left;${c.nowrap ? nowrap : ''}">${escapeHtml(c.h)}</th>`;
+    }
+    html += `</tr></thead><tbody>`;
+    for (const { pr } of prList) {
+      const info = details[pr] || {};
+      html += `<tr>`;
+      html += `<td style="${border}font-weight:bold;color:#c00000;">PR ${escapeHtml(pr)}</td>`;
+      html += `<td style="${border}">${escapeHtml(info.description || '—')}</td>`;
+      html += `<td style="${border}${nowrap}">${escapeHtml(info.status || 'Unknown')}</td>`;
+      html += `<td style="${border}${nowrap}">${escapeHtml(info.responsible || '—')}</td>`;
+      html += `</tr>`;
+    }
+    html += `</tbody></table>`;
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const blob = new Blob([html], { type: 'text/html' });
+        const text = new Blob([html.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
+        await navigator.clipboard.write([new window.ClipboardItem({ 'text/html': blob, 'text/plain': text })]);
+      } else {
+        await navigator.clipboard.writeText(html);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
+      <div className="px-5 py-3 bg-gradient-to-r from-[#02838F] to-[#03a0ad] flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <h3 className="text-sm font-bold text-white tracking-wide">Open PRs</h3>
+          <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest">{prList.length}</span>
+        </div>
+        <button
+          onClick={copyToOutlook}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 text-[#02838F] text-[11px] font-bold uppercase tracking-wider shadow-sm hover:bg-white transition-colors"
+          title="Copy this table as a formatted table you can paste into Outlook"
+        >
+          {copied ? (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+              Copied
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+              Copy to Outlook
+            </>
+          )}
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className="bg-red-50/80">
+              <th className="text-left px-5 py-2.5 font-semibold text-[#02838F] border-b border-red-200 w-28 min-w-[7rem]">PR</th>
+              <th className="text-left px-5 py-2.5 font-semibold text-[#02838F] border-b border-l border-red-200 min-w-[18rem]">Description</th>
+              <th className="text-left px-5 py-2.5 font-semibold text-[#02838F] border-b border-l border-red-200 w-32 min-w-[8rem]">Status</th>
+              <th className="text-left px-5 py-2.5 font-semibold text-[#02838F] border-b border-l border-red-200 min-w-[16rem]">Responsible</th>
+            </tr>
+          </thead>
+          <tbody>
+            {prList.map(({ pr }) => {
+              const info = details[pr] || {};
+              return (
+                <tr key={pr} className="border-b border-red-100 row-hover align-top">
+                  <td className="px-5 py-3 border-b border-red-100 align-top">
+                    <a href={gnatsUrl(pr)} target="_blank" rel="noopener noreferrer" className="font-bold text-red-600 hover:underline font-jetbrains" title={`Open PR ${pr} in GNATS`}>
+                      PR {pr}
+                    </a>
+                  </td>
+                  <td className="px-5 py-3 border-b border-l border-red-100 align-top text-slate-700 leading-snug">
+                    {info.description || <span className="text-slate-400 italic">Fetching from GNATS…</span>}
+                  </td>
+                  <td className="px-5 py-3 border-b border-l border-red-100 align-top">
+                    <span className={`inline-block px-2 py-0.5 rounded-md border text-[11px] font-bold uppercase tracking-wide ${statusStyle(info.status)}`}>
+                      {info.status || 'Unknown'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 border-b border-l border-red-100 align-top text-[12px] text-slate-600 leading-snug">
+                    {info.responsible || <span className="text-slate-400">—</span>}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -549,13 +819,21 @@ const DailySanityDashboard = () => {
 
         // DS-1 release data for Daily Sanity view
         if (data.ds1 && data.ds1.length > 0) {
-          const orderedDs1 = [...data.ds1].sort((a, b) => {
-            if (a.release === PRIORITY_SANITY_RELEASE) return -1;
-            if (b.release === PRIORITY_SANITY_RELEASE) return 1;
-            return 0;
-          });
+          // Release columns are ordered by build date, newest first. The date
+          // comes from the embedded YYYYMMDDHHMM timestamp in the release name;
+          // named builds without a timestamp use an explicit known date.
+          const NAMED_RELEASE_DATES = { '25.4X300-D10.2-EVO': 202606140000 };
+          const releaseTimestamp = (name) => {
+            if (NAMED_RELEASE_DATES[name]) return NAMED_RELEASE_DATES[name];
+            const m = String(name || '').match(/(\d{12})/);
+            return m ? Number(m[1]) : 0;
+          };
+          const orderedDs1 = [...data.ds1].sort(
+            (a, b) => releaseTimestamp(b.release) - releaseTimestamp(a.release)
+          );
           setDs1Releases(orderedDs1);
-          setSelectedSanityRelease(orderedDs1[0].release);
+          const defaultRel = orderedDs1.find(r => r.release === PRIORITY_SANITY_RELEASE) || orderedDs1[0];
+          setSelectedSanityRelease(defaultRel.release);
         }
 
         // Expand all sections by default
@@ -1272,13 +1550,12 @@ const DailySanityDashboard = () => {
         {/* ── Performance Overview Chart (Daily Sanity only, hidden when normalized) ── */}
         {isSanity && !isNormalized && <SanityOverviewChart displayData={displayData} />}
 
-        {/* ── All-Releases Matrix Tables + Trend Charts (Daily Sanity only) ── */}
+        {/* ── All-Releases Matrix Tables (Daily Sanity only) ── */}
         {isSanity && ds1Releases.length > 0 && (
           <div className="mt-2 space-y-3">
             <ReleaseMatrixTable device="srx400" label="SRX 400" releases={ds1Releases} />
-            <ReleaseTrendChart device="srx400" label="SRX 400" releases={ds1Releases} />
             <ReleaseMatrixTable device="srx440" label="SRX 440" releases={ds1Releases} />
-            <ReleaseTrendChart device="srx440" label="SRX 440" releases={ds1Releases} />
+            <PRStatusTable releases={ds1Releases} />
           </div>
         )}
       </main>

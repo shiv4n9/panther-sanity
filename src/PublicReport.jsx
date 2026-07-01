@@ -292,13 +292,21 @@ const PublicReport = () => {
 
         // DS-1 release data for Daily Sanity view
         if (data.ds1 && data.ds1.length > 0) {
-          const orderedDs1 = [...data.ds1].sort((a, b) => {
-            if (a.release === PRIORITY_SANITY_RELEASE) return -1;
-            if (b.release === PRIORITY_SANITY_RELEASE) return 1;
-            return 0;
-          });
+          // Release columns are ordered by build date, newest first. The date
+          // comes from the embedded YYYYMMDDHHMM timestamp in the release name;
+          // named builds without a timestamp use an explicit known date.
+          const NAMED_RELEASE_DATES = { '25.4X300-D10.2-EVO': 202606140000 };
+          const releaseTimestamp = (name) => {
+            if (NAMED_RELEASE_DATES[name]) return NAMED_RELEASE_DATES[name];
+            const m = String(name || '').match(/(\d{12})/);
+            return m ? Number(m[1]) : 0;
+          };
+          const orderedDs1 = [...data.ds1].sort(
+            (a, b) => releaseTimestamp(b.release) - releaseTimestamp(a.release)
+          );
           setDs1Releases(orderedDs1);
-          setSelectedSanityRelease(orderedDs1[0].release);
+          const defaultRel = orderedDs1.find(r => r.release === PRIORITY_SANITY_RELEASE) || orderedDs1[0];
+          setSelectedSanityRelease(defaultRel.release);
         }
 
         // Expand all sections by default
