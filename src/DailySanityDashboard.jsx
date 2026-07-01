@@ -361,14 +361,50 @@ function escapeHtml(str) {
 
 // Write rich HTML (with a plain-text fallback) to the clipboard so it can be
 // pasted as a formatted table into Outlook/Word.
-async function writeHtmlToClipboard(html) {
-  if (navigator.clipboard && window.ClipboardItem) {
-    const blob = new Blob([html], { type: 'text/html' });
-    const text = new Blob([html.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
-    await navigator.clipboard.write([new window.ClipboardItem({ 'text/html': blob, 'text/plain': text })]);
-  } else {
-    await navigator.clipboard.writeText(html);
+// Copies rich HTML to the clipboard so it pastes as a formatted table in
+// Outlook/Word. Uses the async Clipboard API in secure contexts (HTTPS or
+// localhost) and falls back to a selection + execCommand approach for plain
+// HTTP servers, where navigator.clipboard is unavailable.
+function legacyCopyHtml(html) {
+  const container = document.createElement('div');
+  container.setAttribute('contenteditable', 'true');
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.style.opacity = '0';
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(container);
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
   }
+  selection.removeAllRanges();
+  document.body.removeChild(container);
+  return ok;
+}
+
+async function writeHtmlToClipboard(html) {
+  if (window.isSecureContext && navigator.clipboard && window.ClipboardItem) {
+    try {
+      const blob = new Blob([html], { type: 'text/html' });
+      const text = new Blob([html.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
+      await navigator.clipboard.write([new window.ClipboardItem({ 'text/html': blob, 'text/plain': text })]);
+      return;
+    } catch {
+      // Fall through to the legacy path below.
+    }
+  }
+  if (legacyCopyHtml(html)) return;
+  throw new Error('Clipboard copy failed');
 }
 
 const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
