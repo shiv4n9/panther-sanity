@@ -510,13 +510,15 @@ const ReleaseMatrixTable = forwardRef(({ device, label, releases }, ref) => {
     const border = 'border:1px solid #4a5f1e;padding:5px 9px;';
     const baselineHeadBg = 'background:#c5db8f;white-space:nowrap;';
     const baselineCellStyle = `${border}text-align:center;background:#eef3e0;color:#3f5417;font-weight:bold;white-space:nowrap;`;
-    let html = `<table style="border-collapse:collapse;table-layout:fixed;font-family:Calibri,Arial,sans-serif;font-size:10pt;">`;
-    html += `<colgroup><col style="width:280px;"><col style="width:90px;">${matrix.cols.map(() => '<col style="width:150px;">').join('')}</colgroup>`;
-    html += `<caption style="caption-side:top;text-align:left;padding:4px 0;">`;
+    // Outlook/Word drops <caption>, so emit the title + notes as block-level
+    // <div>s directly before the table instead.
+    let html = `<div style="font-family:Calibri,Arial,sans-serif;font-size:10pt;">`;
     html += `<div style="font-weight:bold;text-decoration:underline;">${escapeHtml(label)}</div>`;
     html += `<div style="font-style:italic;font-size:9pt;">All values in Mbps , except CPS cases</div>`;
     html += `<div style="font-style:italic;font-size:9pt;">Values in <span style="color:#DC2626;font-weight:bold;">red</span> have a <span style="color:#DC2626;font-weight:bold;">PR</span> associated with them</div>`;
-    html += `</caption>`;
+    html += `</div>`;
+    html += `<table style="border-collapse:collapse;table-layout:fixed;font-family:Calibri,Arial,sans-serif;font-size:10pt;">`;
+    html += `<colgroup><col style="width:280px;"><col style="width:90px;">${matrix.cols.map(() => '<col style="width:150px;">').join('')}</colgroup>`;
     let headHtml = `<th style="${border}text-align:left;">Test Case</th>`;
     headHtml += `<th style="${border}text-align:left;${baselineHeadBg}">Baseline</th>`;
     for (const c of matrix.cols) {
@@ -734,7 +736,7 @@ const PRStatusTable = forwardRef(({ releases }, ref) => {
     ];
     let html = `<table style="border-collapse:collapse;table-layout:fixed;font-family:Calibri,Arial,sans-serif;font-size:10pt;">`;
     html += `<colgroup>${cols.map(c => `<col style="width:${c.w};">`).join('')}</colgroup>`;
-    html += `<caption style="caption-side:top;text-align:left;font-weight:bold;padding:4px 0;">Open PRs</caption>`;
+    html = `<div style="font-family:Calibri,Arial,sans-serif;font-size:10pt;font-weight:bold;text-decoration:underline;">Open PRs</div>` + html;
     html += `<thead><tr style="background:#c00000;color:#fff;">`;
     for (const c of cols) {
       html += `<th style="${border}text-align:left;${c.nowrap ? nowrap : ''}">${escapeHtml(c.h)}</th>`;
