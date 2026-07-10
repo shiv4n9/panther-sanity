@@ -8,12 +8,7 @@ import SanityOverviewChart from './components/SanityOverviewChart';
 import { API_BASE } from './config/api';
 
 // ─── PR Links for known blocked test cases ───────────────────
-const PR_LINKS = [
-  {
-    match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256/i.test(tc),
-    pr: '1940446',
-  },
-];
+const PR_LINKS = [];
 
 const PRIORITY_SANITY_RELEASE = '25.4X300-D10.2-EVO';
 
