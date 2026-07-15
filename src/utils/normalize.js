@@ -22,6 +22,19 @@ export function isScalingCategory(category) {
  * @returns {{ value: string, wasNormalized: boolean }}
  */
 export function normalizeTo90Cpu(metric, cpuStr) {
+  return normalizeToTargetCpu(metric, cpuStr, 90, { onlyIfCpuAboveTarget: true });
+}
+
+/**
+ * Scales throughput metrics to a provided CPU target using linear scaling.
+ *
+ * @param {string} metric
+ * @param {string} cpuStr
+ * @param {number} targetCpu
+ * @param {{ onlyIfCpuAboveTarget?: boolean }} options
+ * @returns {{ value: string, wasNormalized: boolean }}
+ */
+export function normalizeToTargetCpu(metric, cpuStr, targetCpu, options = {}) {
   // Guard: no metric or no CPU → pass through
   if (!metric || !cpuStr) {
     return { value: metric, wasNormalized: false };
@@ -34,20 +47,29 @@ export function normalizeTo90Cpu(metric, cpuStr) {
   }
 
   const cpu = parseInt(cpuMatch[1], 10);
+  const target = Number(targetCpu);
 
-  // Condition 1: CPU <= 90 or invalid → pass through
-  if (isNaN(cpu) || cpu <= 90) {
+  if (isNaN(cpu) || isNaN(target) || target <= 0) {
     return { value: metric, wasNormalized: false };
   }
 
-  // Condition 2: CPU > 90 → scale down
-  const factor = 90 / cpu;
+  // Optional behavior for existing 90%-only normalization.
+  if (options.onlyIfCpuAboveTarget && cpu <= target) {
+    return { value: metric, wasNormalized: false };
+  }
+
+  if (cpu === target) {
+    return { value: metric, wasNormalized: false };
+  }
+
+  // Scale all numeric components to the selected CPU target.
+  const factor = target / cpu;
 
   const normalized = metric.replace(/[\d]+\.?\d*/g, (match) => {
     const original = parseFloat(match);
     if (isNaN(original)) return match;
 
-    const scaled = (original / cpu) * 90;
+    const scaled = original * factor;
 
     // Rounding: integer → integer, decimal → 1 decimal place
     if (match.includes('.')) {

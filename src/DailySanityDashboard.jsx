@@ -9,15 +9,15 @@ import HistoryModal from './components/HistoryModal';
 import ChangelogBanner from './components/ChangelogBanner';
 import SanityOverviewChart from './components/SanityOverviewChart';
 import AnimatedMetric from './components/AnimatedMetric';
-import { normalizeTo90Cpu, calculatePercentageDiff, isScalingCategory, extractMbpsValue } from './utils/normalize';
+import { normalizeTo90Cpu, normalizeToTargetCpu, calculatePercentageDiff, isScalingCategory, extractMbpsValue } from './utils/normalize';
 
 // ─── PR Links for known blocked test cases ───────────────────
-const PR_LINKS = [];
-
-// ─── PRs that have been resolved ──────────────────────────────
-// These are excluded from the "Open PRs" table even if still
-// referenced in the datasheet comments.
-const RESOLVED_PRS = new Set(['1954277']);
+const PR_LINKS = [
+  {
+    match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256/i.test(tc),
+    pr: '1940446',
+  },
+];
 
 // ─── Local PR details fallback ────────────────────────────────
 // Used until the GNATS REST API access is granted. Sourced from the GNATS
@@ -702,7 +702,7 @@ const PRStatusTable = forwardRef(({ releases }, ref) => {
           // takes precedence; only fall back to the hardcoded mapping if none.
           const commentPR = getPRFromComment(t.srx400?.comments) || getPRFromComment(t.srx440?.comments);
           const pr = commentPR || getPR(t.testCase);
-          if (pr && !RESOLVED_PRS.has(pr)) {
+          if (pr) {
             if (!map.has(pr)) map.set(pr, new Set());
             map.get(pr).add(t.testCase);
           }
@@ -856,6 +856,8 @@ const DailySanityDashboard = () => {
   const [historyModal, setHistoryModal] = useState({ open: false, testCase: '', platform: '', category: '', value: '' });
   const [isNormalized, setIsNormalized] = useState(false);
   const [isOptimized, setIsOptimized] = useState(false);
+  const [srx400CpuOverride, setSrx400CpuOverride] = useState(null);
+  const [srx440CpuOverride, setSrx440CpuOverride] = useState(null);
   const [changelogRefresh, setChangelogRefresh] = useState(0);
   const [ds1Releases, setDs1Releases] = useState([]);       // [{ release, merged }]
   const [selectedSanityRelease, setSelectedSanityRelease] = useState('');
@@ -884,6 +886,29 @@ const DailySanityDashboard = () => {
 
   const isSanity = activeView === 'sanity';
   const show3XX = isSanity && showCompare;
+  const hasCpuOverride = srx400CpuOverride !== null || srx440CpuOverride !== null;
+  const disableModeToggles = hasCpuOverride;
+  const disableCpuAdjusters = isNormalized || isOptimized;
+
+  const handleNormalizeToggle = () => {
+    if (disableModeToggles) return;
+    setIsNormalized(prev => !prev);
+  };
+
+  const handleOptimizedToggle = () => {
+    if (disableModeToggles) return;
+    setIsOptimized(prev => !prev);
+  };
+
+  const handleCpuOverrideChange = (platform, value) => {
+    if (disableCpuAdjusters) return;
+    const parsed = value === 'none' ? null : parseInt(value, 10);
+    if (platform === 'srx400') {
+      setSrx400CpuOverride(parsed);
+      return;
+    }
+    setSrx440CpuOverride(parsed);
+  };
 
   // Which devices the selected DS-1 release actually reports. A release may
   // carry data for only one device — in that case we render just that column
@@ -918,8 +943,9 @@ const DailySanityDashboard = () => {
     try { localStorage.setItem('seenReleaseHint', '1'); } catch { /* ignore */ }
   };
 
-  // Cap CPU display to 90% when normalization is active
-  const capCpu = (cpuStr) => {
+  // Show the effective CPU reference currently applied to displayed metrics.
+  const capCpu = (cpuStr, overrideCpu = null) => {
+    if (overrideCpu !== null) return `${overrideCpu}%`;
     if (!isNormalized || !cpuStr) return cpuStr;
     const m = cpuStr.match(/(\d+)/);
     if (!m) return cpuStr;
@@ -1278,13 +1304,17 @@ const DailySanityDashboard = () => {
             </button>
           </div>
 
-          {/* Right — Toggle Switches in matching pill container */}
-          <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg shadow-juniper/20 border border-juniper/30 gap-1 overflow-visible">
+            {/* Right — Toggle Switches + Full Regression CPU adjusters */}
+            <div className="flex items-center gap-2">
+            <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg shadow-juniper/20 border border-juniper/30 gap-1 overflow-visible">
             {/* Normalize CPU Toggle */}
             <div className="relative group/norm">
-            <label className="flex items-center gap-2 cursor-pointer select-none px-4 py-2 rounded-full transition-all duration-300 hover:bg-slate-50">
+              <label
+                className={`flex items-center gap-2 select-none px-4 py-2 rounded-full transition-all duration-300 ${disableModeToggles ? 'opacity-45 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-50'}`}
+                title={disableModeToggles ? 'Clear SRX CPU overrides to enable Normalize CPU' : undefined}
+              >
               <div
-                onClick={() => setIsNormalized(!isNormalized)}
+                  onClick={handleNormalizeToggle}
                 className={`relative w-9 h-[18px] rounded-full transition-colors duration-300 ${isNormalized ? 'bg-amber-500' : 'bg-slate-300'}`}
               >
                 <div className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] bg-white rounded-full shadow-sm transition-transform duration-300 ${isNormalized ? 'translate-x-[18px]' : ''}`} />
@@ -1303,9 +1333,12 @@ const DailySanityDashboard = () => {
             </div>
 
             {/* Optimized View Toggle */}
-            <label className="flex items-center gap-2 cursor-pointer select-none px-4 py-2 rounded-full transition-all duration-300 hover:bg-slate-50">
+              <label
+                className={`flex items-center gap-2 select-none px-4 py-2 rounded-full transition-all duration-300 ${disableModeToggles ? 'opacity-45 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-50'}`}
+                title={disableModeToggles ? 'Clear SRX CPU overrides to enable Optimized View' : undefined}
+              >
               <div
-                onClick={() => setIsOptimized(!isOptimized)}
+                  onClick={handleOptimizedToggle}
                 className={`relative w-9 h-[18px] rounded-full transition-colors duration-300 ${isOptimized ? 'bg-juniper' : 'bg-slate-300'}`}
               >
                 <div className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] bg-white rounded-full shadow-sm transition-transform duration-300 ${isOptimized ? 'translate-x-[18px]' : ''}`} />
@@ -1318,6 +1351,7 @@ const DailySanityDashboard = () => {
               </span>
             </label>
           </div>
+            </div>
         </div>
 
         {/* Search Bar */}
@@ -1425,6 +1459,56 @@ const DailySanityDashboard = () => {
             )}
           </div>
 
+            {/* Regression-only CPU adjuster row aligned to table columns */}
+            {activeView === 'regression' && (
+              <div className={`grid gap-0 px-0 py-2 bg-slate-50 border-b border-juniper/25 items-center ${gridClass}`}>
+                <div className="px-6 text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                  CPU Target Adjusters
+                </div>
+                {render400 && (
+                  <div className="px-5 border-l border-juniper/20">
+                    <div className="inline-flex items-center gap-1.5 rounded-md border border-juniper/25 bg-juniper-light/40 px-2 py-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-juniper-darker">SRX 400 CPU</span>
+                      <select
+                        disabled={disableCpuAdjusters}
+                        value={srx400CpuOverride === null ? 'none' : String(srx400CpuOverride)}
+                        onChange={(e) => handleCpuOverrideChange('srx400', e.target.value)}
+                        className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${disableCpuAdjusters ? 'bg-slate-200 border-slate-300 text-slate-500 cursor-not-allowed' : 'bg-white border-juniper/30 text-slate-700'}`}
+                        title={disableCpuAdjusters ? 'Turn off Normalize CPU and Optimized View to use SRX 400 CPU override' : 'Adjust SRX 400 throughput to selected CPU target'}
+                      >
+                        <option value="none">Clear/None</option>
+                        <option value="60">60%</option>
+                        <option value="65">65%</option>
+                        <option value="70">70%</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+                {render440 && (
+                  <div className="px-5 border-l border-juniper/20">
+                    <div className="inline-flex items-center gap-1.5 rounded-md border border-blue-200/80 bg-blue-50/70 px-2 py-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">SRX 440 CPU</span>
+                      <select
+                        disabled={disableCpuAdjusters}
+                        value={srx440CpuOverride === null ? 'none' : String(srx440CpuOverride)}
+                        onChange={(e) => handleCpuOverrideChange('srx440', e.target.value)}
+                        className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${disableCpuAdjusters ? 'bg-slate-200 border-slate-300 text-slate-500 cursor-not-allowed' : 'bg-white border-blue-200 text-slate-700'}`}
+                        title={disableCpuAdjusters ? 'Turn off Normalize CPU and Optimized View to use SRX 440 CPU override' : 'Adjust SRX 440 throughput to selected CPU target'}
+                      >
+                        <option value="none">Clear/None</option>
+                        <option value="70">70%</option>
+                        <option value="75">75%</option>
+                        <option value="80">80%</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+                <div className="px-5 border-l border-juniper/20 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  {disableCpuAdjusters ? 'Disable Normalize/Optimized to edit' : 'Set per-platform CPU targets'}
+                </div>
+              </div>
+            )}
+
           {/* Table Body — Accordion Sections */}
           <div className="flex flex-col bg-white">
             {displayData.length === 0 ? (
@@ -1482,10 +1566,21 @@ const DailySanityDashboard = () => {
                             const comments = item.srx440.comments || item.srx400.comments || '';
                             const branch = getBranchComparison(item.testCase);
 
-                            // CPU normalization — skip scaling/capacity sections
-                            const shouldNormalize = isNormalized && !isScalingCategory(section.category);
-                            const norm400 = shouldNormalize && has400 ? normalizeTo90Cpu(item.srx400.throughput, item.srx400.cpu) : { value: item.srx400.throughput, wasNormalized: false };
-                            const norm440 = shouldNormalize && has440 ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu) : { value: item.srx440.throughput, wasNormalized: false };
+                              // CPU transforms are disabled for scaling/capacity sections.
+                              const canAdjustCpu = !isScalingCategory(section.category);
+                              const shouldNormalize = isNormalized && canAdjustCpu;
+                              const adjusted400 = canAdjustCpu && has400 && srx400CpuOverride !== null
+                                ? normalizeToTargetCpu(item.srx400.throughput, item.srx400.cpu, srx400CpuOverride)
+                                : null;
+                              const adjusted440 = canAdjustCpu && has440 && srx440CpuOverride !== null
+                                ? normalizeToTargetCpu(item.srx440.throughput, item.srx440.cpu, srx440CpuOverride)
+                                : null;
+                              const norm400 = adjusted400 || (shouldNormalize && has400
+                                ? normalizeTo90Cpu(item.srx400.throughput, item.srx400.cpu)
+                                : { value: item.srx400.throughput, wasNormalized: false });
+                              const norm440 = adjusted440 || (shouldNormalize && has440
+                                ? normalizeTo90Cpu(item.srx440.throughput, item.srx440.cpu)
+                                : { value: item.srx440.throughput, wasNormalized: false });
                             const mbpsOnly = !!branch?.mbpsOnly;
                             const parsed400 = show3XX ? (mbpsOnly ? filterToMbps(parseCompareMetric(norm400.value, branch?.sourceMetric)) : parseCompareMetric(norm400.value, branch?.sourceMetric)) : null;
                             const parsed440 = show3XX ? (mbpsOnly ? filterToMbps(parseCompareMetric(norm440.value, branch?.sourceMetric)) : parseCompareMetric(norm440.value, branch?.sourceMetric)) : null;
@@ -1530,7 +1625,7 @@ const DailySanityDashboard = () => {
                                 {render400 && (
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`400-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => !show3XX && has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: capCpu(item.srx400.cpu), shm: item.srx400.shm })}
+                                    onMouseEnter={(e) => !show3XX && has400 && handleCellEnter(e, `400-${sIdx}-${idx}`, { cpu: capCpu(item.srx400.cpu, canAdjustCpu ? srx400CpuOverride : null), shm: item.srx400.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {(() => {
@@ -1541,7 +1636,7 @@ const DailySanityDashboard = () => {
                                             norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-juniper-dark'
                                           }`}
                                           onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
-                                          title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
+                                            title={norm400.wasNormalized ? (adjusted400 ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Adjusted to ${srx400CpuOverride}% CPU` : `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%`) : undefined}
                                         >
                                           {renderCompareMetricRows(parsed400, false)}
                                         </div>
@@ -1551,7 +1646,7 @@ const DailySanityDashboard = () => {
                                             norm400.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-juniper-dark'
                                           }`}
                                           onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX400', category: section.category, value: item.srx400.throughput })}
-                                          title={norm400.wasNormalized ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%` : undefined}
+                                            title={norm400.wasNormalized ? (adjusted400 ? `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Adjusted to ${srx400CpuOverride}% CPU` : `Raw: ${item.srx400.throughput} @ ${item.srx400.cpu} CPU → Normalized to 90%`) : undefined}
                                         >
                                           {norm400.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
                                           <AnimatedMetric value={norm400.value} />
@@ -1575,7 +1670,7 @@ const DailySanityDashboard = () => {
                                 {render440 && (
                                 <div
                                   className={`flex flex-col justify-center gap-1 px-5 border-l border-juniper/30 ${flashedCells.has(`440-${item.testCase}`) ? 'diff-flash' : ''}`}
-                                  onMouseEnter={(e) => !show3XX && has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: capCpu(item.srx440.cpu), shm: item.srx440.shm })}
+                                    onMouseEnter={(e) => !show3XX && has440 && handleCellEnter(e, `440-${sIdx}-${idx}`, { cpu: capCpu(item.srx440.cpu, canAdjustCpu ? srx440CpuOverride : null), shm: item.srx440.shm })}
                                   onMouseLeave={() => setHoveredCell(null)}
                                 >
                                   {(() => {
@@ -1586,7 +1681,7 @@ const DailySanityDashboard = () => {
                                             norm440.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-blue-600'
                                           }`}
                                           onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
-                                          title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
+                                            title={norm440.wasNormalized ? (adjusted440 ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Adjusted to ${srx440CpuOverride}% CPU` : `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%`) : undefined}
                                         >
                                           {renderCompareMetricRows(parsed440, false)}
                                         </div>
@@ -1596,7 +1691,7 @@ const DailySanityDashboard = () => {
                                             norm440.wasNormalized ? 'text-amber-700 hover:text-amber-800' : 'text-slate-800 hover:text-blue-600'
                                           }`}
                                           onClick={() => setHistoryModal({ open: true, testCase: item.testCase, platform: 'SRX440', category: section.category, value: item.srx440.throughput })}
-                                          title={norm440.wasNormalized ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%` : undefined}
+                                            title={norm440.wasNormalized ? (adjusted440 ? `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Adjusted to ${srx440CpuOverride}% CPU` : `Raw: ${item.srx440.throughput} @ ${item.srx440.cpu} CPU → Normalized to 90%`) : undefined}
                                         >
                                           {norm440.wasNormalized && <span className="text-amber-500 mr-1">⚡</span>}
                                           <AnimatedMetric value={norm440.value} />
