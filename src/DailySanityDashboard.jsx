@@ -12,12 +12,7 @@ import AnimatedMetric from './components/AnimatedMetric';
 import { normalizeTo90Cpu, normalizeToTargetCpu, calculatePercentageDiff, isScalingCategory, extractMbpsValue } from './utils/normalize';
 
 // ─── PR Links for known blocked test cases ───────────────────
-const PR_LINKS = [
-  {
-    match: (tc) => /^ipsec\(site-2-site\)\s+udp throughput with.*aes-gcm256/i.test(tc),
-    pr: '1940446',
-  },
-];
+const PR_LINKS = [];
 
 // ─── Local PR details fallback ────────────────────────────────
 // Used until the GNATS REST API access is granted. Sourced from the GNATS
