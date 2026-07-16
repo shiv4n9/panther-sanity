@@ -1784,7 +1784,10 @@ const DailySanityDashboard = () => {
             </div>
             <ReleaseMatrixTable ref={srx400Ref} device="srx400" label="SRX 400" releases={ds1Releases} />
             <ReleaseMatrixTable ref={srx440Ref} device="srx440" label="SRX 440" releases={ds1Releases} />
-            <PRStatusTable ref={prTableRef} releases={ds1Releases.filter(r => r.release === selectedSanityRelease)} />
+            {/* Open PRs are driven by the latest release only. A PR referenced
+                in an older release but absent from the latest is considered
+                fixed/closed and is therefore not shown. */}
+            <PRStatusTable ref={prTableRef} releases={ds1Releases.slice(0, 1)} />
           </div>
         )}
       </main>
