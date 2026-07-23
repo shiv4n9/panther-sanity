@@ -1073,6 +1073,97 @@ def visit_count():
         return jsonify({'total': 0, 'today': 0, 'unique': 0, 'unique_today': 0}), 200
 
 
+# ─── Datasheet Publish review sign-off ────────────────────────
+ALLOWED_APPROVERS = {'Anand Thulasiram', 'Jagadeesh Rajashekharaiah Yaliyur', 'Geetha BK', 'Antony Ruban Alexis', 'Ramasubramaniam Ganesan'}
+ALLOWED_STATUSES = {'approved', 'not_approved', 'pending'}
+
+
+def _ensure_approvals_table(cur):
+    """Create the approvals table if it does not exist (idempotent)."""
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS datasheet_approvals (
+            approver    TEXT PRIMARY KEY,
+            status      TEXT NOT NULL DEFAULT 'pending',
+            comment     TEXT DEFAULT '',
+            updated_at  TIMESTAMPTZ DEFAULT NOW()
+        )
+        """
+    )
+
+
+@app.route('/api/datasheet-approvals', methods=['GET'])
+def get_datasheet_approvals():
+    """Return the current review sign-off state for the Datasheet Publish sheet."""
+    if not DATABASE_URL:
+        return jsonify({'approvals': []}), 200
+    try:
+        conn = get_db()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                _ensure_approvals_table(cur)
+                cur.execute(
+                    "SELECT approver, status, comment, updated_at FROM datasheet_approvals"
+                )
+                rows = cur.fetchall()
+            conn.commit()
+        finally:
+            put_db(conn)
+        approvals = [
+            {
+                'approver': r['approver'],
+                'status': r['status'],
+                'comment': r['comment'] or '',
+                'updated_at': r['updated_at'].isoformat() if r['updated_at'] else None,
+            }
+            for r in rows
+        ]
+        return jsonify({'approvals': approvals}), 200
+    except Exception as e:
+        logger.error(f"datasheet-approvals GET error: {e}")
+        return jsonify({'approvals': []}), 200
+
+
+@app.route('/api/datasheet-approvals', methods=['POST'])
+def post_datasheet_approvals():
+    """Upsert a single reviewer's sign-off (approver + status + comment)."""
+    if not DATABASE_URL:
+        return jsonify({'error': 'database not configured'}), 503
+    body = request.get_json(silent=True) or {}
+    approver = (body.get('approver') or '').strip()
+    status = (body.get('status') or 'pending').strip()
+    comment = (body.get('comment') or '').strip()
+
+    if approver not in ALLOWED_APPROVERS:
+        return jsonify({'error': 'unknown approver'}), 400
+    if status not in ALLOWED_STATUSES:
+        return jsonify({'error': 'invalid status'}), 400
+
+    try:
+        conn = get_db()
+        try:
+            with conn.cursor() as cur:
+                _ensure_approvals_table(cur)
+                cur.execute(
+                    """
+                    INSERT INTO datasheet_approvals (approver, status, comment, updated_at)
+                    VALUES (%s, %s, %s, NOW())
+                    ON CONFLICT (approver)
+                    DO UPDATE SET status = EXCLUDED.status,
+                                  comment = EXCLUDED.comment,
+                                  updated_at = NOW()
+                    """,
+                    (approver, status, comment),
+                )
+            conn.commit()
+        finally:
+            put_db(conn)
+        return jsonify({'ok': True, 'approver': approver, 'status': status}), 200
+    except Exception as e:
+        logger.error(f"datasheet-approvals POST error: {e}")
+        return jsonify({'error': 'save failed'}), 500
+
+
 def _gnats_get_token(force=False):
     """Return a GNATS bearer token, minting one from username/password if needed.
 

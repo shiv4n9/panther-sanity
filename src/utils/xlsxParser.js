@@ -316,6 +316,97 @@ function parseDSSheet(ws) {
     .sort((a, b) => extractDate(b.release).localeCompare(extractDate(a.release)));
 }
 
+// ─── Datasheet Publish sheet ──────────────────────────────────
+
+/**
+ * Read the solid fill color of a cell as an uppercase RGB hex string
+ * (e.g. "FFFF00"), or null when the cell has no explicit fill.
+ * Requires the workbook to be read with `cellStyles: true`.
+ */
+function getFillRgb(cell) {
+  const rgb = cell && cell.s && cell.s.fgColor && cell.s.fgColor.rgb;
+  if (!rgb) return null;
+  // Some fills carry an 8-digit ARGB value; keep the trailing RGB.
+  return String(rgb).toUpperCase().slice(-6);
+}
+
+/**
+ * Parse the "Datasheet Publish" sheet into review sections.
+ *
+ * Sheet layout (cols A–E):
+ *   Row 0            — title band ("Testcase Description | SRX400 | | SRX440 | ")
+ *   Section headers  — green fill (C5E0B4); col A = category, col B = "Actual Mbps/CPS",
+ *                      col C/E = "Datasheet publish"
+ *   Data rows        — col A test name, B/C = SRX400 actual/publish,
+ *                      D/E = SRX440 actual/publish. Fill FFFF00 = yellow highlight,
+ *                      FFC7CE = pink highlight.
+ *
+ * @param {Object} ws - XLSX worksheet (must be read with cellStyles: true)
+ * @returns {{ sections: Array<{ category, unit, rows: Array }> }}
+ */
+export function parseDatasheetPublishSheet(ws) {
+  if (!ws || !ws['!ref']) return { sections: [] };
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const getCell = (r, c) => ws[XLSX.utils.encode_cell({ r, c })] || null;
+  const text = (cell) => (cell ? String(cell.w != null ? cell.w : (cell.v != null ? cell.v : '')).trim() : '');
+
+  const HEADER_FILL = 'C5E0B4';
+  const sections = [];
+  let current = null;
+
+  // Row 0 is the SRX400/SRX440 title band — start from row 1.
+  for (let r = range.s.r + 1; r <= range.e.r; r++) {
+    const aCell = getCell(r, 0);
+    const bCell = getCell(r, 1);
+    const cCell = getCell(r, 2);
+    const dCell = getCell(r, 3);
+    const eCell = getCell(r, 4);
+
+    const colA = text(aCell);
+    const colB = text(bCell);
+    if (!colA && !colB) continue; // skip blank rows
+
+    const fillA = getFillRgb(aCell);
+    const isHeader = fillA === HEADER_FILL || /^actual\b/i.test(colB);
+
+    if (isHeader) {
+      const unitMatch = colB.match(/actual\s+(\w+)/i);
+      current = {
+        category: colA,
+        unit: unitMatch ? unitMatch[1] : '',
+        srx400ActualLabel: colB || 'Actual',
+        srx400PublishLabel: text(cCell) || 'Datasheet publish',
+        srx440ActualLabel: text(dCell) || 'Actual',
+        srx440PublishLabel: text(eCell) || 'Datasheet publish',
+        rows: [],
+      };
+      sections.push(current);
+      continue;
+    }
+
+    if (!current) {
+      current = { category: 'Other', unit: '', rows: [] };
+      sections.push(current);
+    }
+
+    const rowFill = getFillRgb(bCell) || getFillRgb(cCell) || getFillRgb(dCell) || fillA;
+    let highlight = null;
+    if (rowFill === 'FFFF00') highlight = 'yellow';
+    else if (rowFill === 'FFC7CE') highlight = 'pink';
+
+    current.rows.push({
+      testCase: colA,
+      srx400Actual: colB,
+      srx400Publish: text(cCell),
+      srx440Actual: text(dCell),
+      srx440Publish: text(eCell),
+      highlight,
+    });
+  }
+
+  return { sections };
+}
+
 // ─── Public API ───────────────────────────────────────────────
 
 /**
@@ -333,7 +424,9 @@ export async function loadDatasheet(url) {
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellText: true });
+  // cellStyles: true is required to read cell fill colors (yellow/pink/green
+  // highlights) used by the Datasheet Review view.
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellText: true, cellStyles: true });
 
   const result = {};
   for (const sheetName of ['SRX400', 'SRX440']) {
@@ -349,6 +442,10 @@ export async function loadDatasheet(url) {
   // Parse DS-1 sheet for Daily Sanity release-stacked data
   const dsWs = workbook.Sheets['DS-1'];
   result.ds1 = dsWs ? parseDSSheet(dsWs) : [];
+
+  // Parse "Datasheet Publish" sheet for the Datasheet Review view
+  const dpWs = workbook.Sheets['Datasheet Publish'];
+  result.datasheetPublish = dpWs ? parseDatasheetPublishSheet(dpWs) : { sections: [] };
 
   return result;
 }

@@ -9,6 +9,7 @@ import HistoryModal from './components/HistoryModal';
 import ChangelogBanner from './components/ChangelogBanner';
 import SanityOverviewChart from './components/SanityOverviewChart';
 import AnimatedMetric from './components/AnimatedMetric';
+import DatasheetReview from './DatasheetReview';
 import { normalizeTo90Cpu, normalizeToTargetCpu, calculatePercentageDiff, isScalingCategory, extractMbpsValue } from './utils/normalize';
 
 // ─── PR Links for known blocked test cases ───────────────────
@@ -842,6 +843,7 @@ const DailySanityDashboard = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeView, setActiveView] = useState('sanity');
+  const [datasheetPublish, setDatasheetPublish] = useState({ sections: [] });
   const [expandedGroups, setExpandedGroups] = useState({});
   const [hoveredCell, setHoveredCell] = useState(null);
   const [hoveredDiff, setHoveredDiff] = useState(null);
@@ -957,6 +959,7 @@ const DailySanityDashboard = () => {
         const merged = mergeSheets(data.srx400, data.srx440);
         setMergedData(merged);
         setReleases({ srx400: data.srx400.release, srx440: data.srx440.release });
+        setDatasheetPublish(data.datasheetPublish || { sections: [] });
 
         // DS-1 release data for Daily Sanity view
         if (data.ds1 && data.ds1.length > 0) {
@@ -1297,6 +1300,19 @@ const DailySanityDashboard = () => {
                 Full Regression
               </span>
             </button>
+            <button
+              onClick={() => { setActiveView('datasheet'); setShowCompare(false); setExpandedGroups({}); }}
+              className={`relative px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                activeView === 'datasheet'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/40'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Datasheet Review
+              </span>
+            </button>
           </div>
 
             {/* Right — Toggle Switches + Full Regression CPU adjusters */}
@@ -1348,6 +1364,12 @@ const DailySanityDashboard = () => {
           </div>
             </div>
         </div>
+
+        {activeView === 'datasheet' && (
+          <DatasheetReview data={datasheetPublish} releases={releases} />
+        )}
+
+        {activeView !== 'datasheet' && (<>
 
         {/* Search Bar */}
         <div className="relative group">
@@ -1790,6 +1812,8 @@ const DailySanityDashboard = () => {
             <PRStatusTable ref={prTableRef} releases={ds1Releases.slice(0, 1)} />
           </div>
         )}
+
+        </>)}
       </main>
 
       {/* Footer */}

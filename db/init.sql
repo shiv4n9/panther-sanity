@@ -52,3 +52,11 @@ CREATE TABLE IF NOT EXISTS ingestion_log (
   tests_updated INTEGER      DEFAULT 0,
   diff_json     JSONB        DEFAULT '{}'::jsonb
 );
+
+-- Datasheet Publish review sign-off (one row per reviewer)
+CREATE TABLE IF NOT EXISTS datasheet_approvals (
+  approver    TEXT         PRIMARY KEY,
+  status      TEXT         NOT NULL DEFAULT 'pending',
+  comment     TEXT         DEFAULT '',
+  updated_at  TIMESTAMPTZ  DEFAULT NOW()
+);
